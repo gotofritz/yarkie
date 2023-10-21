@@ -3,3 +3,17 @@
 body {
   font-family: "Trebuchet MS", Verdana, sans-serif;
 }
+
+div {
+  border: 1px dotted black;
+  margin: 1rem;
+  padding: 0.5rem;
+}
+
+.error {
+  background-color: red;
+  color: white;
+}
+.channel {
+  white-space: pre;
+}
