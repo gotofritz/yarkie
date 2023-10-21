@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const DEFAULT_CHANNELS: string[] = [
+const DEFAULT_PLAYLISTS: string[] = [
   "hey",
   "you",
   "there",
@@ -10,21 +10,21 @@ const DEFAULT_CHANNELS: string[] = [
 
 function App() {
   const serverUrl = "https://localhost:1234";
-  const [channels, setChannels] = useState(DEFAULT_CHANNELS);
+  const [playlists, setPlaylists] = useState(DEFAULT_PLAYLISTS);
   const [pageErrors, setPageErrors] = useState(null);
   useEffect(() => {
     let ignore = false;
-    setChannels([]);
+    setPlaylists([]);
     fetch(serverUrl)
       .then((res) => res.json())
       .then(
         (result) => {
           if (!ignore) {
-            setChannels(result);
+            setPlaylists(result);
           }
         },
         (error) => {
-          setChannels(DEFAULT_CHANNELS);
+          setPlaylists(DEFAULT_PLAYLISTS);
           setPageErrors(error.message);
         }
       );
@@ -33,11 +33,11 @@ function App() {
     };
   }, [serverUrl]);
 
-  const channelList = (channels: string[] = DEFAULT_CHANNELS) => {
+  const playlistsList = (items: string[] = DEFAULT_PLAYLISTS) => {
     return (
       <>
-        {channels.map((data) => {
-          return <div className="channel">{data as string}</div>;
+        {items.map((data) => {
+          return <div className="playlist">{data as string}</div>;
         })}
       </>
     );
@@ -46,8 +46,8 @@ function App() {
     <div className="App">
       <h1>Yarkie</h1>
       {pageErrors && <div className="error">Error: {pageErrors}</div>}
-      {channels.length == 0 && <div className="empty">No channels found</div>}
-      {channels.length > 0 && channelList(channels)}
+      {playlists.length == 0 && <div className="empty">No channels found</div>}
+      {playlists.length > 0 && playlistsList(playlists)}
     </div>
   );
 }
