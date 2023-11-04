@@ -690,3 +690,5 @@ FodyWeavers.xsd
 
 data/*
 !data/*.db
+
+dumps/
