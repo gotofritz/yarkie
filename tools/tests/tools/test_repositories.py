@@ -1,9 +1,16 @@
 from click.testing import CliRunner
-from tools.repositories import DataRepository, data_repository
+from tools.cli import cli
 
 
-def test_version():
-    assert isinstance(data_repository, DataRepository)
-    # sqlite version should be something like (3, 39, 5)
-    assert len(data_repository.db.sqlite_version) == 3
-    assert data_repository.db.sqlite_version[0] == 3
+def test_sanity_db(runner):
+    """
+    Can still load real DB.
+    """
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["--debug"])
+        assert result.exit_code == 0
+        assert "yarkie.db" in result.output
+
+        result = runner.invoke(cli, ["--mock-data", '{"A":[{"B":123}]}', "--debug"])
+        assert result.exit_code == 0
+        assert "yarkie.db" not in result.output
