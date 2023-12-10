@@ -1,10 +1,9 @@
-from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any, TypeAlias
-import click
+
 from sqlite_utils import Database
 from sqlite_utils.db import NotFoundError
-import json
 
 DB_PATH = Path(__file__).parent.parent.parent / "data/yarkie.db"
 

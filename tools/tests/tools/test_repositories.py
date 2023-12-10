@@ -1,4 +1,3 @@
-from click.testing import CliRunner
 from tools.cli import cli
 
 

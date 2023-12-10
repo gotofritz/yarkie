@@ -1,6 +1,5 @@
 import click
 
-
 from tools.commands.playlist.main import playlist
 from tools.repositories import DataRepository
 from tools.settings import CONTEXT_SETTINGS

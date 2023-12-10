@@ -1,4 +1,5 @@
 import click
+
 from tools.exceptions import PlaylistExistException
 from tools.settings import CONTEXT_SETTINGS
 

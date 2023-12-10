@@ -1,9 +1,8 @@
-from datetime import datetime
-import json
 from click.testing import CliRunner
-from tools.commands.playlist.add import add
+
 from tools.cli import cli
-from tools.models.fakes import FakePlaylistFactory, FakeDBFactory
+from tools.commands.playlist.add import add
+from tools.models.fakes import FakeDBFactory, FakePlaylistFactory
 
 
 def test_help(runner):

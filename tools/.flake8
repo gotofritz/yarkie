@@ -1,0 +1,10 @@
+[flake8]
+# E501 do not assign a lambda expression, use a def: 🙄
+extend-ignore = E731
+
+exclude =
+  __pycache__,
+  .git,
+  tests/coverage
+max-complexity = 10
+max-line-length = 88

@@ -1,10 +1,12 @@
-from datetime import datetime
 import json
+from datetime import datetime
+
+from faker import Faker
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
-from faker import Faker
-from tools.repositories import DataRepository
+
 from tools.models.models import Playlist, Video
+from tools.repositories import DataRepository
 
 faker_instance = Faker()
 
