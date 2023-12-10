@@ -17,4 +17,7 @@ dependencies = [
 tools = "cli:cli"
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = [
+  "pytest == 7.4.3",
+  "pytest-cov == 4.1.0"
+]
