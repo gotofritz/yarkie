@@ -1,3 +1,4 @@
+"""Main entry point of program."""
 import click
 
 from tools.commands.playlist.main import playlist
@@ -15,9 +16,7 @@ from tools.settings import CONTEXT_SETTINGS
 )
 @click.pass_context
 def cli(ctx, mock_data, debug):
-    """
-    Manages yarkie data and videos
-    """
+    """Manage yarkie data and videos."""
     ctx.obj = DataRepository(data=mock_data)
     if debug:
         click.echo(ctx.obj.db)

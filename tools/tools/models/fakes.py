@@ -1,3 +1,4 @@
+"""Provide factories for fake versions of models."""
 import json
 from datetime import datetime
 
@@ -12,8 +13,19 @@ faker_instance = Faker()
 
 
 class FakeDBFactory(DataRepository):
+    """Utility class for generating JSON data to pass to --mock-data."""
+
     @classmethod
     def build_json(cls, playlists: Playlist | list[Playlist] | None = None):
+        """
+        Generate a json string with mock data for the DB.
+
+        Arguments
+        ---------
+        playlists:
+            if passed, it will be used to populate this table
+
+        """
         db = {}
         if playlists:
             if isinstance(playlists, list):
@@ -24,6 +36,8 @@ class FakeDBFactory(DataRepository):
 
 
 class FakePlaylistFactory(ModelFactory[Playlist]):
+    """Factory class for Playlist instances with mock data."""
+
     __model__ = Playlist
     __faker__ = faker_instance
 
@@ -32,5 +46,7 @@ class FakePlaylistFactory(ModelFactory[Playlist]):
 
 
 class FakeVideoFactory(ModelFactory[Video]):
+    """Factory class for Video instances with mock data."""
+
     __model__ = Video
     __faker__ = faker_instance

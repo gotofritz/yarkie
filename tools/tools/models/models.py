@@ -1,3 +1,4 @@
+"""Provide pydantic model for DB table structure."""
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -6,14 +7,18 @@ last_updated_factory = lambda: datetime.now().isoformat()
 
 
 class Playlist(BaseModel, extra="allow"):
-    id: str
+    """Data structure for basic rows of Playlist table in DB."""
+
+    id: str  # noqa: A003 # cannot be changed as it comes from DB
     title: str
     description: str | None = None
     last_updated: str = Field(default_factory=last_updated_factory)
 
 
 class Video(BaseModel, extra="allow"):
-    id: str
+    """Data structure for basic rows of Videos table in DB."""
+
+    id: str  # noqa: A003 # cannot be changed as it comes from DB
     playlist_id: str
     title: str
     description: str | None = None

@@ -1,14 +1,20 @@
 version: "3"
 
 vars:
+  ALL: tools/ tests/
   VENV: venv/bin
-  SOURCES: tools/ tests/
+  SOURCES: tools/
 
 tasks:
+  bandit:
+    desc: ""
+    cmds:
+      - "{{.VENV}}/bandit {{.SOURCES}}"
+
   black:
     desc: "lint Python code with Black"
     cmds:
-      - "{{.VENV}}/black {{.SOURCES}}"
+      - "{{.VENV}}/black {{.ALL}}"
 
   coverage:
     desc: "opens the latest coverage in a web browser"
@@ -18,17 +24,32 @@ tasks:
   flake8:
     desc: "lint Python code with flake"
     cmds:
-      - "{{.VENV}}/flake8 {{.SOURCES}}"
+      - "{{.VENV}}/flake8 {{.ALL}}"
 
   isort:
     desc: "sorts imports"
     cmds:
-      - "{{.VENV}}/isort {{.SOURCES}}"
+      - "{{.VENV}}/isort {{.ALL}}"
+
+  lint:
+    desc: "runs all linting tasks"
+    deps:
+      - isort
+      - black
+      - mypy
+      - flake8
+      - bandit
 
   mypy:
     desc: "runs mypy on source"
     cmds:
-      - "{{.VENV}}/mypy tools/"
+      - "{{.VENV}}/mypy {{.SOURCES}}"
+
+  qa:
+    desc: "runs linting and test"
+    deps:
+      - test
+      - lint
 
   test:
     cmds:

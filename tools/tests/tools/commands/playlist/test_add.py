@@ -20,8 +20,8 @@ def test_help(runner):
 def test_happy_path(runner, faker):
     """Typical run with no special cases."""
     with runner.isolated_filesystem():
-        id = faker.word()
-        playlist = FakePlaylistFactory.build(id=id)
+        key = faker.word()
+        playlist = FakePlaylistFactory.build(id=key)
         mock_data = FakeDBFactory.build_json(playlists=playlist)
         result = runner.invoke(
             cli, ["--mock-data", mock_data, "playlist", "add", faker.word()]
@@ -34,9 +34,9 @@ def test_playlist_exists(runner, faker):
     """Early exit if playlist exists."""
     runner = CliRunner()
     with runner.isolated_filesystem():
-        id = faker.word()
-        playlist = FakePlaylistFactory.build(id=id)
+        key = faker.word()
+        playlist = FakePlaylistFactory.build(id=key)
         mock_data = FakeDBFactory.build_json(playlists=playlist)
-        result = runner.invoke(cli, ["--mock-data", mock_data, "playlist", "add", id])
+        result = runner.invoke(cli, ["--mock-data", mock_data, "playlist", "add", key])
         assert result.exit_code == 1
         assert "PLAYLIST already exist in db" in result.output.strip()

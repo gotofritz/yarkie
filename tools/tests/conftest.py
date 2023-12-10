@@ -2,6 +2,7 @@ import pytest
 from click.testing import CliRunner
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def runner(request):
+    """Allow to run click."""
     return CliRunner()

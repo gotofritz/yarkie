@@ -2,9 +2,7 @@ from tools.cli import cli
 
 
 def test_sanity_db(runner):
-    """
-    Can still load real DB.
-    """
+    """Can still load real DB."""
     with runner.isolated_filesystem():
         result = runner.invoke(cli, ["--debug"])
         assert result.exit_code == 0

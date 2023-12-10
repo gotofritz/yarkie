@@ -1,6 +1,8 @@
+"""Provide the DataRepository class."""
+
 import json
 from pathlib import Path
-from typing import cast, Any, TypeAlias
+from typing import Any, TypeAlias, cast
 
 from sqlite_utils import Database
 from sqlite_utils.db import NotFoundError, Table
@@ -11,7 +13,28 @@ DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
 
 class DataRepository:
+    """
+    Handles the DB connection and provides utility methods.
+
+    The DB can be a real sqlite DB, or an in-memory one for testing.
+
+    Methods:
+    -------
+    playlist_exists: returns true if playlists exists
+    """
+
     def __init__(self, data: DBData | None = None):
+        """
+        Create the DB instance.
+
+        It will be an in-memory DB for testing if some init data was passed,
+        or read from the default file if not.
+
+        Arguments
+        ---------
+        [data]: if passed the database is meant to be for testing and
+        this is interpreted as the initialisation data.
+        """
         self.dbpath: Path | None = None
         self.db: Database | None = None
         if isinstance(data, str):
@@ -32,14 +55,14 @@ class DataRepository:
             table = cast(Table, self.db[table_name])
             table.insert_all(data, pk="id")
 
-    def playlist_exists(self, id: str) -> bool:
+    def playlist_exists(self, key: str) -> bool:
         """Look up a playlist in the db."""
         if self.db is None:
             return False
         try:
             # this nonsense is needed to keep mypy happy
             table = cast(Table, self.db["playlists"])
-            table.get(id)
+            table.get(key)
             return True
         except NotFoundError:
             return False

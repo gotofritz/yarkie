@@ -1,1 +1,3 @@
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+"""Constants used across app."""
+
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
