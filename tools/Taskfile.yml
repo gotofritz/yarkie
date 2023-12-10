@@ -21,9 +21,14 @@ tasks:
       - "{{.VENV}}/flake8 {{.SOURCES}}"
 
   isort:
-    desc: "sorts import"
+    desc: "sorts imports"
     cmds:
       - "{{.VENV}}/isort {{.SOURCES}}"
+
+  mypy:
+    desc: "runs mypy on source"
+    cmds:
+      - "{{.VENV}}/mypy tools/"
 
   test:
     cmds:
