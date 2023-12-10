@@ -1,0 +1,10 @@
+version: "3"
+
+tasks:
+  test:
+    cmds:
+      - pytest -vv --cov --cov-report=html:tests/coverage --cov-fail-under=95 .
+
+  coverage:
+    cmds:
+      - open tests/coverage/index.html
