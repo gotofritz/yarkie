@@ -1,8 +1,10 @@
 [project]
 name = "tools"
 version = "0.1.1"
-description = "helpers and set up scripts for yarkie"
+description = "Helpers and set up scripts for yarkie"
 requires-python = ">=3.11"
+
+# Project dependencies
 dependencies = [
     "click == 8.1.7",
     "faker == 20.1.0",
@@ -16,27 +18,30 @@ dependencies = [
 ]
 
 [project.scripts]
+# Entry point for the command-line interface
 tools = "cli:cli"
 
 [project.optional-dependencies]
+# Optional dependencies for testing
 test = [
-  "bandit == 1.7.6",
-  "black == 23.11.0",
-  "flake8 == 6.1.0",
-  "flake8-bugbear == 23.12.2",
-  "flake8-builtins == 2.2.0",
-  "flake8-comprehensions == 3.14.0",
-  "flake8-docstrings == 1.7.0",
-  "flake8-mutable == 1.2.0",
-  "flake8-pytest-style == 1.7.2",
-  "flake8-simplify == 0.21.0",
-  "isort == 5.13.0",
-  "mypy == 1.7.1",
-  "pytest == 7.4.3",
-  "pytest-cov == 4.1.0"
+    "bandit == 1.7.6",
+    "black == 23.11.0",
+    "flake8 == 6.1.0",
+    "flake8-bugbear == 23.12.2",
+    "flake8-builtins == 2.2.0",
+    "flake8-comprehensions == 3.14.0",
+    "flake8-docstrings == 1.7.0",
+    "flake8-mutable == 1.2.0",
+    "flake8-pytest-style == 1.7.2",
+    "flake8-simplify == 0.21.0",
+    "isort == 5.13.0",
+    "mypy == 1.7.1",
+    "pytest == 7.4.3",
+    "pytest-cov == 4.1.0",
 ]
 
 [tool.black]
+# Black code formatter settings
 line-length = 88
 target-version = ['py312']
 include = '\.py?$'

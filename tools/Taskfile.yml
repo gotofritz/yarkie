@@ -6,33 +6,39 @@ vars:
   SOURCES: tools/
 
 tasks:
+  # Task to run Bandit, a security linter for Python code
   bandit:
-    desc: ""
+    desc: "Run Bandit for security linting"
     cmds:
       - "{{.VENV}}/bandit {{.SOURCES}}"
 
+  # Task to lint Python code with Black (code formatter)
   black:
-    desc: "lint Python code with Black"
+    desc: "Lint Python code with Black"
     cmds:
       - "{{.VENV}}/black {{.ALL}}"
 
+  # Task to open the latest coverage report in a web browser
   coverage:
-    desc: "opens the latest coverage in a web browser"
+    desc: "Open the latest coverage report in a web browser"
     cmds:
       - open tests/coverage/index.html
 
+  # Task to lint Python code with Flake8
   flake8:
-    desc: "lint Python code with flake"
+    desc: "Lint Python code with Flake8"
     cmds:
       - "{{.VENV}}/flake8 {{.ALL}}"
 
+  # Task to sort imports in Python code using isort
   isort:
-    desc: "sorts imports"
+    desc: "Sort imports"
     cmds:
       - "{{.VENV}}/isort {{.ALL}}"
 
+  # Task to run all linting tasks (isort, black, mypy, flake8, bandit)
   lint:
-    desc: "runs all linting tasks"
+    desc: "Run all linting tasks"
     deps:
       - isort
       - black
@@ -40,17 +46,21 @@ tasks:
       - flake8
       - bandit
 
+  # Task to run MyPy for static type checking on the source code
   mypy:
-    desc: "runs mypy on source"
+    desc: "Run MyPy for static type checking"
     cmds:
       - "{{.VENV}}/mypy {{.SOURCES}}"
 
+  # Task to run linting and tests
   qa:
-    desc: "runs linting and test"
+    desc: "Run linting and tests"
     deps:
       - test
       - lint
 
+  # Task to run tests using pytest with coverage reporting
   test:
+    desc: "Run tests with coverage"
     cmds:
       - pytest -vv --cov --cov-report=html:tests/coverage --cov-fail-under=95 .

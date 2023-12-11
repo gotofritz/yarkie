@@ -1,4 +1,6 @@
-"""Provide the DataRepository class."""
+# tools/repositories.py
+
+"""Provide a DataRepository class for managing db connection."""
 
 import json
 from pathlib import Path
@@ -14,26 +16,27 @@ DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
 class DataRepository:
     """
-    Handles the DB connection and provides utility methods.
+    Manage the database connection and provides utility methods.
 
-    The DB can be a real sqlite DB, or an in-memory one for testing.
+    The database can be either a real SQLite database or an in-memory
+    one for testing purposes.
 
     Methods:
-    -------
-    playlist_exists: returns true if playlists exists
+    --------
+    playlist_exists: Returns True if a playlist exists in the database.
     """
 
     def __init__(self, data: DBData | None = None):
         """
-        Create the DB instance.
+        Initialize the database instance.
 
-        It will be an in-memory DB for testing if some init data was passed,
-        or read from the default file if not.
+        If initialization data is provided, it creates an in-memory
+        database for testing; otherwise, it reads from the default file.
 
-        Arguments
-        ---------
-        [data]: if passed the database is meant to be for testing and
-        this is interpreted as the initialisation data.
+        Args: - data: If provided, the database is meant for testing,
+        and this
+                is interpreted as the initialization data in JSON
+                format.
         """
         self.db: Database
         self.dbpath: Path | None = None
@@ -41,24 +44,26 @@ class DataRepository:
         if isinstance(data, str):
             parsed = json.loads(data)
             if isinstance(parsed, dict):
+                # Creating an in-memory database for testing
                 self.db = Database(memory=True)
                 self._load_data(parsed)
                 inited = True
         if not inited:
+            # Using the default database file path
             self.dbpath = DB_PATH
             self.db = Database(self.dbpath)
 
     def _load_data(self, init_data: DBData) -> None:
-        """Load data into the in memory db. Used for testing."""
+        """Load data into the in-memory database. Used for testing."""
         for table_name, data in init_data.items():
-            # this nonsense is needed to keep mypy happy
+            # Type casting to keep mypy happy
             table = cast(Table, self.db[table_name])
             table.insert_all(data, pk="id")
 
     def playlist_exists(self, key: str) -> bool:
-        """Look up a playlist in the db."""
+        """Check if a playlist exists in the database."""
         try:
-            # this nonsense is needed to keep mypy happy
+            # Type casting to keep mypy happy
             table = cast(Table, self.db["playlists"])
             table.get(key)
             return True

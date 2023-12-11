@@ -1,4 +1,6 @@
-"""Provide pydantic model for DB table structure."""
+# tools/models/models.py
+
+"""Provide Pydantic models for DB table structure."""
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -7,18 +9,49 @@ last_updated_factory = lambda: datetime.now().isoformat()
 
 
 class Playlist(BaseModel, extra="allow"):
-    """Data structure for basic rows of Playlist table in DB."""
+    """
+    Data structure for basic rows of Playlist table in DB.
 
-    id: str  # noqa: A003 # cannot be changed as it comes from DB
+    Attributes:
+    - id: Unique identifier for the playlist (cannot be changed as it comes from DB).
+    - title: Title of the playlist.
+    - description: Optional description of the playlist.
+    - last_updated: Timestamp indicating the last update time (default is the current
+                    timestamp).
+    """
+
+    id: str  # noqa: A003
     title: str
     description: str | None = None
     last_updated: str = Field(default_factory=last_updated_factory)
 
 
 class Video(BaseModel, extra="allow"):
-    """Data structure for basic rows of Videos table in DB."""
+    """
+    Data structure for basic rows of Videos table in DB.
 
-    id: str  # noqa: A003 # cannot be changed as it comes from DB
+    Attributes:
+    - id: Unique identifier for the video (cannot be changed as it comes from DB).
+    - playlist_id: Identifier linking the video to a specific playlist.
+    - title: Title of the video.
+    - description: Optional description of the video.
+    - uploader: Uploader or creator of the video.
+    - duration: Duration of the video.
+    - view_count: Number of views for the video.
+    - comment_count: Number of comments on the video.
+    - like_count: Number of likes received by the video.
+    - upload_date: Timestamp indicating the upload date (default is the current
+                   timestamp).
+    - width: Width of the video.
+    - height: Height of the video.
+    - video_file: File path or URL of the video.
+    - thumbnail: File path or URL of the video thumbnail.
+    - deleted: Boolean indicating whether the video is marked as deleted.
+    - last_updated: Timestamp indicating the last update time (default is the current
+                    timestamp).
+    """
+
+    id: str  # noqa: A003
     playlist_id: str
     title: str
     description: str | None = None
