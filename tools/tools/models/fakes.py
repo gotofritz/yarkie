@@ -9,7 +9,7 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
 from tools.models.models import Playlist, Video
-from tools.repositories import DataRepository
+from tools.repositories.data_repository import DataRepository
 
 faker_instance = Faker()
 

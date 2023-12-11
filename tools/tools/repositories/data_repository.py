@@ -4,12 +4,13 @@
 
 import json
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, Generator, TypeAlias, cast
 
 from sqlite_utils import Database
 from sqlite_utils.db import NotFoundError, Table
 
-DB_PATH = Path(__file__).parent.parent.parent / "data/yarkie.db"
+from tools.settings import DB_PATH
+
 
 DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
@@ -69,3 +70,22 @@ class DataRepository:
             return True
         except NotFoundError:
             return False
+
+    def get_playlist_videos(self, playlist_key: str) -> Generator[dict, None, None]:
+        # Type casting to keep mypy happy
+        table = cast(Table, self.db["videos"])
+        return table.rows_where("playlist_id=?", [playlist_key])
+
+    def get_playlist_videos_ids_with_thumbnail(self, playlist_key: str) -> list[str]:
+        return [
+            row["id"]
+            for row in list(self.get_playlist_videos(playlist_key=playlist_key))
+            if row["thumbnail"] and not row["thumbnail"].startswith("http")
+        ]
+
+    def get_playlist_videos_ids_with_videos(self, playlist_key: str) -> list[str]:
+        return [
+            row["id"]
+            for row in list(self.get_playlist_videos(playlist_key=playlist_key))
+            if row["video_file"]
+        ]

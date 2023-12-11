@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 last_updated_factory = lambda: datetime.now().isoformat()
 
 
-class Playlist(BaseModel, extra="allow"):
+class Playlist(BaseModel, extra="ignore"):
     """
     Data structure for basic rows of Playlist table in DB.
 
@@ -26,7 +26,7 @@ class Playlist(BaseModel, extra="allow"):
     last_updated: str = Field(default_factory=last_updated_factory)
 
 
-class Video(BaseModel, extra="allow"):
+class Video(BaseModel, extra="ignore"):
     """
     Data structure for basic rows of Videos table in DB.
 
@@ -57,13 +57,13 @@ class Video(BaseModel, extra="allow"):
     description: str | None = None
     uploader: str | None = None
     duration: float
-    view_count: int
-    comment_count: int
-    like_count: int
+    view_count: int = 0
+    comment_count: int = 0
+    like_count: int = 0
     upload_date: str = Field(default_factory=last_updated_factory)
     width: int
     height: int
-    video_file: str
-    thumbnail: str
-    deleted: bool
+    video_file: str = ""
+    thumbnail: str = ""
+    deleted: bool = False
     last_updated: str = Field(default_factory=last_updated_factory)
