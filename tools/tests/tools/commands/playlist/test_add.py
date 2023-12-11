@@ -43,6 +43,4 @@ def test_playlist_exists(runner, faker):
         mock_data = FakeDBFactory.build_json(playlists=playlist)
         result = runner.invoke(cli, ["--mock-data", mock_data, "playlist", "add", key])
         assert result.exit_code == 1
-        assert (
-            "PLAYLIST already exists in the database; exiting" in result.output.strip()
-        )
+        assert "PLAYLIST already exists in the database; exiting" in result.output
