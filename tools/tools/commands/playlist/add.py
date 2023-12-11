@@ -6,7 +6,7 @@ from tools.settings import CONTEXT_SETTINGS
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument("id", type=click.STRING)
+@click.argument("key", type=click.STRING)
 @click.pass_context
 def add(ctx, key):
     """Add a playlist to the db and download its videos."""

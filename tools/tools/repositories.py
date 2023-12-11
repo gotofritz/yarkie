@@ -35,21 +35,21 @@ class DataRepository:
         [data]: if passed the database is meant to be for testing and
         this is interpreted as the initialisation data.
         """
+        self.db: Database
         self.dbpath: Path | None = None
-        self.db: Database | None = None
+        inited = False
         if isinstance(data, str):
             parsed = json.loads(data)
             if isinstance(parsed, dict):
                 self.db = Database(memory=True)
                 self._load_data(parsed)
-        if not self.db:
+                inited = True
+        if not inited:
             self.dbpath = DB_PATH
             self.db = Database(self.dbpath)
 
     def _load_data(self, init_data: DBData) -> None:
         """Load data into the in memory db. Used for testing."""
-        if self.db is None:
-            return
         for table_name, data in init_data.items():
             # this nonsense is needed to keep mypy happy
             table = cast(Table, self.db[table_name])
@@ -57,8 +57,6 @@ class DataRepository:
 
     def playlist_exists(self, key: str) -> bool:
         """Look up a playlist in the db."""
-        if self.db is None:
-            return False
         try:
             # this nonsense is needed to keep mypy happy
             table = cast(Table, self.db["playlists"])
