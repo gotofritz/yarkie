@@ -161,6 +161,8 @@ class LocalDBRepository:
 
     def refresh_download_field(self):
         """_summary_"""
+
+        # this doesn't always seem to run / work.
         cursor = self.db.execute(
             """
             UPDATE videos SET downloaded=1, last_updated= :last_updated
@@ -169,8 +171,6 @@ class LocalDBRepository:
             {"last_updated": last_updated_factory()},
         )
         print(f"{cursor.rowcount} videos downloaded")
-        # cursor = self.db.execute(sql="UPDATE videos SET downloaded=1")
-        # print(f"{cursor.rowcount} videos downloaded")
 
     def close(self):
         """_summary_"""
