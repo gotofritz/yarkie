@@ -9,12 +9,12 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
 from tools.models.models import Playlist, Video
-from tools.repositories.data_repository import DataRepository
+from tools.data_access.local_db_repository import LocalDBRepository
 
 faker_instance = Faker()
 
 
-class FakeDBFactory(DataRepository):
+class FakeDBFactory(LocalDBRepository):
     """
     Utility class for generating JSON data to pass to --mock-data.
 

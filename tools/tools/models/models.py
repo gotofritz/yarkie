@@ -2,6 +2,7 @@
 
 """Provide Pydantic models for DB table structure."""
 from datetime import datetime
+from typing import TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -52,7 +53,7 @@ class Video(BaseModel, extra="ignore"):
     """
 
     id: str  # noqa: A003
-    playlist_id: str
+    playlist_id: str | None = None
     title: str
     description: str | None = None
     uploader: str | None = None
@@ -66,4 +67,17 @@ class Video(BaseModel, extra="ignore"):
     video_file: str = ""
     thumbnail: str = ""
     deleted: bool = False
+    downloaded: bool = False
     last_updated: str = Field(default_factory=last_updated_factory)
+
+
+class DeletedVideo(BaseModel, extra="ignore"):
+    """Comment."""
+
+    id: str  # noqa: A003 # cannot be changed as it comes from DB
+    playlist_id: str | None = None
+    deleted: bool = True
+    last_updated: str = Field(default_factory=last_updated_factory)
+
+
+YoutubeObj: TypeAlias = Playlist | Video | DeletedVideo

@@ -31,25 +31,15 @@ ydl_settings (dict): YouTube download settings for Yark.
 
 from tools.ytservice.video_logger import VideoLogger
 
-ydl_settings_info = {
-    # Centralized logging system; makes output fully quiet
-    "logger": VideoLogger(),
-    # Skip downloading pending livestreams
-    # (#60 <https://github.com/Owez/yark/issues/60>)
-    "ignore_no_formats_error": True,
-    # Concurrent fragment downloading for increased resilience
-    # (#109 <https://github.com/Owez/yark/issues/109>)
-    "concurrent_fragment_downloads": 8,
-}
 
-
-def make_ydl_settings_download(dest_folder: str):
-    return {
-        # Set the output path
-        "outtmpl": f"{dest_folder}/%(id)s.%(ext)s",
-        # Centralized logger hook for ignoring all stdout
+def make_ydl_settings_download(dest_folder: str | None = None):
+    ydl_settings = {
         "logger": VideoLogger(),
-        # Logger hook for download progress
         "progress_hooks": [VideoLogger.downloading],
         "format": "mp4",
+        "concurrent_fragment_downloads": 8,
+        "ignore_no_formats_error": True,
     }
+    if dest_folder:
+        ydl_settings["outtmpl"] = f"{dest_folder}/%(id)s.%(ext)s"
+    return ydl_settings

@@ -1,6 +1,6 @@
 from typing import Any
 from tools.models.models import Playlist, Video, last_updated_factory
-from tools.ydl_settings import ydl_settings_info
+from tools.ydl_settings import make_ydl_settings_download
 
 from yt_dlp import YoutubeDL
 
@@ -13,8 +13,8 @@ class PlaylistService:
         self.videos: list[Video] = []
         self.deleted: list[str] = []
 
-    def download_latest_info(self) -> "PlaylistService":
-        with YoutubeDL(ydl_settings_info) as ydl:
+    def download_latest_info(self):
+        with YoutubeDL(make_ydl_settings_download()) as ydl:
             playlist_record = ydl.extract_info(self.key, download=False)
 
             self.info = Playlist.model_validate(
@@ -35,5 +35,3 @@ class PlaylistService:
                     self.videos.append(video_record)
                 except Exception as e:
                     self.deleted.append(video_info["id"])
-
-        return self
