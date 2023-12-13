@@ -1,6 +1,6 @@
-# tools/commands/playlist/add.py
+# tools/commands/playlist/refresh.py
 
-"""Command to add a playlist, with or without videos."""
+"""Command to refresh a playlist, with or without videos."""
 import click
 
 from tools.services.archiver_service import ArchiverService
@@ -10,7 +10,7 @@ from tools.settings import CONTEXT_SETTINGS
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument("key", type=click.STRING)
 @click.pass_context
-def add(ctx, key):
+def refresh(ctx, key):
     """
     Add a playlist to the db and download its videos.
 

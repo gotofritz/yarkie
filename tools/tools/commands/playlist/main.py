@@ -3,7 +3,7 @@
 """Collect all playlist commands."""
 import click
 
-from tools.commands.playlist.add import add
+from tools.commands.playlist.refresh import refresh
 from tools.settings import CONTEXT_SETTINGS
 
 
@@ -22,5 +22,5 @@ def playlist(ctx):
     pass
 
 
-# Add the 'add' command to the 'playlist' command group.
-playlist.add_command(add)
+# Add the 'refresh' command to the 'playlist' command group.
+playlist.add_command(refresh)
