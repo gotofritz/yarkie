@@ -25,4 +25,4 @@ def downloading_hook(download_info: dict[str, Any]):
 
     # Finished a video's download
     elif download_info["status"] == "finished":
-        print(f"  • Downloaded {video_id}        ")
+        print(f"  • Downloaded  {video_id}      100%                       ")

@@ -4,7 +4,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, Callable, Optional, TypeAlias, cast
 
 from sqlite_utils import Database
 from sqlite_utils.db import Table
@@ -27,7 +27,9 @@ class LocalDBRepository:
         - dbpath: The path to the database file (None if in-memory).
     """
 
-    def __init__(self, data: DBData | None = None):
+    def __init__(
+        self, logger: Optional[Callable[[str], None]] = None, data: DBData | None = None
+    ):
         """
         Initialize the database instance.
 
@@ -41,6 +43,7 @@ class LocalDBRepository:
         """
         self.db: Database
         self.dbpath: Path | None = None
+        self.log = logger or (lambda _: None)
         inited = False
         if isinstance(data, str):
             parsed = json.loads(data)
@@ -75,6 +78,7 @@ class LocalDBRepository:
             if isinstance(record, Playlist)
         ]
         self._update_table("playlists", records=records)
+        self.log(f"Updated {len(records)} playlist(s)")
 
     def update_videos(self, all_videos: list[Video]):
         """Update the 'videos' table with the provided records.
@@ -176,27 +180,51 @@ class LocalDBRepository:
         This method updates the 'downloaded' field for videos where the
         conditions (downloaded = 0, video_file not empty, thumbnail does
         not start with 'http') are met.
+
+        First approach was to do it all on the sql side with
+
+        UPDATE videos SET downloaded=1, last_updated= :last_updated
+        WHERE downloaded = 0 AND video_file <> '' AND thumbnail NOT LIKE
+        'http%'
+
+        But some weird caching means sqlite_utils tells me the rows were
+        affected, but then they still show up as not.
         """
-        # this doesn't always seem to run / work.
-        cursor = self.db.execute(
-            """
-            UPDATE videos SET downloaded=1, last_updated= :last_updated
-            WHERE downloaded = 0 AND video_file <> '' AND thumbnail NOT LIKE 'http%'
-            """,
-            {"last_updated": last_updated_factory()},
-        )
-        print(f"{cursor.rowcount} videos downloaded")
+        # Type casting to keep mypy happy
+        table = cast(Table, self.db["videos"])
+
+        # it seems insane to have to do it this way, but there is no
+        # bulk update statement in sqlite_utils, and running a db query
+        # directly seem to mess up the cache
+        for _so_many, row in enumerate(
+            table.rows_where(
+                where="""
+                    downloaded = 0 AND video_file <> '' AND thumbnail NOT LIKE 'http%'
+                    """,
+                select="id",
+            )
+        ):
+            table.update(
+                row["id"],
+                {
+                    "downloaded": 1,
+                    "last_updated": last_updated_factory(),
+                },
+            )
+        self.log(f"{_so_many + 1} videos flagged as downloaded")
 
     def close(self):
         """Close the database connection."""
         self.db.close()
 
 
-def local_db_repository() -> LocalDBRepository:
+def local_db_repository(
+    logger: Optional[Callable[[str], None]] = None
+) -> LocalDBRepository:
     """
     Return a LocalDBRepository instance.
 
     Returns:
         An instance of the LocalDBRepository class.
     """
-    return LocalDBRepository()
+    return LocalDBRepository(logger=logger)

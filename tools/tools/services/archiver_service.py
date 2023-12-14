@@ -5,14 +5,12 @@
 from typing import Optional
 
 import click
+from yt_dlp import DownloadError
 
 from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader
 from tools.helpers.youtube_downloader import youtube_downloader
-
-from yt_dlp import DownloadError
-
 from tools.models.models import YoutubeObj
 
 
@@ -31,7 +29,9 @@ class ArchiverService:
             local_db: An optional instance of the LocalDBRepository.
         """
         self.youtube = youtube or youtube_dao()
-        self.local_db: LocalDBRepository = local_db or local_db_repository()
+        self.local_db: LocalDBRepository = local_db or local_db_repository(
+            logger=click.echo
+        )
 
     def refresh_playlist(self, key: str):
         """Refresh the specified playlist.
@@ -45,8 +45,14 @@ class ArchiverService:
         try:
             fresh_info = self.youtube.get_info(key)
         except DownloadError:
-            click.echo("No playlist with that ID found")
+            click.echo("No playlists or videos with that ID found. Aborting")
             raise click.Abort()
+
+        if fresh_info:
+            click.echo(f"...found {len(fresh_info) - 1} videos in total")
+        else:
+            click.echo("...no videos found")
+            return
 
         # for now, all playlists are simply overwritten
         click.echo("Updating DB record for playlist...")
@@ -56,6 +62,11 @@ class ArchiverService:
         # 'something'. We don't know whether it's thumbnail, video, or
         # both yet, that will be dealt with by the downloaders.
         videos_to_download = self.local_db.pass_needs_download(fresh_info)
+        if videos_to_download:
+            click.echo(f"{len(videos_to_download)} need downloading")
+        else:
+            click.echo("No videos need downloading")
+            return
 
         click.echo("Downloading videos...")
         youtube_downloader(

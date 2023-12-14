@@ -20,4 +20,4 @@ def refresh(ctx, key):
     """
     archiver = ArchiverService()
     archiver.refresh_playlist(key=key)
-    click.echo("DONE")
+    click.echo("Finished")
