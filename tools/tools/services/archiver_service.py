@@ -11,6 +11,10 @@ from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader
 from tools.helpers.youtube_downloader import youtube_downloader
 
+from yt_dlp import DownloadError
+
+from tools.models.models import YoutubeObj
+
 
 class ArchiverService:
     """Service for archiving YouTube data."""
@@ -35,8 +39,14 @@ class ArchiverService:
         Args:
             key: The key identifying the playlist.
         """
+        fresh_info: list[YoutubeObj]
+
         click.echo("Getting info from youtube (this will take a while)...")
-        fresh_info = self.youtube.get_info(key)
+        try:
+            fresh_info = self.youtube.get_info(key)
+        except DownloadError:
+            click.echo("No playlist with that ID found")
+            raise click.Abort()
 
         # for now, all playlists are simply overwritten
         click.echo("Updating DB record for playlist...")

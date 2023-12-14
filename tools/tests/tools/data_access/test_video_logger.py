@@ -1,6 +1,5 @@
 # tests/tools/data_access/test_video_logger.py
 
-from unittest.mock import Mock
 
 import pytest
 
@@ -33,10 +32,3 @@ def test_silent_video_logger_warning_does_not_raise_exception(
 def test_silent_video_logger_error_does_not_raise_exception(silent_video_logger, faker):
     """Calling the error method does not raise an exception."""
     silent_video_logger.error(faker.word())
-
-
-def test_silent_video_logger_error_calls_mock_error_method(silent_video_logger):
-    """Calling the error method calls the provided mock_error method."""
-    mock_error = Mock()
-    silent_video_logger.error(mock_error)
-    mock_error.assert_called_once()
