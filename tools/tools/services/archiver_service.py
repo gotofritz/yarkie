@@ -1,6 +1,6 @@
 # tools/services/archiver_service.py
 
-"""Comment."""
+"""Service for archiving YouTube data."""
 
 from typing import Optional
 
@@ -12,17 +12,28 @@ from tools.helpers.youtube_downloader import youtube_downloader
 
 
 class ArchiverService:
+    """Service for archiving YouTube data."""
+
     def __init__(
         self,
         youtube: Optional[YoutubeDAO] = None,
         local_db: Optional[LocalDBRepository] = None,
     ):
-        """Comment."""
+        """Initialize the ArchiverService.
+
+        Args:
+            youtube: An optional instance of the YoutubeDAO.
+            local_db: An optional instance of the LocalDBRepository.
+        """
         self.youtube = youtube or youtube_dao()
         self.local_db: LocalDBRepository = local_db or local_db_repository()
 
     def refresh_playlist(self, key: str):
-        """Comment."""
+        """Refresh the specified playlist.
+
+        Args:
+            key: The key identifying the playlist.
+        """
         click.echo("Getting info from youtube (this will take a while)...")
         fresh_info = self.youtube.get_info(key)
 

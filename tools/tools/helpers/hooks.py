@@ -1,3 +1,7 @@
+# tools/helpers/hooks.py
+
+"""Module providing download progress hooks."""
+
 from typing import Any
 
 

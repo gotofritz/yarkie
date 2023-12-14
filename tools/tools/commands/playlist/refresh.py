@@ -1,6 +1,7 @@
 # tools/commands/playlist/refresh.py
 
-"""Command to refresh a playlist, with or without videos."""
+"""Command to refresh new or existing playlists."""
+
 import click
 
 from tools.services.archiver_service import ArchiverService
@@ -12,8 +13,11 @@ from tools.settings import CONTEXT_SETTINGS
 @click.pass_context
 def refresh(ctx, key):
     """
-    Add a playlist to the db and download its videos.
+    Fetches playlist info, matches to DB, downloads any missing videos,
+    refreshes database.
 
+    Args:
+        - key: The identifier of the playlist to refresh.
     """
     archiver = ArchiverService()
     archiver.refresh_playlist(key=key)

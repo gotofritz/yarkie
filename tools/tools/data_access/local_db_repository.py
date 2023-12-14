@@ -1,4 +1,4 @@
-# tools/repositories.py
+# tools/data_access/local_db_repository.py
 
 """Provide a DataRepository class for managing db connection."""
 
@@ -18,7 +18,14 @@ DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
 class LocalDBRepository:
     """
-    Comment
+    Manages a local database for storing YouTube data.
+
+    This class provides methods for initializing the database, updating
+    playlists and videos, and handling download-related operations.
+
+    Attributes:
+        - db: The database instance.
+        - dbpath: The path to the database file (None if in-memory).
     """
 
     def __init__(self, data: DBData | None = None):
@@ -28,10 +35,10 @@ class LocalDBRepository:
         If initialization data is provided, it creates an in-memory
         database for testing; otherwise, it reads from the default file.
 
-        Args: - data: If provided, the database is meant for testing,
-        and this
-                is interpreted as the initialization data in JSON
-                format.
+        Args:
+            - data: If provided, the database is meant for testing, and
+              this is interpreted as the initialization data in JSON
+              format.
         """
         self.db: Database
         self.dbpath: Path | None = None
@@ -56,7 +63,12 @@ class LocalDBRepository:
             table.insert_all(data, pk="id")
 
     def update_playlists(self, all_records: list[YoutubeObj]):
-        """Comment."""
+        """Update the 'playlists' table with the provided records.
+
+        Args:
+            - all_records: A list of YoutubeObj instances representing
+              playlists to update.
+        """
         # Type casting to keep mypy happy
         records = [
             record.model_dump()
@@ -66,7 +78,12 @@ class LocalDBRepository:
         self._update_table("playlists", records=records)
 
     def update_videos(self, all_records: list[YoutubeObj]):
-        """Comment."""
+        """Update the 'videos' table with the provided records.
+
+        Args:
+            - all_records: A list of YoutubeObj instances representing
+              videos to update.
+        """
         if not all_records:
             return
 
@@ -77,13 +94,28 @@ class LocalDBRepository:
         self._update_table("videos", records=records)
 
     def _update_table(self, table: str, records: list[YoutubeObj]):
-        """Comment."""
+        """Upsert records into the specified table.
+
+        Args:
+            - table: The name of the table to update.
+            - records: A list of YoutubeObj instances representing
+              records to upsert.
+        """
         # Type casting to keep mypy happy
         table = cast(Table, self.db[table])
         table.upsert_all(records=records, pk="id")
 
     def pass_needs_download(self, records: list[YoutubeObj]) -> list[Video]:
-        """Comment."""
+        """
+        Identify videos that need downloading.
+
+        This method checks which videos need to be downloaded by comparing
+        the provided records with the existing data in the 'videos' table.
+
+        Returns:
+            A list of Video objects that either need to be downloaded for
+            the first time or need to be reattempted.
+        """
         # Type casting to keep mypy happy
         table = cast(Table, self.db["videos"])
         downloaded_flags = {
@@ -107,15 +139,30 @@ class LocalDBRepository:
         return new_videos + needs_download
 
     def downloaded_video(self, key: str, local_file: str):
-        """Comment."""
+        """Mark a video as downloaded with the specified local file.
+
+        Args:
+            - key: The unique identifier of the video.
+            - local_file: The path to the locally downloaded video file.
+        """
         self._update_video(updates={"video_file": local_file}, key=key)
 
     def downloaded_thumbnail(self, key: str, local_file: str):
-        """_summary_"""
+        """Mark a video's thumbnail as downloaded with the specified file.
+
+        Args:
+            - key: The unique identifier of the video.
+            - local_file: The path to the locally downloaded thumbnail file.
+        """
         self._update_video(updates={"thumbnail": local_file}, key=key)
 
     def _update_video(self, key: str, updates: dict[str, Any]):
-        """Comment."""
+        """Update a video's information in the 'videos' table.
+
+        Args:
+            - key: The unique identifier of the video.
+            - updates: A dictionary containing the fields to update.
+        """
         # Type casting to keep mypy happy
         table = cast(Table, self.db["videos"])
         table.update(
@@ -124,7 +171,13 @@ class LocalDBRepository:
         )
 
     def refresh_download_field(self):
-        """_summary_"""
+        """
+        Refresh the 'downloaded' field for videos.
+
+        This method updates the 'downloaded' field for videos where the
+        conditions (downloaded = 0, video_file not empty, thumbnail does
+        not start with 'http') are met.
+        """
 
         # this doesn't always seem to run / work.
         cursor = self.db.execute(
@@ -137,10 +190,15 @@ class LocalDBRepository:
         print(f"{cursor.rowcount} videos downloaded")
 
     def close(self):
-        """_summary_"""
+        """Close the database connection."""
         self.db.close()
 
 
 def local_db_repository() -> LocalDBRepository:
-    """Comment."""
+    """
+    Return a LocalDBRepository instance.
+
+    Returns:
+        An instance of the LocalDBRepository class.
+    """
     return LocalDBRepository()

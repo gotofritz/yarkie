@@ -1,50 +1,29 @@
 # tools/data_access/video_logger.py
 
-"""VideoLogger class for logging video download progress and errors."""
+"""VideoLogger module for handling YoutubeDL logging."""
 
 from abc import ABC
-from typing import Any
 
 
 class AbstractVideoLogger(ABC):
-    """Comment."""
+    """Define an abstract video logger."""
 
     def debug(self, msg):
-        """
-        Log debug messages (ignored).
-
-        Args:
-            msg (str): Debug message.
-        """
+        """Log debug messages (ignored)."""
         pass
 
     def info(self, msg):
-        """
-        Log info messages (ignored).
-
-        Args:
-            msg (str): Info message.
-        """
+        """Log info messages (ignored)."""
         pass
 
     def warning(self, msg):
-        """
-        Log warning messages (ignored).
-
-        Args:
-            msg (str): Warning message.
-        """
+        """Log warning messages (ignored)."""
         pass
 
     def error(self, msg):
-        """
-        Log error messages.
-
-        Args:
-            msg (str): Error message.
-        """
+        """Log error messages."""
         pass
 
 
 class SilentVideoLogger(AbstractVideoLogger):
-    """Comment."""
+    """A video logger that suppresses log messages."""

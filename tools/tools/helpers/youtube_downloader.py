@@ -1,3 +1,7 @@
+# tools/helpers/youtube_downloader.py
+
+"""Module providing a YouTube downloader utility."""
+
 from pathlib import Path
 from typing import Optional
 from yt_dlp import YoutubeDL, postprocessor
@@ -28,13 +32,14 @@ class MovePP(postprocessor.PostProcessor):
         *args,
         **kwargs,
     ):
-        """Comment."""
+        """PostProcessor to handle moving downloaded videos to the final
+        destination."""
         super().__init__(*args, **kwargs)
         self.file_repo = file_repo
         self.local_db = local_db
 
     def run(self, info):
-        """Comment."""
+        """Run the post-processing steps after a video is downloaded."""
         moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
         self.local_db.downloaded_video(info.get("id"), moved_to)
         print(f"    Moved to {moved_to}")
@@ -46,7 +51,15 @@ def youtube_downloader(
     file_repo: Optional[FileRepository] = None,
     local_db: Optional[LocalDBRepository] = None,
 ):
-    """Comment."""
+    """Download videos from YouTube using provided keys.
+
+    Args:
+        - keys: A list of video keys to download.
+        - file_repo: An optional FileRepository instance (default is
+          created).
+        - local_db: An optional LocalDBRepository instance (default is
+          created).
+    """
     if not file_repo:
         file_repo = file_repository()
     if not local_db:

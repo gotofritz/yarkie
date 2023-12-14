@@ -1,3 +1,7 @@
+# tools/helpers/thumbnails_downloader.py
+
+"""Module providing a thumbnails downloader utility."""
+
 import asyncio
 from typing import Optional
 from aiohttp import ClientResponse, ClientSession
@@ -11,14 +15,23 @@ def thumbnails_downloader(
     file_repo: Optional[FileRepository] = None,
     local_db: Optional[LocalDBRepository] = None,
 ):
-    """Comment."""
+    """Download thumbnails for the given key-url pairs.
+
+    Args:
+        - key_url_pairs: A list of tuples containing video keys and
+          thumbnail URLs.
+        - file_repo: An optional FileRepository instance (default is
+          created).
+        - local_db: An optional LocalDBRepository instance (default is
+          created).
+    """
     if not file_repo:
         file_repo = file_repository()
     if not local_db:
         local_db = local_db_repository()
 
     async def run_fetch_jobs():
-        """_summary_"""
+        """Run asynchronous jobs to fetch thumbnails."""
         async with ClientSession() as session:
             tasks = [
                 fetch_a_thumbnail(key, url, session) for (key, url) in key_url_pairs
@@ -26,7 +39,13 @@ def thumbnails_downloader(
             await asyncio.gather(*tasks)
 
     async def fetch_a_thumbnail(key, url, session):
-        """_summary_"""
+        """Fetch a thumbnail from the provided URL.
+
+        Args:
+            - key: The unique identifier of the video.
+            - url: The URL of the thumbnail.
+            - session: An aiohttp ClientSession instance.
+        """
         try:
             resp: ClientResponse = await session.request(method="GET", url=url)
             resp.raise_for_status()
