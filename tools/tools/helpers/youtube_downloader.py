@@ -73,4 +73,4 @@ def youtube_downloader(
         try:
             ydl.download(keys)
         except Exception as e:
-            print(f"        Downloading failed {e}")
+            print(f"        Downloading failed {e}                     ")

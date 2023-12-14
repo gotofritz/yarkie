@@ -37,7 +37,7 @@ def thumbnails_downloader(
             tasks = [
                 fetch_a_thumbnail(key, url, session) for (key, url) in key_url_pairs
             ]
-            await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
     async def fetch_a_thumbnail(key, url, session):
         """Fetch a thumbnail from the provided URL.
@@ -52,7 +52,7 @@ def thumbnails_downloader(
             resp.raise_for_status()
             image: bytes = await resp.read()
             moved_to = await file_repo.write_thumbnail(key=key, image=image)
-            local_db.downloaded_thumbnail(key, moved_to)
+            local_db.downloaded_thumbnail(key=key, local_file=moved_to)
         except Exception:
             """Errors are ignored."""
 
