@@ -28,6 +28,7 @@ def test_thumbnails_downloader(mock_file_repo, mock_local_db, monkeypatch, faker
     """Downloads thumbnails and updates file repository and local database."""
     mock_session = MagicMock()
     mock_resp = AsyncMock()
+    mock_resp.raise_for_status = MagicMock()
     mock_resp.read.return_value = b"fake_thumbnail_data"
     mock_session.return_value.__aenter__.return_value.request.return_value = mock_resp
 
@@ -57,6 +58,7 @@ def test_thumbnails_downloader_errors(
     """Errors when downloading thumbnails are ignored."""
     mock_session = MagicMock()
     mock_resp = AsyncMock()
+    mock_resp.raise_for_status = MagicMock()
     mock_resp.read.side_effect = Exception("fake_thumbnail_data")
     mock_session.return_value.__aenter__.return_value.request.return_value = mock_resp
 
@@ -74,6 +76,9 @@ def test_thumbnails_downloader_errors(
 def test_thumbnails_downloader_di(mock_file_repo, mock_local_db, faker, monkeypatch):
     """Use dependency injection for downloader or defaults."""
     mock_session = MagicMock()
+    mock_resp = AsyncMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_session.return_value.__aenter__.return_value.request.return_value = mock_resp
     monkeypatch.setattr(
         "tools.helpers.thumbnails_downloader.ClientSession", mock_session
     )

@@ -52,8 +52,9 @@ def test_youtube_downloader_with_keys(file_repo_mock, local_db_mock, ydl_mock, f
     ydl_mock.__enter__().download.assert_called_with(keys)
 
 
+@pytest.mark.asyncio()
 @patch("tools.helpers.youtube_downloader.MovePP", autospec=True)
-def test_youtube_downloader_di(
+async def test_youtube_downloader_di(
     move_pp_mock, file_repo_mock, local_db_mock, ydl_mock, faker
 ):
     """Use dependency injection or defaults."""
