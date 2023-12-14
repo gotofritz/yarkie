@@ -9,8 +9,8 @@ from faker import Faker
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from tools.models.models import Playlist, Video
 from tools.data_access.local_db_repository import LocalDBRepository
+from tools.models.models import Playlist, Video
 
 faker_instance = Faker()
 

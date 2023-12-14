@@ -2,9 +2,10 @@
 
 """Provide a FileRepository for managing file operations."""
 
-from pathlib import Path
-import aiofiles
 import shutil
+from pathlib import Path
+
+import aiofiles
 
 from tools.settings import DATA_ROOT, THUMBNAIL_EXT, VIDEO_EXT
 
@@ -73,6 +74,9 @@ class FileRepository:
         Returns:
             The file path where the thumbnail is stored.
         """
+        if image is None:
+            return ""
+
         image_file = self.make_thumbnail_path(key)
         async with aiofiles.open(image_file, "wb+") as f:
             await f.write(image)
@@ -81,8 +85,7 @@ class FileRepository:
 
     def move_video_after_download(self, src_path: Path) -> str:
         """
-        Move a video file from a temporary folder to its final
-        destination.
+        Move a video file to its final destination.
 
         Args:
             - src_path: The source path of the video.

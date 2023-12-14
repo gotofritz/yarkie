@@ -13,8 +13,7 @@ from tools.settings import CONTEXT_SETTINGS
 @click.pass_context
 def refresh(ctx, key):
     """
-    Fetches playlist info, matches to DB, downloads any missing videos,
-    refreshes database.
+    Fetch playlist info and match to DB.
 
     Args:
         - key: The identifier of the playlist to refresh.

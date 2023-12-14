@@ -4,15 +4,14 @@
 
 from pathlib import Path
 from typing import Optional
+
 from yt_dlp import YoutubeDL, postprocessor
-from tools.data_access import file_repository
+
 from tools.data_access.file_repository import FileRepository, file_repository
 from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
-from tools.helpers.hooks import downloading_hook
-
 from tools.data_access.video_logger import SilentVideoLogger
+from tools.helpers.hooks import downloading_hook
 from tools.settings import DOWNLOAD_PATH, VIDEO_EXT
-
 
 ydl_settings = {
     "logger": SilentVideoLogger(),
@@ -25,6 +24,8 @@ ydl_settings = {
 
 
 class MovePP(postprocessor.PostProcessor):
+    """YoutubeDL post-processor, called after download."""
+
     def __init__(
         self,
         file_repo: FileRepository,
@@ -32,8 +33,7 @@ class MovePP(postprocessor.PostProcessor):
         *args,
         **kwargs,
     ):
-        """PostProcessor to handle moving downloaded videos to the final
-        destination."""
+        """Move downloaded videos to the final destination."""
         super().__init__(*args, **kwargs)
         self.file_repo = file_repo
         self.local_db = local_db

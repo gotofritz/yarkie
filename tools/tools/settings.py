@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_ROOT = PROJECT_ROOT / "data"

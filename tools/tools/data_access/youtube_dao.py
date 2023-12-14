@@ -4,9 +4,10 @@
 
 
 from typing import Any
-from yt_dlp import YoutubeDL
-from tools.data_access.video_logger import SilentVideoLogger
 
+from yt_dlp import YoutubeDL
+
+from tools.data_access.video_logger import SilentVideoLogger
 from tools.models.models import DeletedVideo, Playlist, Video, YoutubeObj
 
 
@@ -80,7 +81,7 @@ class YoutubeDAO:
                     video_info[field] = 0
 
             return Video.model_validate(video_info)
-        except Exception as e:
+        except Exception:
             return DeletedVideo(id=video_info["id"], playlist_id=playlist_id)
 
 

@@ -8,10 +8,9 @@ from typing import Any, TypeAlias, cast
 
 from sqlite_utils import Database
 from sqlite_utils.db import Table
-from tools.models.models import Playlist, Video, YoutubeObj
-from tools.models.models import last_updated_factory
-from tools.settings import DB_PATH
 
+from tools.models.models import Playlist, Video, YoutubeObj, last_updated_factory
+from tools.settings import DB_PATH
 
 DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
@@ -77,23 +76,21 @@ class LocalDBRepository:
         ]
         self._update_table("playlists", records=records)
 
-    def update_videos(self, all_records: list[YoutubeObj]):
+    def update_videos(self, all_videos: list[Video]):
         """Update the 'videos' table with the provided records.
 
         Args:
             - all_records: A list of YoutubeObj instances representing
               videos to update.
         """
-        if not all_records:
+        if not all_videos:
             return
 
         # Type casting to keep mypy happy
-        records = [
-            record.model_dump() for record in all_records if isinstance(record, Video)
-        ]
+        records = [record.model_dump() for record in all_videos]
         self._update_table("videos", records=records)
 
-    def _update_table(self, table: str, records: list[YoutubeObj]):
+    def _update_table(self, table_name: str, records: list[dict[str, Any]]):
         """Upsert records into the specified table.
 
         Args:
@@ -102,7 +99,7 @@ class LocalDBRepository:
               records to upsert.
         """
         # Type casting to keep mypy happy
-        table = cast(Table, self.db[table])
+        table = cast(Table, self.db[table_name])
         table.upsert_all(records=records, pk="id")
 
     def pass_needs_download(self, records: list[YoutubeObj]) -> list[Video]:
@@ -124,16 +121,18 @@ class LocalDBRepository:
         }
 
         # never seen before videos are added to the DB
-        new_videos = [
+        new_videos: list[Video] = [
             record
             for record in records
             if record.id not in downloaded_flags.keys() and isinstance(record, Video)
         ]
-        self.update_videos(all_records=new_videos)
+        self.update_videos(all_videos=new_videos)
 
         # videos already in the db are tried again for download
-        needs_download = [
-            record for record in records if downloaded_flags.get(record.id, 1) == 0
+        needs_download: list[Video] = [
+            record
+            for record in records
+            if downloaded_flags.get(record.id, 1) == 0 and isinstance(record, Video)
         ]
 
         return new_videos + needs_download
@@ -178,7 +177,6 @@ class LocalDBRepository:
         conditions (downloaded = 0, video_file not empty, thumbnail does
         not start with 'http') are met.
         """
-
         # this doesn't always seem to run / work.
         cursor = self.db.execute(
             """

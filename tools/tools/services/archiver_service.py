@@ -5,6 +5,7 @@
 from typing import Optional
 
 import click
+
 from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader

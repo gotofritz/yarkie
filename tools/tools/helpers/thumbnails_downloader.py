@@ -4,8 +4,9 @@
 
 import asyncio
 from typing import Optional
+
 from aiohttp import ClientResponse, ClientSession
-from tools.data_access import file_repository
+
 from tools.data_access.file_repository import FileRepository, file_repository
 from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
 
@@ -52,7 +53,7 @@ def thumbnails_downloader(
             image: bytes = await resp.read()
             moved_to = await file_repo.write_thumbnail(key=key, image=image)
             local_db.downloaded_thumbnail(key, moved_to)
-        except Exception as e:
+        except Exception:
             """Errors are ignored."""
 
     asyncio.run(run_fetch_jobs())

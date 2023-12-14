@@ -2,10 +2,8 @@
 
 """VideoLogger module for handling YoutubeDL logging."""
 
-from abc import ABC
 
-
-class AbstractVideoLogger(ABC):
+class AbstractVideoLogger:
     """Define an abstract video logger."""
 
     def debug(self, msg):
