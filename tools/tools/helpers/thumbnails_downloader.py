@@ -37,7 +37,7 @@ def thumbnails_downloader(
             tasks = [
                 fetch_a_thumbnail(key, url, session) for (key, url) in key_url_pairs
             ]
-        await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
 
     async def fetch_a_thumbnail(key, url, session):
         """Fetch a thumbnail from the provided URL.

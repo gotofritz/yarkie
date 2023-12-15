@@ -10,7 +10,7 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
 from tools.data_access.local_db_repository import LocalDBRepository
-from tools.models.models import Playlist, Video
+from tools.models.models import DeletedVideo, Playlist, Video
 
 faker_instance = Faker()
 
@@ -71,12 +71,11 @@ class FakeVideoFactory(ModelFactory[Video]):
     """
     Factory class for Video instances with mock data.
 
-    This class uses PolyFactory to generate instances of the Video model with
-    fake data.
+    This class uses PolyFactory to generate instances of the Video model
+    with fake data.
 
-    Attributes:
-    - __model__: The Pydantic model class being used (Video).
-    - __faker__: The Faker instance for generating fake data.
+    Attributes: - __model__: The Pydantic model class being used
+    (Video).  - __faker__: The Faker instance for generating fake data.
 
     Example usage:
     --------------
@@ -84,4 +83,26 @@ class FakeVideoFactory(ModelFactory[Video]):
     """
 
     __model__ = Video
+    __faker__ = faker_instance
+
+    thumbnail = Use(faker_instance.url)
+
+
+class FakeDeletedVideoFactory(ModelFactory[DeletedVideo]):
+    """
+    Factory class for Video instances with mock data.
+
+    This class uses PolyFactory to generate instances of the
+    DeletedVideo model with fake data.
+
+    Attributes: - __model__: The Pydantic model class being used
+    (DeletedVideo).  - __faker__: The Faker instance for generating fake
+    data.
+
+    Example usage:
+    --------------
+    video = FakeVideoFactory.build()
+    """
+
+    __model__ = DeletedVideo
     __faker__ = faker_instance

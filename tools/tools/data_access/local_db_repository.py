@@ -9,7 +9,13 @@ from typing import Any, Callable, Optional, TypeAlias, cast
 from sqlite_utils import Database
 from sqlite_utils.db import Table
 
-from tools.models.models import Playlist, Video, YoutubeObj, last_updated_factory
+from tools.models.models import (
+    DeletedVideo,
+    Playlist,
+    Video,
+    YoutubeObj,
+    last_updated_factory,
+)
 from tools.settings import DB_PATH
 
 DBData: TypeAlias = dict[str, list[dict[str, Any]]]
@@ -94,6 +100,25 @@ class LocalDBRepository:
         records = [record.model_dump() for record in all_videos]
         self._update_table("videos", records=records)
 
+    def refresh_deleted_videos(self, all_videos: list[YoutubeObj]):
+        """Determine with videos were deleted and update table accordingly."""
+        # Type casting to keep mypy happy
+        table = cast(Table, self.db["videos"])
+
+        # deleted_videos will be upserted, but only for convenience,
+        # because there is no `update_all` command. We don't want them
+        # to be created if not already in the DB, because by then it's
+        # too late, we won't be able to download the videos anymore
+        # anyway. So we check if downloaded_previously before adding
+        # them to the delete list.
+        downloaded_previously = {row["id"] for row in table.rows_where(select="id")}
+        deleted_videos: list[dict[str, Any]] = [
+            {"id": video.id, "deleted": 1, "downloaded": 1}
+            for video in all_videos
+            if isinstance(video, DeletedVideo) and video.id in downloaded_previously
+        ]
+        self._update_table(table_name="videos", records=deleted_videos)
+
     def _update_table(self, table_name: str, records: list[dict[str, Any]]):
         """Upsert records into the specified table.
 
@@ -104,7 +129,8 @@ class LocalDBRepository:
         """
         # Type casting to keep mypy happy
         table = cast(Table, self.db[table_name])
-        table.upsert_all(records=records, pk="id")
+        last_updated = {"last_updated": last_updated_factory()}
+        table.upsert_all(records=[record | last_updated for record in records], pk="id")
 
     def pass_needs_download(self, records: list[YoutubeObj]) -> list[Video]:
         """
@@ -193,6 +219,7 @@ class LocalDBRepository:
         # Type casting to keep mypy happy
         table = cast(Table, self.db["videos"])
 
+        _so_many = -1
         # it seems insane to have to do it this way, but there is no
         # bulk update statement in sqlite_utils, and running a db query
         # directly seem to mess up the cache

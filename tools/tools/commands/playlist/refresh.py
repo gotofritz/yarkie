@@ -18,6 +18,6 @@ def refresh(ctx, key):
     Args:
         - key: The identifier of the playlist to refresh.
     """
-    archiver = ArchiverService()
+    archiver = ArchiverService(logger=click.echo)
     archiver.refresh_playlist(key=key)
     click.echo("Finished")
