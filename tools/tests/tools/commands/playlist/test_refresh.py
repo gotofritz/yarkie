@@ -1,6 +1,7 @@
 # tests/tools/commands/playlist/test_add.py
 
 
+from unittest.mock import patch
 from tools.cli import cli
 from tools.commands.playlist.refresh import refresh
 from tools.models.fakes import FakeDBFactory, FakePlaylistFactory
@@ -20,7 +21,8 @@ def test_help(runner):
         assert result.output.startswith("Usage:")
 
 
-def test_happy_path(runner, faker):
+@patch("tools.commands.playlist.refresh.ArchiverService")
+def test_happy_path(_, runner, faker):
     """Test a typical run with no special cases."""
     with runner.isolated_filesystem():
         key = faker.word()
@@ -29,4 +31,5 @@ def test_happy_path(runner, faker):
         result = runner.invoke(
             cli, ["--mock-data", mock_data, "playlist", "refresh", faker.word()]
         )
-        assert result.exit_code == 1
+        assert result.exit_code == 0
+        assert "Finished" in result.output

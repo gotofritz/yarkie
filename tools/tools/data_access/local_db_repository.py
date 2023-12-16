@@ -99,6 +99,7 @@ class LocalDBRepository:
         # Type casting to keep mypy happy
         records = [record.model_dump() for record in all_videos]
         self._update_table("videos", records=records)
+        self.log(f"Updated {len(records)} video(s)")
 
     def refresh_deleted_videos(self, all_videos: list[YoutubeObj]):
         """Determine with videos were deleted and update table accordingly."""
@@ -108,7 +109,7 @@ class LocalDBRepository:
         # deleted_videos will be upserted, but only for convenience,
         # because there is no `update_all` command. We don't want them
         # to be created if not already in the DB, because by then it's
-        # too late, we won't be able to download the videos anymore
+        # too late, we won't be able to download the videos any more
         # anyway. So we check if downloaded_previously before adding
         # them to the delete list.
         downloaded_previously = {row["id"] for row in table.rows_where(select="id")}
@@ -118,6 +119,7 @@ class LocalDBRepository:
             if isinstance(video, DeletedVideo) and video.id in downloaded_previously
         ]
         self._update_table(table_name="videos", records=deleted_videos)
+        self.log(f"Updated {len(deleted_videos)} video(s)")
 
     def _update_table(self, table_name: str, records: list[dict[str, Any]]):
         """Upsert records into the specified table.
@@ -239,10 +241,6 @@ class LocalDBRepository:
                 },
             )
         self.log(f"{_so_many + 1} videos flagged as downloaded")
-
-    def close(self):
-        """Close the database connection."""
-        self.db.close()
 
 
 def local_db_repository(

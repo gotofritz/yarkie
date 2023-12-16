@@ -28,12 +28,17 @@ class FakeDBFactory(LocalDBRepository):
     """
 
     @classmethod
-    def build_json(cls, playlists: Playlist | list[Playlist] | None = None):
+    def build_json(
+        cls,
+        playlists: Playlist | list[Playlist] | None = None,
+        videos: Video | list[Video] | None = None,
+    ):
         """
         Generate a JSON string with mock data for the DB.
 
         Args:
         - playlists: If passed, it will be used to populate the 'playlists' table.
+        - videos: If passed, it will be used to populate the 'videos' table.
         """
         db = {}
         if playlists:
@@ -41,6 +46,11 @@ class FakeDBFactory(LocalDBRepository):
                 db["playlists"] = [obj.model_dump() for obj in playlists]
             else:
                 db["playlists"] = [playlists.model_dump()]
+        if videos:
+            if isinstance(videos, list):
+                db["videos"] = [obj.model_dump() for obj in videos]
+            else:
+                db["videos"] = [videos.model_dump()]
         return json.dumps(db, default=str)
 
 
