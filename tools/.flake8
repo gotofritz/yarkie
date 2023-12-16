@@ -1,0 +1,15 @@
+[flake8]
+# E501 do not assign a lambda expression, use a def: 🙄
+extend-ignore = E731
+
+exclude =
+  __pycache__,
+  .git,
+  tests/coverage
+max-complexity = 10
+max-line-length = 88
+per-file-ignores =
+    # D104: Missing docstring in public package, pointless if empty
+    */__init__.py:D104
+    # D100: Missing docstring in public module, excessive for tests
+    tests/*:D100
