@@ -32,8 +32,8 @@ class FileRepository:
               default root from settings is used.
         """
         self.root = root or DATA_ROOT
-        self.thumbnails_root = DATA_ROOT / "thumbnails"
-        self.videos_root = DATA_ROOT / "videos"
+        self.thumbnails_root = self.root / "thumbnails"
+        self.videos_root = self.root / "videos"
 
     def make_thumbnail_path(self, key: str) -> Path:
         """

@@ -5,6 +5,6 @@ from click.testing import CliRunner
 
 
 @pytest.fixture()
-def runner(request):
+def runner(request) -> CliRunner:
     """Fixture to provide a Click test runner."""
     return CliRunner()
