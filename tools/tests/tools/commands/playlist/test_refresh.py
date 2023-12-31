@@ -2,9 +2,19 @@
 
 
 from unittest.mock import patch
+
+import pytest
+
 from tools.cli import cli
 from tools.commands.playlist.refresh import refresh
 from tools.models.fakes import FakeDBFactory, FakePlaylistFactory
+
+
+@pytest.fixture()
+def patch_archive_service():
+    """Silence the ArchiverService."""
+    with patch("tools.commands.playlist.refresh.ArchiverService") as do_nothing:
+        yield do_nothing
 
 
 def test_help(runner):
@@ -21,8 +31,8 @@ def test_help(runner):
         assert result.output.startswith("Usage:")
 
 
-@patch("tools.commands.playlist.refresh.ArchiverService")
-def test_happy_path(_, runner, faker):
+@pytest.mark.usefixtures("patch_archive_service")
+def test_happy_path(runner, faker):
     """Test a typical run with no special cases."""
     with runner.isolated_filesystem():
         key = faker.word()
