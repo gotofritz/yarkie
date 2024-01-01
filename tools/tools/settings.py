@@ -7,8 +7,8 @@ from pathlib import Path
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-DATA_ROOT = PROJECT_ROOT / "data"
-DOWNLOAD_PATH = DATA_ROOT / ".yarkie"
-DB_PATH = DATA_ROOT / "yarkie.db"
+DATA_ROOT = Path().home() / ".yarkie"
+DOWNLOAD_PATH = DATA_ROOT / "tmp"
+DB_PATH = DATA_ROOT / "db" / "yarkie.db"
 THUMBNAIL_EXT = "webp"
 VIDEO_EXT = "mp4"

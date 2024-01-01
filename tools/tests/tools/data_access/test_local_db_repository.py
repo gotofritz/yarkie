@@ -3,13 +3,11 @@ import random
 from unittest.mock import MagicMock, Mock
 
 from sqlite_utils import Database
-from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
-from tools.models.fakes import (
-    FakeDBFactory,
-    FakeDeletedVideoFactory,
-    FakePlaylistFactory,
-    FakeVideoFactory,
-)
+
+from tools.data_access.local_db_repository import (LocalDBRepository,
+                                                   local_db_repository)
+from tools.models.fakes import (FakeDBFactory, FakeDeletedVideoFactory,
+                                FakePlaylistFactory, FakeVideoFactory)
 from tools.models.models import Playlist, Video
 
 
@@ -24,7 +22,6 @@ def is_db_in_memory(db: Database) -> bool:
 
 def test_in_memory_db():
     """Valid data will be loaded in an in-memory db."""
-
     playlist = FakePlaylistFactory.build()
     mock_data = FakeDBFactory.build_json(playlists=playlist)
     sut = LocalDBRepository(data=mock_data)
@@ -314,53 +311,6 @@ def test_downloaded_thumbnail(faker):
     videos_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
     assert not videos_in_db[0][13].startswith("http")
     assert videos_in_db[1][13].startswith("http")
-
-
-def test_refresh_download_field(faker):
-    """Clean up db by resetting download flag where needed."""
-    initial_videos = [
-        # 1. should be updated
-        FakeVideoFactory.build(
-            downloaded=0, video_file=faker.word(), thumbnail=faker.word()
-        ),
-        # NOT - thumbnail is stil a URL, hence it wasn't downloaded
-        FakeVideoFactory.build(
-            downloaded=0, video_file=faker.word(), thumbnail=faker.url()
-        ),
-        # NOT - video_file is empty, hence it wasn't downloaded
-        FakeVideoFactory.build(
-            downloaded=0, video_file=faker.word(), thumbnail=faker.url()
-        ),
-        # 2. should be updated
-        FakeVideoFactory.build(
-            downloaded=0, video_file=faker.word(), thumbnail=faker.word()
-        ),
-        # 3. should be updated
-        FakeVideoFactory.build(
-            downloaded=0, video_file=faker.word(), thumbnail=faker.word()
-        ),
-        # NOT - already set
-        FakeVideoFactory.build(downloaded=1),
-        # NOT - already set
-        FakeVideoFactory.build(downloaded=1),
-    ]
-    mock_data = FakeDBFactory.build_json(videos=initial_videos)
-
-    mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
-
-    # db contains what we expect
-    videos_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
-    assert len(videos_in_db) == len(initial_videos)
-
-    # call method we are testing
-    sut.refresh_download_field()
-
-    videos_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
-    assert videos_in_db[0][15] == 1
-    assert videos_in_db[3][15] == 1
-    assert videos_in_db[4][15] == 1
-    mock_logger.assert_called_once_with("3 videos flagged as downloaded")
 
 
 def test_refresh_download_field(faker):
