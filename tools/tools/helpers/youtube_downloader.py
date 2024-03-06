@@ -20,6 +20,7 @@ ydl_settings = {
     "concurrent_fragment_downloads": 8,
     "ignore_no_formats_error": True,
     "outtmpl": f"{DOWNLOAD_PATH}/%(id)s.%(ext)s",
+    "retries": 3,
 }
 
 
