@@ -79,8 +79,7 @@ class DeletedVideo(BaseModel, extra="ignore"):
     - deleted: Boolean indicating whether the video is marked as
       deleted.
     - last_updated: Timestamp indicating the last update time (default
-      is the current
-                    timestamp).
+      is the current timestamp).
 
 
     """
@@ -92,3 +91,16 @@ class DeletedVideo(BaseModel, extra="ignore"):
 
 
 YoutubeObj: TypeAlias = Playlist | Video | DeletedVideo
+
+
+class PlaylistEntry(BaseModel):
+    """Links Videos to a Playlist.
+
+    - video_id: Unique identifier for the video.
+    - playlist_id: Unique identifier for the playlist.
+
+
+    """
+
+    video_id: str
+    playlist_id: str

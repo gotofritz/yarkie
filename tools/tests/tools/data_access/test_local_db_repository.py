@@ -4,10 +4,13 @@ from unittest.mock import MagicMock, Mock
 
 from sqlite_utils import Database
 
-from tools.data_access.local_db_repository import (LocalDBRepository,
-                                                   local_db_repository)
-from tools.models.fakes import (FakeDBFactory, FakeDeletedVideoFactory,
-                                FakePlaylistFactory, FakeVideoFactory)
+from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
+from tools.models.fakes import (
+    FakeDBFactory,
+    FakeDeletedVideoFactory,
+    FakePlaylistFactory,
+    FakeVideoFactory,
+)
 from tools.models.models import Playlist, Video
 
 
@@ -70,7 +73,7 @@ def test_update_playlists_happy_path():
     )
     random.shuffle(all_records)
 
-    sut.update_playlists(all_records=all_records)
+    sut.update(all_records=all_records)
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     for original, updated, stored in zip(playlists, updated_playlists, playlists_in_db):
@@ -111,7 +114,7 @@ def test_insert_playlists():
     )
     random.shuffle(all_records)
 
-    sut.update_playlists(all_records=all_records)
+    sut.update(all_records=all_records)
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     assert len(playlists_in_db) == 4
@@ -155,7 +158,7 @@ def test_update_videos():
         FakeVideoFactory.build(id=initial_videos[0].id)
     ]
 
-    sut.update_videos(all_videos=all_videos)
+    sut._update_videos(all_videos=all_videos)
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
 
@@ -176,7 +179,7 @@ def test_update_videos_no_videos():
     mock_logger = Mock()
     sut = LocalDBRepository(data=mock_data, logger=mock_logger)
 
-    sut.update_videos(all_videos=[])
+    sut._update_videos(all_videos=[])
 
     mock_logger.assert_not_called()
 
@@ -255,7 +258,7 @@ def test_pass_needs_download(faker):
         # no
         FakeVideoFactory.build(downloaded=0, id=initial_videos[7].id),
     ]
-    need_download = sut.pass_needs_download(records=records)
+    need_download = sut.pass_needs_download(all_records=records)
     assert len(need_download) == 6
 
 

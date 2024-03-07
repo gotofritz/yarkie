@@ -101,7 +101,7 @@ class ArchiverService:
         For now, all playlists are simply overwritten.
         """
         self.log("Updating DB record for playlist...")
-        self.local_db.update_playlists(fresh_info)
+        self.local_db.update(fresh_info)
 
     def _get_videos_to_download(self, fresh_info: list[YoutubeObj]) -> list[Video]:
         """Get videos that need downloading.
