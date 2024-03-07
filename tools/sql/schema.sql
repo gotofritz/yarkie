@@ -23,7 +23,7 @@ CREATE TABLE "videos" (
    deleted INT,
    last_updated TEXT
  , [downloaded] INTEGER);
-CREATE TABLE playlist_video (
+CREATE TABLE "playlist_entries" (
     playlist_id TEXT,
     video_id TEXT,
     PRIMARY KEY (playlist_id, video_id),
