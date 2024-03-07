@@ -11,7 +11,7 @@ from tools.models.fakes import (
     FakePlaylistFactory,
     FakeVideoFactory,
 )
-from tools.models.models import Playlist, Video
+from tools.models.models import Playlist
 
 
 def is_db_in_memory(db: Database) -> bool:
@@ -42,7 +42,7 @@ def test_default_db(faker):
     assert not is_db_in_memory(sut.db)
 
 
-def test_update_playlists_happy_path():
+def test_update_happy_path():
     """Update multiple playlists passed alongside other data."""
     playlists = FakePlaylistFactory.batch(size=2)
     mock_data = FakeDBFactory.build_json(playlists=playlists)
@@ -68,8 +68,8 @@ def test_update_playlists_happy_path():
     ]
     all_records = (
         updated_playlists
-        + FakeVideoFactory.batch(size=1)
-        + FakeDeletedVideoFactory.batch(size=1)
+        + FakeVideoFactory.batch(size=1, playlist_id=playlists[0].id)
+        + FakeDeletedVideoFactory.batch(size=1, playlist_id=playlists[0].id)
     )
     random.shuffle(all_records)
 
@@ -94,7 +94,22 @@ def test_update_playlists_happy_path():
         assert updated.title == as_obj.title
         assert original.title != as_obj.title
 
-    mock_logger.assert_called_once_with("Updated 2 playlist(s)")
+    assert mock_logger.call_count == 4
+    mock_calls = mock_logger.call_args_list
+
+    # there are 2 playlists in our mock
+    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
+
+    # delete statement runs for both playlists, regardless of whether
+    # there are entries for those playlists
+    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
+
+    # there's one Video and one DeletedVideo in our mock
+    assert mock_calls[2][0][0] == "Updated 2 videos(s)"
+
+    # we made sure the video mocks have a playlist_id, so both have
+    # links which are updated
+    assert mock_calls[3][0][0] == "Updated 2 videos/playlist link(s)"
 
 
 def test_insert_playlists():
@@ -109,8 +124,8 @@ def test_insert_playlists():
 
     all_records = (
         updated_playlists
-        + FakeVideoFactory.batch(size=1)
-        + FakeDeletedVideoFactory.batch(size=1)
+        + FakeVideoFactory.batch(size=1, playlist_id=None)
+        + FakeDeletedVideoFactory.batch(size=1, playlist_id=None)
     )
     random.shuffle(all_records)
 
@@ -118,70 +133,23 @@ def test_insert_playlists():
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     assert len(playlists_in_db) == 4
-    mock_logger.assert_called_once_with("Updated 2 playlist(s)")
 
+    assert mock_logger.call_count == 4
+    mock_calls = mock_logger.call_args_list
 
-def test_update_videos():
-    """Can update or insert videos."""
-    initial_videos = FakeVideoFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(videos=initial_videos)
+    # there are 2 playlists in our mock
+    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
 
-    mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+    # delete statement runs for both playlists, regardless of whether
+    # there are entries for those playlists
+    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
 
-    # the db contains what we expect
-    videos_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
-    for generated, stored in zip(initial_videos, videos_in_db):
-        assert generated == Video.model_validate(
-            {
-                "id": stored[0],
-                "playlist_id": stored[1],
-                "title": stored[2],
-                "description": stored[3],
-                "uploader": stored[4],
-                "duration": stored[5],
-                "view_count": stored[6],
-                "comment_count": stored[7],
-                "like_count": stored[8],
-                "upload_date": stored[9],
-                "width": stored[10],
-                "height": stored[11],
-                "video_file": stored[12],
-                "thumbnail": stored[13],
-                "deleted": stored[14],
-                "downloaded": stored[15],
-                "last_updated": stored[16],
-            }
-        )
+    # there's one Video and one DeletedVideo in our mock
+    assert mock_calls[2][0][0] == "Updated 2 videos(s)"
 
-    all_videos = FakeVideoFactory.batch(size=2) + [
-        FakeVideoFactory.build(id=initial_videos[0].id)
-    ]
-
-    sut._update_videos(all_videos=all_videos)
-
-    playlists_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
-
-    # we have updated 3 videos, but one of them has the same id as an
-    # existing one, so only 2 are new.
-    # 2 new + 2 old = 4
-    assert len(playlists_in_db) == 4
-
-    # we sent 3 videos to the update method
-    mock_logger.assert_called_once_with("Updated 3 video(s)")
-
-
-def test_update_videos_no_videos():
-    """Exit silently if no videos passed."""
-    initial_videos = FakeVideoFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(videos=initial_videos)
-
-    mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
-
-    sut._update_videos(all_videos=[])
-
-    mock_logger.assert_not_called()
+    # we made sure the video mocks have no fake playlist_id, and the
+    # playlist themselves are empty, so no link should have been updated
+    assert mock_calls[3][0][0] == "Updated 0 videos/playlist link(s)"
 
 
 def test_refresh_deleted_videos():

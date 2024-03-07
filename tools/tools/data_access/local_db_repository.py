@@ -178,7 +178,9 @@ class LocalDBRepository:
             where="playlist_id = ?",
             where_args=[playlist["id"] for playlist in playlist_records],
         )
-        self.log(f"Removed {len(playlist_records)} playlist links")
+        self.log(
+            f"Removed links to videos (if any) for {len(playlist_records)} playlists"
+        )
 
     def refresh_deleted_videos(self, all_videos: list[YoutubeObj]):
         """Determine with videos were deleted and update table accordingly."""
