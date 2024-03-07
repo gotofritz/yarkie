@@ -98,7 +98,7 @@ class LocalDBRepository:
               videos to update.
         """
         if not all_records:
-            return
+            return []
 
         downloaded_flags = self._table_as_map(table="videos", field="downloaded")
         video_records = [
@@ -143,7 +143,7 @@ class LocalDBRepository:
               videos to update.
         """
         if not all_records:
-            return
+            return []
 
         playlist_records = [
             record.model_dump()

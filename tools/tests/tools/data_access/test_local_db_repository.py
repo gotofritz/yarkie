@@ -112,6 +112,78 @@ def test_update_happy_path():
     assert mock_calls[3][0][0] == "Updated 2 videos/playlist link(s)"
 
 
+def test_update_empty():
+    """Update called with no data."""
+    playlists = FakePlaylistFactory.batch(size=2)
+    mock_data = FakeDBFactory.build_json(playlists=playlists)
+
+    mock_logger = Mock()
+    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+
+    sut.update(all_records=[])
+
+    assert mock_logger.call_count == 0
+
+
+def test_update_no_video_data():
+    """Update called with no video data, just playlists."""
+    playlists = FakePlaylistFactory.batch(size=2)
+    mock_data = FakeDBFactory.build_json(playlists=playlists)
+
+    mock_logger = Mock()
+    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+
+    # the db contains what we expect
+    playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
+    for generated, stored in zip(playlists, playlists_in_db):
+        assert generated == Playlist.model_validate(
+            {
+                "id": stored[0],
+                "title": stored[1],
+                "description": stored[2],
+                "last_updated": stored[3],
+            }
+        )
+
+    all_records = [
+        FakePlaylistFactory.build(id=playlists[0].id),
+        FakePlaylistFactory.build(id=playlists[1].id),
+    ]
+
+    sut.update(all_records=all_records)
+
+    playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
+    for original, updated, stored in zip(playlists, all_records, playlists_in_db):
+        as_obj = Playlist.model_validate(
+            {
+                "id": stored[0],
+                "title": stored[1],
+                "description": stored[2],
+                "last_updated": stored[3],
+            }
+        )
+        assert original.id == as_obj.id
+        assert updated.id == as_obj.id
+
+        # they are not actually equal, because of last_updated
+        assert updated != as_obj
+
+        assert updated.title == as_obj.title
+        assert original.title != as_obj.title
+
+    assert mock_logger.call_count == 2
+    mock_calls = mock_logger.call_args_list
+
+    # there are 2 playlists in our mock
+    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
+
+    # delete statement runs for both playlists, regardless of whether
+    # there are entries for those playlists
+    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
+
+    # there are no videos
+
+
 def test_insert_playlists():
     """Insert playlists if no id matches."""
     playlists = FakePlaylistFactory.batch(size=2)
