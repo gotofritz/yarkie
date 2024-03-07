@@ -4,11 +4,14 @@ from unittest.mock import MagicMock, Mock
 
 from sqlite_utils import Database
 
-from tools.data_access.local_db_repository import (LocalDBRepository,
-                                                   local_db_repository)
-from tools.models.fakes import (FakeDBFactory, FakeDeletedVideoFactory,
-                                FakePlaylistFactory, FakeVideoFactory)
-from tools.models.models import Playlist, Video
+from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
+from tools.models.fakes import (
+    FakeDBFactory,
+    FakeDeletedVideoFactory,
+    FakePlaylistFactory,
+    FakeVideoFactory,
+)
+from tools.models.models import Playlist
 
 
 def is_db_in_memory(db: Database) -> bool:
@@ -39,7 +42,7 @@ def test_default_db(faker):
     assert not is_db_in_memory(sut.db)
 
 
-def test_update_playlists_happy_path():
+def test_update_happy_path():
     """Update multiple playlists passed alongside other data."""
     playlists = FakePlaylistFactory.batch(size=2)
     mock_data = FakeDBFactory.build_json(playlists=playlists)
@@ -65,12 +68,12 @@ def test_update_playlists_happy_path():
     ]
     all_records = (
         updated_playlists
-        + FakeVideoFactory.batch(size=1)
-        + FakeDeletedVideoFactory.batch(size=1)
+        + FakeVideoFactory.batch(size=1, playlist_id=playlists[0].id)
+        + FakeDeletedVideoFactory.batch(size=1, playlist_id=playlists[0].id)
     )
     random.shuffle(all_records)
 
-    sut.update_playlists(all_records=all_records)
+    sut.update(all_records=all_records)
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     for original, updated, stored in zip(playlists, updated_playlists, playlists_in_db):
@@ -91,7 +94,94 @@ def test_update_playlists_happy_path():
         assert updated.title == as_obj.title
         assert original.title != as_obj.title
 
-    mock_logger.assert_called_once_with("Updated 2 playlist(s)")
+    assert mock_logger.call_count == 4
+    mock_calls = mock_logger.call_args_list
+
+    # there are 2 playlists in our mock
+    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
+
+    # delete statement runs for both playlists, regardless of whether
+    # there are entries for those playlists
+    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
+
+    # there's one Video and one DeletedVideo in our mock
+    assert mock_calls[2][0][0] == "Updated 2 videos(s)"
+
+    # we made sure the video mocks have a playlist_id, so both have
+    # links which are updated
+    assert mock_calls[3][0][0] == "Updated 2 videos/playlist link(s)"
+
+
+def test_update_empty():
+    """Update called with no data."""
+    playlists = FakePlaylistFactory.batch(size=2)
+    mock_data = FakeDBFactory.build_json(playlists=playlists)
+
+    mock_logger = Mock()
+    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+
+    sut.update(all_records=[])
+
+    assert mock_logger.call_count == 0
+
+
+def test_update_no_video_data():
+    """Update called with no video data, just playlists."""
+    playlists = FakePlaylistFactory.batch(size=2)
+    mock_data = FakeDBFactory.build_json(playlists=playlists)
+
+    mock_logger = Mock()
+    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+
+    # the db contains what we expect
+    playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
+    for generated, stored in zip(playlists, playlists_in_db):
+        assert generated == Playlist.model_validate(
+            {
+                "id": stored[0],
+                "title": stored[1],
+                "description": stored[2],
+                "last_updated": stored[3],
+            }
+        )
+
+    all_records = [
+        FakePlaylistFactory.build(id=playlists[0].id),
+        FakePlaylistFactory.build(id=playlists[1].id),
+    ]
+
+    sut.update(all_records=all_records)
+
+    playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
+    for original, updated, stored in zip(playlists, all_records, playlists_in_db):
+        as_obj = Playlist.model_validate(
+            {
+                "id": stored[0],
+                "title": stored[1],
+                "description": stored[2],
+                "last_updated": stored[3],
+            }
+        )
+        assert original.id == as_obj.id
+        assert updated.id == as_obj.id
+
+        # they are not actually equal, because of last_updated
+        assert updated != as_obj
+
+        assert updated.title == as_obj.title
+        assert original.title != as_obj.title
+
+    assert mock_logger.call_count == 2
+    mock_calls = mock_logger.call_args_list
+
+    # there are 2 playlists in our mock
+    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
+
+    # delete statement runs for both playlists, regardless of whether
+    # there are entries for those playlists
+    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
+
+    # there are no videos
 
 
 def test_insert_playlists():
@@ -106,79 +196,32 @@ def test_insert_playlists():
 
     all_records = (
         updated_playlists
-        + FakeVideoFactory.batch(size=1)
-        + FakeDeletedVideoFactory.batch(size=1)
+        + FakeVideoFactory.batch(size=1, playlist_id=None)
+        + FakeDeletedVideoFactory.batch(size=1, playlist_id=None)
     )
     random.shuffle(all_records)
 
-    sut.update_playlists(all_records=all_records)
+    sut.update(all_records=all_records)
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     assert len(playlists_in_db) == 4
-    mock_logger.assert_called_once_with("Updated 2 playlist(s)")
 
+    assert mock_logger.call_count == 4
+    mock_calls = mock_logger.call_args_list
 
-def test_update_videos():
-    """Can update or insert videos."""
-    initial_videos = FakeVideoFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(videos=initial_videos)
+    # there are 2 playlists in our mock
+    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
 
-    mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+    # delete statement runs for both playlists, regardless of whether
+    # there are entries for those playlists
+    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
 
-    # the db contains what we expect
-    videos_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
-    for generated, stored in zip(initial_videos, videos_in_db):
-        assert generated == Video.model_validate(
-            {
-                "id": stored[0],
-                "playlist_id": stored[1],
-                "title": stored[2],
-                "description": stored[3],
-                "uploader": stored[4],
-                "duration": stored[5],
-                "view_count": stored[6],
-                "comment_count": stored[7],
-                "like_count": stored[8],
-                "upload_date": stored[9],
-                "width": stored[10],
-                "height": stored[11],
-                "video_file": stored[12],
-                "thumbnail": stored[13],
-                "deleted": stored[14],
-                "downloaded": stored[15],
-                "last_updated": stored[16],
-            }
-        )
+    # there's one Video and one DeletedVideo in our mock
+    assert mock_calls[2][0][0] == "Updated 2 videos(s)"
 
-    all_videos = FakeVideoFactory.batch(size=2) + [
-        FakeVideoFactory.build(id=initial_videos[0].id)
-    ]
-
-    sut.update_videos(all_videos=all_videos)
-
-    playlists_in_db = sut.db.conn.execute("SELECT * FROM videos;").fetchall()
-
-    # we have updated 3 videos, but one of them has the same id as an
-    # existing one, so only 2 are new.
-    # 2 new + 2 old = 4
-    assert len(playlists_in_db) == 4
-
-    # we sent 3 videos to the update method
-    mock_logger.assert_called_once_with("Updated 3 video(s)")
-
-
-def test_update_videos_no_videos():
-    """Exit silently if no videos passed."""
-    initial_videos = FakeVideoFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(videos=initial_videos)
-
-    mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
-
-    sut.update_videos(all_videos=[])
-
-    mock_logger.assert_not_called()
+    # we made sure the video mocks have no fake playlist_id, and the
+    # playlist themselves are empty, so no link should have been updated
+    assert mock_calls[3][0][0] == "Updated 0 videos/playlist link(s)"
 
 
 def test_refresh_deleted_videos():
@@ -255,7 +298,7 @@ def test_pass_needs_download(faker):
         # no
         FakeVideoFactory.build(downloaded=0, id=initial_videos[7].id),
     ]
-    need_download = sut.pass_needs_download(records=records)
+    need_download = sut.pass_needs_download(all_records=records)
     assert len(need_download) == 6
 
 

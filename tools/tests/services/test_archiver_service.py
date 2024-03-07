@@ -79,21 +79,24 @@ def test_refresh_playlist_happy_path(youtube_dao, logger, local_db, faker):
     pass_needs_download_mock = Mock()
     pass_needs_download_mock.return_value = videos_to_download
     local_db.pass_needs_download = pass_needs_download_mock
-    update_playlists_mock = Mock()
-    local_db.update_playlists = update_playlists_mock
+    update_mock = Mock()
+    local_db.update = update_mock
 
     archiver_service = ArchiverService(
         youtube=youtube_dao, local_db=local_db, logger=logger
     )
 
-    with patch(
-        "tools.services.archiver_service.thumbnails_downloader"
-    ) as thumbnails_downloader_mock, patch(
-        "tools.services.archiver_service.youtube_downloader"
-    ) as youtube_downloader_mock:
+    with (
+        patch(
+            "tools.services.archiver_service.thumbnails_downloader"
+        ) as thumbnails_downloader_mock,
+        patch(
+            "tools.services.archiver_service.youtube_downloader"
+        ) as youtube_downloader_mock,
+    ):
         archiver_service.refresh_playlist(faker.uuid4())
 
-    update_playlists_mock.assert_called_once_with(fresh_info)
+    update_mock.assert_called_once_with(fresh_info)
     youtube_downloader_mock.assert_called_once_with(
         keys=[video.id for video in videos_to_download]
     )
@@ -130,21 +133,24 @@ def test_refresh_playlist_nothing_to_download(youtube_dao, logger, local_db, fak
     pass_needs_download_mock = Mock()
     pass_needs_download_mock.return_value = videos_to_download
     local_db.pass_needs_download = pass_needs_download_mock
-    update_playlists_mock = Mock()
-    local_db.update_playlists = update_playlists_mock
+    update_mock = Mock()
+    local_db.update = update_mock
 
     archiver_service = ArchiverService(
         youtube=youtube_dao, local_db=local_db, logger=logger
     )
 
-    with patch(
-        "tools.services.archiver_service.thumbnails_downloader"
-    ) as thumbnails_downloader_mock, patch(
-        "tools.services.archiver_service.youtube_downloader"
-    ) as youtube_downloader_mock:
+    with (
+        patch(
+            "tools.services.archiver_service.thumbnails_downloader"
+        ) as thumbnails_downloader_mock,
+        patch(
+            "tools.services.archiver_service.youtube_downloader"
+        ) as youtube_downloader_mock,
+    ):
         archiver_service.refresh_playlist(faker.uuid4())
 
-    update_playlists_mock.assert_called_once_with(fresh_info)
+    update_mock.assert_called_once_with(fresh_info)
     youtube_downloader_mock.assert_not_called()
     thumbnails_downloader_mock.assert_not_called()
     refresh_deleted_videos_mock.assert_not_called()

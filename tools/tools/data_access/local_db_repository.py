@@ -12,6 +12,7 @@ from sqlite_utils.db import Table
 from tools.models.models import (
     DeletedVideo,
     Playlist,
+    PlaylistEntry,
     Video,
     YoutubeObj,
     last_updated_factory,
@@ -70,36 +71,116 @@ class LocalDBRepository:
             table = cast(Table, self.db[table_name])
             table.insert_all(data, pk="id")
 
-    def update_playlists(self, all_records: list[YoutubeObj]):
-        """Update the 'playlists' table with the provided records.
+    def update(self, all_records: list[YoutubeObj]):
+        """Update YT objects requested by users.
+
+        That would be playlist and associated videos, and videos
+        requested individually. For the former the link between video
+        and playlist is also updated, for the latter not.
 
         Args:
             - all_records: A list of YoutubeObj instances representing
-              playlists to update.
+              playlists or videos to update.
         """
-        # Type casting to keep mypy happy
-        records = [
-            record.model_dump()
-            for record in all_records
-            if isinstance(record, Playlist)
-        ]
-        self._update_table("playlists", records=records)
-        self.log(f"Updated {len(records)} playlist(s)")
+        # TODO: needs transactions
 
-    def update_videos(self, all_videos: list[Video]):
-        """Update the 'videos' table with the provided records.
+        playlists = self._updated_playlists(all_records=all_records)
+        self._clear_playlist_links(playlist_records=playlists)
+        self._updated_videos_and_links(all_records=all_records)
+
+    def _updated_videos_and_links(
+        self, all_records: list[YoutubeObj]
+    ) -> list[Video | DeletedVideo]:
+        """Update the 'videos' related tables with the provided records.
 
         Args:
             - all_records: A list of YoutubeObj instances representing
               videos to update.
         """
-        if not all_videos:
+        if not all_records:
+            return []
+
+        downloaded_flags = self._table_as_map(table="videos", field="downloaded")
+        video_records = [
+            # the playlist_id field is needed to generate the entry in
+            # the playlist_entries table, but not here
+            record.model_dump(exclude={"playlist_id"})
+            # preserve the downloaded field if entry was already in db,
+            # otherwise all videos will be downloaded again every time
+            | {"downloaded": downloaded_flags.get(record.id, 0)}
+            for record in all_records
+            if isinstance(record, (Video, DeletedVideo))
+        ]
+        if not video_records:
+            return []
+
+        self._update_table("videos", records=video_records)
+        self.log(f"Updated {len(video_records)} videos(s)")
+
+        entries_records = [
+            PlaylistEntry(
+                video_id=record.id, playlist_id=record.playlist_id
+            ).model_dump()
+            for record in all_records
+            if isinstance(record, (Video, DeletedVideo))
+            and record.playlist_id is not None
+        ]
+        if entries_records:
+            table = cast(Table, self.db["playlist_entries"])
+            table.upsert_all(
+                records=[record for record in entries_records],
+                pk=["playlist_id", "video_id"],
+            )
+        self.log(f"Updated {len(entries_records)} videos/playlist link(s)")
+
+    def _updated_playlists(self, all_records: list[YoutubeObj]) -> list[Playlist]:
+        """Update the 'playlist' table with the provided records.
+
+        The link between playlist and videos are left untouched.
+
+        Args:
+            - all_records: A list of YoutubeObj instances representing
+              videos to update.
+        """
+        if not all_records:
+            return []
+
+        playlist_records = [
+            record.model_dump()
+            for record in all_records
+            if isinstance(record, Playlist)
+        ]
+        if playlist_records:
+            self._update_table("playlists", records=playlist_records)
+
+            table = cast(Table, self.db["playlist_entries"])
+            table.delete_where(
+                where="playlist_id = ?",
+                where_args=[playlist["id"] for playlist in playlist_records],
+            )
+            self.log(f"Updated {len(playlist_records)} playlist(s)")
+        return playlist_records
+
+    def _clear_playlist_links(self, playlist_records: list[Playlist]):
+        """Remove all links to videos for playlist_records.
+
+        Typically so that they can be recreated later with newer data.
+
+        Args:
+            - playlist_records: A list of Playlists whose links will
+            need to be removed
+        """
+        if not playlist_records:
             return
 
-        # Type casting to keep mypy happy
-        records = [record.model_dump() for record in all_videos]
-        self._update_table("videos", records=records)
-        self.log(f"Updated {len(records)} video(s)")
+        table = cast(Table, self.db["playlist_entries"])
+        table.delete_where(
+            where="playlist_id = ?",
+            where_args=[playlist["id"] for playlist in playlist_records],
+        )
+        self.log(
+            f"Removed links to videos (if any) for {len(playlist_records)} playlists"
+        )
 
     def refresh_deleted_videos(self, all_videos: list[YoutubeObj]):
         """Determine with videos were deleted and update table accordingly."""
@@ -134,9 +215,22 @@ class LocalDBRepository:
         last_updated = {"last_updated": last_updated_factory()}
         table.upsert_all(records=[record | last_updated for record in records], pk="id")
 
-    def pass_needs_download(self, records: list[YoutubeObj]) -> list[Video]:
+    def _table_as_map(self, table: str, field: str) -> dict[str, Any]:
+        """Generate a lookup for table, where value is field."""
+
+        table = cast(Table, self.db[table])
+        table_map = {
+            r["id"]: r[field] for r in list(table.rows_where(select=f"id, {field}"))
+        }
+        return table_map
+
+    def pass_needs_download(self, all_records: list[YoutubeObj]) -> list[Video]:
         """
         Identify videos that need downloading.
+
+        Args:_table_as_map
+            - all_records: A list of YoutubeObj instances representing
+              videos to update.
 
         This method checks which videos need to be downloaded by comparing
         the provided records with the existing data in the 'videos' table.
@@ -145,29 +239,17 @@ class LocalDBRepository:
             A list of Video objects that either need to be downloaded for
             the first time or need to be reattempted.
         """
-        # Type casting to keep mypy happy
-        table = cast(Table, self.db["videos"])
-        downloaded_flags = {
-            r["id"]: r["downloaded"]
-            for r in list(table.rows_where(select="id, downloaded"))
-        }
+        downloaded_flags = self._table_as_map(table="videos", field="downloaded")
 
-        # never seen before videos are added to the DB
-        new_videos: list[Video] = [
-            record
-            for record in records
-            if record.id not in downloaded_flags.keys() and isinstance(record, Video)
-        ]
-        self.update_videos(all_videos=new_videos)
-
-        # videos already in the db are tried again for download
+        # either video is not in the db, or it is but with flag set to
+        # false
         needs_download: list[Video] = [
             record
-            for record in records
-            if downloaded_flags.get(record.id, 1) == 0 and isinstance(record, Video)
+            for record in all_records
+            if isinstance(record, Video) and downloaded_flags.get(record.id, 0) == 0
         ]
 
-        return new_videos + needs_download
+        return needs_download
 
     def downloaded_video(self, key: str, local_file: str):
         """Mark a video as downloaded with the specified local file.
