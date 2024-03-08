@@ -9,9 +9,9 @@ from tools.settings import CONTEXT_SETTINGS
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument("key", type=click.STRING)
+@click.argument("keys", type=click.STRING, nargs=-1)
 @click.pass_context
-def refresh(ctx, key):
+def refresh(ctx, keys):
     """
     Fetch playlist info and match to DB.
 
@@ -19,5 +19,5 @@ def refresh(ctx, key):
         - key: The identifier of the playlist to refresh.
     """
     archiver = ArchiverService(logger=click.echo)
-    archiver.refresh_playlist(key=key)
+    archiver.refresh_playlist(keys=keys)
     click.echo("Finished")

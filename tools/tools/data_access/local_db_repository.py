@@ -29,9 +29,11 @@ class LocalDBRepository:
     This class provides methods for initializing the database, updating
     playlists and videos, and handling download-related operations.
 
-    Attributes:
-        - db: The database instance.
-        - dbpath: The path to the database file (None if in-memory).
+
+    Attributes
+    ----------
+    db: The database instance.
+    dbpath: The path to the database file (None if in-memory).
     """
 
     def __init__(
@@ -43,10 +45,11 @@ class LocalDBRepository:
         If initialization data is provided, it creates an in-memory
         database for testing; otherwise, it reads from the default file.
 
-        Args:
-            - data: If provided, the database is meant for testing, and
-              this is interpreted as the initialization data in JSON
-              format.
+
+        Parameters
+        ----------
+        data: If provided, the database is meant for testing, and this
+        is interpreted as the initialization data in JSON format.
         """
         self.db: Database
         self.dbpath: Path | None = None
@@ -64,6 +67,15 @@ class LocalDBRepository:
             self.dbpath = DB_PATH
             self.db = Database(self.dbpath)
 
+    def get_all_playlists_keys(self) -> tuple[str]:
+        """Return all the playlists keys.
+
+        Typically used to download all playlists if the user didn't pass
+        any.
+        """
+        table = cast(Table, self.db["playlists"])
+        return tuple(r["id"] for r in table.rows)
+
     def _load_data(self, init_data: DBData) -> None:
         """Load data into the in-memory database. Used for testing."""
         for table_name, data in init_data.items():
@@ -78,9 +90,10 @@ class LocalDBRepository:
         requested individually. For the former the link between video
         and playlist is also updated, for the latter not.
 
-        Args:
-            - all_records: A list of YoutubeObj instances representing
-              playlists or videos to update.
+        Parameters
+        ----------
+        all_records: A list of YoutubeObj instances representing
+        playlists or videos to update.
         """
         # TODO: needs transactions
 
@@ -93,9 +106,10 @@ class LocalDBRepository:
     ) -> list[Video | DeletedVideo]:
         """Update the 'videos' related tables with the provided records.
 
-        Args:
-            - all_records: A list of YoutubeObj instances representing
-              videos to update.
+        Parameters
+        ----------
+        all_records: A list of YoutubeObj instances representing
+        playlists or videos to update.
         """
         if not all_records:
             return []
@@ -138,9 +152,10 @@ class LocalDBRepository:
 
         The link between playlist and videos are left untouched.
 
-        Args:
-            - all_records: A list of YoutubeObj instances representing
-              videos to update.
+        Parameters
+        ----------
+        all_records: A list of YoutubeObj instances representing
+        playlists or videos to update.
         """
         if not all_records:
             return []
@@ -153,12 +168,6 @@ class LocalDBRepository:
         if playlist_records:
             self._update_table("playlists", records=playlist_records)
 
-            table = cast(Table, self.db["playlist_entries"])
-            table.delete_where(
-                where="playlist_id = ?",
-                where_args=[playlist["id"] for playlist in playlist_records],
-            )
-            self.log(f"Updated {len(playlist_records)} playlist(s)")
         return playlist_records
 
     def _clear_playlist_links(self, playlist_records: list[Playlist]):
@@ -166,17 +175,18 @@ class LocalDBRepository:
 
         Typically so that they can be recreated later with newer data.
 
-        Args:
-            - playlist_records: A list of Playlists whose links will
-            need to be removed
+        Parameters
+        ----------
+        all_records: A list of YoutubeObj instances representing
+        playlists or videos to update.
         """
         if not playlist_records:
             return
 
         table = cast(Table, self.db["playlist_entries"])
+        where_args = ", ".join([f'"{playlist["id"]}"' for playlist in playlist_records])
         table.delete_where(
-            where="playlist_id = ?",
-            where_args=[playlist["id"] for playlist in playlist_records],
+            where=f"playlist_id IN ({where_args})",
         )
         self.log(
             f"Removed links to videos (if any) for {len(playlist_records)} playlists"
@@ -205,10 +215,11 @@ class LocalDBRepository:
     def _update_table(self, table_name: str, records: list[dict[str, Any]]):
         """Upsert records into the specified table.
 
-        Args:
-            - table: The name of the table to update.
-            - records: A list of YoutubeObj instances representing
-              records to upsert.
+        Parameters
+        ----------
+        table: The name of the table to update.
+        records: A list of YoutubeObj instances representing records to
+        upsert.
         """
         # Type casting to keep mypy happy
         table = cast(Table, self.db[table_name])
@@ -228,16 +239,20 @@ class LocalDBRepository:
         """
         Identify videos that need downloading.
 
-        Args:_table_as_map
-            - all_records: A list of YoutubeObj instances representing
-              videos to update.
 
-        This method checks which videos need to be downloaded by comparing
-        the provided records with the existing data in the 'videos' table.
+        Parameters
+        ----------
+        all_records: A list of YoutubeObj instances representing videos
+        to update.
 
-        Returns:
-            A list of Video objects that either need to be downloaded for
-            the first time or need to be reattempted.
+        This method checks which videos need to be downloaded by
+        comparing the provided records with the existing data in the
+        'videos' table.
+
+        Returns
+        ----------
+        A list of Video objects that either need to be downloaded for
+        the first time or need to be reattempted.
         """
         downloaded_flags = self._table_as_map(table="videos", field="downloaded")
 
@@ -254,27 +269,31 @@ class LocalDBRepository:
     def downloaded_video(self, key: str, local_file: str):
         """Mark a video as downloaded with the specified local file.
 
-        Args:
-            - key: The unique identifier of the video.
-            - local_file: The path to the locally downloaded video file.
+
+        Parameters
+        ----------
+        key: The unique identifier of the video.
+        local_file: The path to the locally downloaded video file.
         """
         self._update_video(updates={"video_file": local_file}, key=key)
 
     def downloaded_thumbnail(self, key: str, local_file: str):
         """Mark a video's thumbnail as downloaded with the specified file.
 
-        Args:
-            - key: The unique identifier of the video.
-            - local_file: The path to the locally downloaded thumbnail file.
+        Parameters
+        ----------
+        key: The unique identifier of the video.
+        local_file: The path to the locally downloaded thumbnail file.
         """
         self._update_video(updates={"thumbnail": local_file}, key=key)
 
     def _update_video(self, key: str, updates: dict[str, Any]):
         """Update a video's information in the 'videos' table.
 
-        Args:
-            - key: The unique identifier of the video.
-            - updates: A dictionary containing the fields to update.
+        Parameters
+        ----------
+        key: The unique identifier of the video.
+        updates: A dictionary containing the fields to update.
         """
         # Type casting to keep mypy happy
         table = cast(Table, self.db["videos"])

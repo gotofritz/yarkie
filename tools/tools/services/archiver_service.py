@@ -4,8 +4,6 @@
 
 from typing import Callable, Optional
 
-import click
-from yt_dlp import DownloadError
 
 from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
@@ -35,65 +33,59 @@ class ArchiverService:
             An optional logger callable, by default None.
         """
         self.log = logger or (lambda _: None)
-        self.youtube = youtube or youtube_dao()
+        self.youtube = youtube or youtube_dao(logger=self.log)
         self.local_db: LocalDBRepository = local_db or local_db_repository(
             logger=self.log
         )
 
-    def refresh_playlist(self, key: str):
+    def refresh_playlist(self, keys: tuple[str]):
         """Refresh the specified playlist.
 
         Parameters
         ----------
-        key : str
-            The key identifying the playlist.
+        keys : The keys identifying the playlist. If empty it will do
+        _all_ the playlists in the DB (but not the videos)
         """
+        if not keys:
+            keys = self.local_db.get_all_playlists_keys()
+
+        self.log(f"Refreshing following: {keys}")
+
         # Get fresh information from YouTube
-        fresh_info = self._get_info_from_youtube(key=key)
+        fresh_info = self._get_info_from_youtube(keys=keys)
 
         # Check if there are videos
         if not fresh_info:
             self.log("...no videos found")
             return
 
-        # Update database records
+        # Add fresh info to the DB, it will be refreshed later as we get
+        # new info, if needed
         self._update_db_records(fresh_info=fresh_info)
 
-        # Get videos to download
+        # only download videos which we don't have yet
         videos_to_download = self._get_videos_to_download(fresh_info=fresh_info)
-
-        # Check if there are videos to download
         if not videos_to_download:
             self.log("No videos need downloading")
             return
 
-        # Download videos
         self._download_videos(videos_to_download=videos_to_download)
-
-        # Download thumbnails
         self._download_thumbnails(videos_to_download=videos_to_download)
-
-        # Refresh the database
         self._refresh_database(fresh_info=fresh_info)
 
-    def _get_info_from_youtube(self, key: str) -> list[YoutubeObj]:
-        """Get information from YouTube and handle errors.
+    def _get_info_from_youtube(self, keys: tuple[str]) -> list[YoutubeObj]:
+        """Get playlist/video info from YouTube and handle errors.
 
         Returns
         -------
-        list[YoutubeObj]
-            List of YouTube objects containing information about videos
-            and playlists.
+        List of YouTube objects containing information about videos
+        and playlists.
         """
         self.log("Getting info from youtube (this will take a while)...")
-        try:
-            fresh_info = self.youtube.get_info(key)
-            if fresh_info:
-                self.log(f"...found {len(fresh_info) - 1} videos in total")
-            return fresh_info
-        except DownloadError:
-            self.log("No playlists or videos with that ID found. Aborting")
-            raise click.Abort()
+        fresh_info = self.youtube.get_info(keys)
+        if fresh_info:
+            self.log(f"...found {len(fresh_info) - 1} videos in total")
+        return fresh_info
 
     def _update_db_records(self, fresh_info: list[YoutubeObj]):
         """Update database records with fresh information.
