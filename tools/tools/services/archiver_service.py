@@ -37,7 +37,7 @@ class ArchiverService:
             logger=self.log
         )
 
-    def refresh_playlist(self, keys: tuple[str] | None) -> None:
+    def refresh_playlist(self, keys: tuple[str] | None = None) -> None:
         """Refresh the specified playlist.
 
         Parameters

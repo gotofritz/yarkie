@@ -7,6 +7,7 @@ import pytest
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.youtube_dao import YoutubeDAO
 from tools.models.fakes import (
+    FakeDBFactory,
     FakeDeletedVideoFactory,
     FakePlaylistFactory,
     FakeVideoFactory,
@@ -160,5 +161,29 @@ def test_refresh_playlist_nothing_to_download(youtube_dao, logger, local_db, fak
         "No videos need downloading",
     ]
     assert len(logger.mock_calls) == len(expected_log_messages)
+    for i, msg in enumerate(expected_log_messages):
+        assert msg in logger.mock_calls[i].args[0]
+
+
+def test_refresh_all_playlists(youtube_dao, logger, faker):
+    """If no keys are passed, all playlists are refreshed."""
+    playlists_in_db = FakePlaylistFactory.batch(size=3)
+    mock_data = FakeDBFactory.build_json(playlists=playlists_in_db)
+    local_db = LocalDBRepository(data=mock_data)
+
+    archiver_service = ArchiverService(
+        youtube=youtube_dao, local_db=local_db, logger=logger
+    )
+
+    expected_keys = tuple(playlist.id for playlist in playlists_in_db)
+    with (
+        patch("tools.services.archiver_service.thumbnails_downloader"),
+        patch("tools.services.archiver_service.youtube_downloader"),
+    ):
+        archiver_service.refresh_playlist()
+
+    expected_log_messages = [
+        f"Now refreshing: {expected_keys}",
+    ]
     for i, msg in enumerate(expected_log_messages):
         assert msg in logger.mock_calls[i].args[0]
