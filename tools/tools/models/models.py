@@ -2,11 +2,11 @@
 
 """Provide Pydantic models for DB table structure."""
 from datetime import datetime
-from typing import TypeAlias
+from typing import Callable, TypeAlias
 
 from pydantic import BaseModel, Field
 
-last_updated_factory = lambda: datetime.now().isoformat()
+last_updated_factory: Callable[[], str] = lambda: datetime.now().isoformat()
 
 
 class Playlist(BaseModel, extra="ignore"):

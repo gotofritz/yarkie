@@ -5,8 +5,7 @@
 
 from typing import Any, Callable, Optional
 
-from yt_dlp import YoutubeDL
-from yt_dlp import DownloadError
+from yt_dlp import DownloadError, YoutubeDL
 
 from tools.data_access.video_logger import SilentVideoLogger
 from tools.models.models import DeletedVideo, Playlist, Video, YoutubeObj
@@ -22,7 +21,7 @@ class YoutubeDAO:
         "ignore_no_formats_error": True,
     }
 
-    def __init__(self, logger):
+    def __init__(self, logger: Optional[Callable[[str], None]] = None):
         """Initialize the YouTube DAO."""
         self.log = logger or (lambda _: None)
 

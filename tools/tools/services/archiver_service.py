@@ -4,7 +4,6 @@
 
 from typing import Callable, Optional
 
-
 from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader
@@ -38,7 +37,7 @@ class ArchiverService:
             logger=self.log
         )
 
-    def refresh_playlist(self, keys: tuple[str]):
+    def refresh_playlist(self, keys: tuple[str] | None) -> None:
         """Refresh the specified playlist.
 
         Parameters
@@ -49,7 +48,7 @@ class ArchiverService:
         if not keys:
             keys = self.local_db.get_all_playlists_keys()
 
-        self.log(f"Refreshing following: {keys}")
+        self.log(f"Now refreshing: {keys}")
 
         # Get fresh information from YouTube
         fresh_info = self._get_info_from_youtube(keys=keys)
@@ -87,7 +86,7 @@ class ArchiverService:
             self.log(f"...found {len(fresh_info) - 1} videos in total")
         return fresh_info
 
-    def _update_db_records(self, fresh_info: list[YoutubeObj]):
+    def _update_db_records(self, fresh_info: list[YoutubeObj]) -> None:
         """Update database records with fresh information.
 
         For now, all playlists are simply overwritten.
@@ -111,14 +110,14 @@ class ArchiverService:
             self.log(f"{len(videos_to_download)} need downloading")
         return videos_to_download
 
-    def _download_videos(self, videos_to_download: list[Video]):
+    def _download_videos(self, videos_to_download: list[Video]) -> None:
         """Download videos."""
         self.log("Downloading videos...")
         youtube_downloader(
             keys=[video.id for video in videos_to_download if not video.video_file]
         )
 
-    def _download_thumbnails(self, videos_to_download: list[Video]):
+    def _download_thumbnails(self, videos_to_download: list[Video]) -> None:
         """Download thumbnails."""
         self.log("Downloading thumbnails...")
         thumbnails_downloader(
@@ -129,7 +128,7 @@ class ArchiverService:
             ]
         )
 
-    def _refresh_database(self, fresh_info: list[YoutubeObj]):
+    def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
         """Refresh the database."""
         self.log("Refreshing database...")
         self.local_db.refresh_deleted_videos(all_videos=fresh_info)

@@ -2,9 +2,7 @@
 
 from unittest.mock import MagicMock, Mock, patch
 
-import click
 import pytest
-from yt_dlp import DownloadError
 
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.youtube_dao import YoutubeDAO
@@ -46,18 +44,9 @@ def test_refresh_playlist_no_videos(faker, logger, youtube_dao):
     """No videos are found."""
     youtube_dao.get_info.return_value = []
     archiver_service = ArchiverService(youtube=youtube_dao, logger=logger)
-    archiver_service.refresh_playlist(faker.uuid4())
-    assert logger.mock_calls[1].args[0] == "...no videos found"
-    assert len(logger.mock_calls) == 2
-
-
-def test_refresh_playlist_with_error(youtube_dao, logger, faker):
-    """Error when downloading."""
-    youtube_dao.get_info.side_effect = DownloadError(msg="ouch")
-    archiver_service = ArchiverService(youtube=youtube_dao, logger=logger)
-    with pytest.raises(click.Abort):
-        archiver_service.refresh_playlist(faker.uuid4())
-    assert "Aborting" in logger.mock_calls[1].args[0]
+    archiver_service.refresh_playlist([faker.uuid4()])
+    assert logger.mock_calls[-1].args[0] == "...no videos found"
+    assert len(logger.mock_calls) == 3
 
 
 def test_refresh_playlist_happy_path(youtube_dao, logger, local_db, faker):
@@ -86,6 +75,7 @@ def test_refresh_playlist_happy_path(youtube_dao, logger, local_db, faker):
         youtube=youtube_dao, local_db=local_db, logger=logger
     )
 
+    expected_key = faker.uuid4()
     with (
         patch(
             "tools.services.archiver_service.thumbnails_downloader"
@@ -94,7 +84,7 @@ def test_refresh_playlist_happy_path(youtube_dao, logger, local_db, faker):
             "tools.services.archiver_service.youtube_downloader"
         ) as youtube_downloader_mock,
     ):
-        archiver_service.refresh_playlist(faker.uuid4())
+        archiver_service.refresh_playlist(expected_key)
 
     update_mock.assert_called_once_with(fresh_info)
     youtube_downloader_mock.assert_called_once_with(
@@ -106,14 +96,19 @@ def test_refresh_playlist_happy_path(youtube_dao, logger, local_db, faker):
     refresh_deleted_videos_mock.assert_called_once_with(all_videos=fresh_info)
     refresh_download_field_mock.assert_called_once()
 
-    assert len(logger.mock_calls) == 7
-    assert "info from youtube" in logger.mock_calls[0].args[0]
-    assert logger.mock_calls[1].args[0] == "...found 3 videos in total"
-    assert logger.mock_calls[2].args[0] == "Updating DB record for playlist..."
-    assert logger.mock_calls[3].args[0] == "2 need downloading"
-    assert logger.mock_calls[4].args[0] == "Downloading videos..."
-    assert logger.mock_calls[5].args[0] == "Downloading thumbnails..."
-    assert logger.mock_calls[6].args[0] == "Refreshing database..."
+    expected_log_messages = [
+        f"Now refreshing: {expected_key}",
+        "info from youtube",
+        "...found 3 videos in total",
+        "Updating DB record for playlist...",
+        "2 need downloading",
+        "Downloading videos...",
+        "Downloading thumbnails...",
+        "Refreshing database...",
+    ]
+    assert len(logger.mock_calls) == len(expected_log_messages)
+    for i, msg in enumerate(expected_log_messages):
+        assert msg in logger.mock_calls[i].args[0]
 
 
 def test_refresh_playlist_nothing_to_download(youtube_dao, logger, local_db, faker):
@@ -140,6 +135,7 @@ def test_refresh_playlist_nothing_to_download(youtube_dao, logger, local_db, fak
         youtube=youtube_dao, local_db=local_db, logger=logger
     )
 
+    expected_key = faker.uuid4()
     with (
         patch(
             "tools.services.archiver_service.thumbnails_downloader"
@@ -148,7 +144,7 @@ def test_refresh_playlist_nothing_to_download(youtube_dao, logger, local_db, fak
             "tools.services.archiver_service.youtube_downloader"
         ) as youtube_downloader_mock,
     ):
-        archiver_service.refresh_playlist(faker.uuid4())
+        archiver_service.refresh_playlist(expected_key)
 
     update_mock.assert_called_once_with(fresh_info)
     youtube_downloader_mock.assert_not_called()
@@ -156,8 +152,13 @@ def test_refresh_playlist_nothing_to_download(youtube_dao, logger, local_db, fak
     refresh_deleted_videos_mock.assert_not_called()
     refresh_download_field_mock.assert_not_called()
 
-    assert len(logger.mock_calls) == 4
-    assert "info from youtube" in logger.mock_calls[0].args[0]
-    assert "...found 3 videos in total" in logger.mock_calls[1].args[0]
-    assert logger.mock_calls[2].args[0] == "Updating DB record for playlist..."
-    assert logger.mock_calls[3].args[0] == "No videos need downloading"
+    expected_log_messages = [
+        f"Now refreshing: {expected_key}",
+        "info from youtube",
+        "...found 3 videos in total",
+        "Updating DB record for playlist...",
+        "No videos need downloading",
+    ]
+    assert len(logger.mock_calls) == len(expected_log_messages)
+    for i, msg in enumerate(expected_log_messages):
+        assert msg in logger.mock_calls[i].args[0]

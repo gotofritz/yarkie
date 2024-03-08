@@ -32,7 +32,7 @@ class FakeDBFactory(LocalDBRepository):
         cls,
         playlists: Playlist | list[Playlist] | None = None,
         videos: Video | list[Video] | None = None,
-    ):
+    ) -> str:
         """
         Generate a JSON string with mock data for the DB.
 

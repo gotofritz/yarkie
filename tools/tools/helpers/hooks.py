@@ -5,7 +5,7 @@
 from typing import Any
 
 
-def downloading_hook(download_info: dict[str, Any]):
+def downloading_hook(download_info: dict[str, Any]) -> None:
     """
     Progress hook for video downloading.
 

@@ -11,7 +11,7 @@ from tools.settings import CONTEXT_SETTINGS
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument("keys", type=click.STRING, nargs=-1)
 @click.pass_context
-def refresh(ctx, keys):
+def refresh(ctx: click.Context, keys: tuple[str] | None) -> None:
     """
     Fetch playlist info and match to DB.
 

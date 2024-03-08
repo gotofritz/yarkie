@@ -4,7 +4,7 @@
 import click
 
 from tools.commands.playlist.main import playlist
-from tools.data_access.local_db_repository import LocalDBRepository
+from tools.data_access.local_db_repository import DBData, LocalDBRepository
 from tools.settings import CONTEXT_SETTINGS
 
 
@@ -17,7 +17,11 @@ from tools.settings import CONTEXT_SETTINGS
     "--debug/--no-debug", default=False, is_flag=True, help="Print debug information."
 )
 @click.pass_context
-def cli(ctx, mock_data, debug):
+def cli(
+    ctx: click.Context,
+    mock_data: DBData | None,
+    debug: bool | None,
+) -> None:
     """Manage yarkie data and videos."""
     # Initialize the DataRepository and set it as a context object.
     ctx.obj = LocalDBRepository(data=mock_data)
