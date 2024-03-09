@@ -9,7 +9,7 @@ from tools.settings import CONTEXT_SETTINGS
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.pass_context
-def playlist(ctx):
+def playlist(ctx: click.Context) -> None:
     """
     Manage playlist data and videos.
 

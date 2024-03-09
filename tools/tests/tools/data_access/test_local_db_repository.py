@@ -94,22 +94,21 @@ def test_update_happy_path():
         assert updated.title == as_obj.title
         assert original.title != as_obj.title
 
-    assert mock_logger.call_count == 4
+    expected_log_messages = [
+        # delete statement runs for both playlists, regardless of whether
+        # there are entries for those playlists
+        "Removed links to videos (if any) for 2 playlists",
+        # there's one Video and one DeletedVideo in our mock
+        "Updated 2 videos(s)",
+        # we made sure the video mocks have a playlist_id, so both have
+        # links which are updated
+        "Updated 2 videos/playlist link(s)",
+    ]
+    assert mock_logger.call_count == len(expected_log_messages)
     mock_calls = mock_logger.call_args_list
 
-    # there are 2 playlists in our mock
-    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
-
-    # delete statement runs for both playlists, regardless of whether
-    # there are entries for those playlists
-    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
-
-    # there's one Video and one DeletedVideo in our mock
-    assert mock_calls[2][0][0] == "Updated 2 videos(s)"
-
-    # we made sure the video mocks have a playlist_id, so both have
-    # links which are updated
-    assert mock_calls[3][0][0] == "Updated 2 videos/playlist link(s)"
+    for i, msg in enumerate(expected_log_messages):
+        assert mock_calls[i][0][0] == msg
 
 
 def test_update_empty():
@@ -171,17 +170,17 @@ def test_update_no_video_data():
         assert updated.title == as_obj.title
         assert original.title != as_obj.title
 
-    assert mock_logger.call_count == 2
+    expected_log_messages = [
+        # delete statement runs for both playlists, regardless of whether
+        # there are entries for those playlists
+        "Removed links to videos (if any) for 2 playlists",
+        # there are no videos
+    ]
+    assert mock_logger.call_count == len(expected_log_messages)
     mock_calls = mock_logger.call_args_list
 
-    # there are 2 playlists in our mock
-    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
-
-    # delete statement runs for both playlists, regardless of whether
-    # there are entries for those playlists
-    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
-
-    # there are no videos
+    for i, msg in enumerate(expected_log_messages):
+        assert mock_calls[i][0][0] == msg
 
 
 def test_insert_playlists():
@@ -206,22 +205,17 @@ def test_insert_playlists():
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     assert len(playlists_in_db) == 4
 
-    assert mock_logger.call_count == 4
-    mock_calls = mock_logger.call_args_list
-
-    # there are 2 playlists in our mock
-    assert mock_calls[0][0][0] == "Updated 2 playlist(s)"
-
-    # delete statement runs for both playlists, regardless of whether
-    # there are entries for those playlists
-    assert mock_calls[1][0][0] == "Removed links to videos (if any) for 2 playlists"
-
-    # there's one Video and one DeletedVideo in our mock
-    assert mock_calls[2][0][0] == "Updated 2 videos(s)"
-
-    # we made sure the video mocks have no fake playlist_id, and the
-    # playlist themselves are empty, so no link should have been updated
-    assert mock_calls[3][0][0] == "Updated 0 videos/playlist link(s)"
+    expected_log_messages = [
+        # delete statement runs for both playlists, regardless of whether
+        # there are entries for those playlists
+        "Removed links to videos (if any) for 2 playlists",
+        # there's one Video and one DeletedVideo in our mock
+        "Updated 2 videos(s)",
+        # we made sure the video mocks have a playlist_id, so both have
+        # links which are updated
+        "Updated 2 videos/playlist link(s)",
+    ]
+    assert mock_logger.call_count == len(expected_log_messages)
 
 
 def test_refresh_deleted_videos():

@@ -3,7 +3,7 @@
 """Module providing a YouTube downloader utility."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from yt_dlp import YoutubeDL, postprocessor
 
@@ -24,22 +24,24 @@ ydl_settings = {
 }
 
 
-class MovePP(postprocessor.PostProcessor):
+# error: Class cannot subclass "PostProcessor" (has type "Any")
+# probably due to MetaClass
+class MovePP(postprocessor.PostProcessor):  # type: ignore
     """YoutubeDL post-processor, called after download."""
 
     def __init__(
         self,
         file_repo: FileRepository,
         local_db: LocalDBRepository,
-        *args,
-        **kwargs,
+        *args: tuple[Any],
+        **kwargs: dict[str, Any],
     ):
         """Move downloaded videos to the final destination."""
         super().__init__(*args, **kwargs)
         self.file_repo = file_repo
         self.local_db = local_db
 
-    def run(self, info):
+    def run(self, info: Any) -> tuple[list[Any], Any]:
         """Run the post-processing steps after a video is downloaded."""
         moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
         self.local_db.downloaded_video(info.get("id"), moved_to)
@@ -51,7 +53,7 @@ def youtube_downloader(
     keys: list[str],
     file_repo: Optional[FileRepository] = None,
     local_db: Optional[LocalDBRepository] = None,
-):
+) -> None:
     """Download videos from YouTube using provided keys.
 
     Args:

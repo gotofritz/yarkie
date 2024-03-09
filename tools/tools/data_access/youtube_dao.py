@@ -3,9 +3,9 @@
 """Module providing YouTube Data Access Object (DAO)."""
 
 
-from typing import Any
+from typing import Any, Callable, Optional
 
-from yt_dlp import YoutubeDL
+from yt_dlp import DownloadError, YoutubeDL
 
 from tools.data_access.video_logger import SilentVideoLogger
 from tools.models.models import DeletedVideo, Playlist, Video, YoutubeObj
@@ -21,10 +21,11 @@ class YoutubeDAO:
         "ignore_no_formats_error": True,
     }
 
-    def __init__(self):
+    def __init__(self, logger: Optional[Callable[[str], None]] = None):
         """Initialize the YouTube DAO."""
+        self.log = logger or (lambda _: None)
 
-    def get_info(self, key: str) -> list[YoutubeObj]:
+    def get_info(self, keys: tuple[str]) -> list[YoutubeObj]:
         """Retrieve YouTube information for the given key.
 
         Args:
@@ -34,27 +35,37 @@ class YoutubeDAO:
             A list of YouTube objects representing videos or playlists.
         """
         info: list[YoutubeObj] = []
-        extracted: dict[str, Any] = {}
-        with YoutubeDL(self.ydl_settings) as ydl:
-            extracted = ydl.extract_info(key, download=False)
 
-        if "entries" in extracted:
-            # it's a playlist
-            info = [
-                self._extract_video_info(video_info=video_info, playlist_id=key)
-                for video_info in extracted["entries"]
-            ]
-            info.append(
-                Playlist.model_validate(
-                    {
-                        "id": extracted["id"],
-                        "title": extracted["title"],
-                        "description": extracted["description"],
-                    }
-                )
-            )
-        else:
-            info = [self._extract_video_info(video_info=extracted)]
+        for key in keys:
+            self.log(f"Tackling {key}")
+            extracted: dict[str, Any] = {}
+            try:
+                with YoutubeDL(self.ydl_settings) as ydl:
+                    extracted = ydl.extract_info(key, download=False)
+
+                if "entries" in extracted:
+                    # it's a playlist
+                    info.extend(
+                        [
+                            self._extract_video_info(
+                                video_info=video_info, playlist_id=key
+                            )
+                            for video_info in extracted["entries"]
+                        ]
+                    )
+                    info.append(
+                        Playlist.model_validate(
+                            {
+                                "id": extracted["id"],
+                                "title": extracted["title"],
+                                "description": extracted["description"],
+                            }
+                        )
+                    )
+                else:
+                    info.extend([self._extract_video_info(video_info=extracted)])
+            except DownloadError as e:
+                self.log(f"Downloader error: {e}")
 
         return info
 
@@ -85,6 +96,6 @@ class YoutubeDAO:
             return DeletedVideo(id=video_info["id"], playlist_id=playlist_id)
 
 
-def youtube_dao() -> YoutubeDAO:
+def youtube_dao(logger: Optional[Callable[[str], None]] = None) -> YoutubeDAO:
     """Return a YoutubeDAO instance."""
-    return YoutubeDAO()
+    return YoutubeDAO(logger=logger)

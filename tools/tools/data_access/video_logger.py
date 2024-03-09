@@ -6,19 +6,19 @@
 class AbstractVideoLogger:
     """Define an abstract video logger."""
 
-    def debug(self, msg):
+    def debug(self, msg: str) -> None:
         """Log debug messages (ignored)."""
         pass
 
-    def info(self, msg):
+    def info(self, msg: str) -> None:
         """Log info messages (ignored)."""
         pass
 
-    def warning(self, msg):
+    def warning(self, msg: str) -> None:
         """Log warning messages (ignored)."""
         pass
 
-    def error(self, msg):
+    def error(self, msg: str) -> None:
         """Log error messages."""
         pass
 

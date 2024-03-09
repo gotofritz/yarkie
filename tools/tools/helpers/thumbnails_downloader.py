@@ -15,7 +15,7 @@ def thumbnails_downloader(
     key_url_pairs: list[tuple[str, str]],
     file_repo: Optional[FileRepository] = None,
     local_db: Optional[LocalDBRepository] = None,
-):
+) -> None:
     """Download thumbnails for the given key-url pairs.
 
     Args:
@@ -31,7 +31,7 @@ def thumbnails_downloader(
     if not local_db:
         local_db = local_db_repository()
 
-    async def run_fetch_jobs():
+    async def run_fetch_jobs() -> None:
         """Run asynchronous jobs to fetch thumbnails."""
         async with ClientSession() as session:
             tasks = [
@@ -39,7 +39,7 @@ def thumbnails_downloader(
             ]
             await asyncio.gather(*tasks)
 
-    async def fetch_a_thumbnail(key, url, session):
+    async def fetch_a_thumbnail(key: str, url: str, session: ClientSession) -> None:
         """Fetch a thumbnail from the provided URL.
 
         Args:
