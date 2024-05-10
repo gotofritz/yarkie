@@ -121,18 +121,44 @@ class LocalDBRepository:
             return []
 
         downloaded_flags = self._table_as_map(table_name="videos", field="downloaded")
-        video_records = [
-            # the playlist_id field is needed to generate the entry in
-            # the playlist_entries table, but not here
-            record.model_dump(exclude={"playlist_id"})
-            # preserve the downloaded field if entry was already in db,
-            # otherwise all videos will be downloaded again every time
-            | {"downloaded": downloaded_flags.get(record.id, 0)}
-            for record in videos
-        ]
 
-        self._update_table("videos", records=video_records)
-        self.log(f"Updated {len(video_records)} videos(s)")
+        # sqlite is not smart enough to handle both at the same time. If
+        # there are new_videos, which have ALL the fields, then
+        # updated_videos would also update ALL the fields, regardless of
+        # what data is in the json.
+        updated_videos = []
+        new_videos = []
+
+        for record in videos:
+            already_downloaded = downloaded_flags.get(record.id)
+            print('---------------------------')
+            print(f"{already_downloaded=} for {record.id}")
+            if already_downloaded:
+                # most fields like width, location of thumbnail, etc don't change
+                to_append = record.model_dump(
+                    include={
+                        "id",
+                        "title",
+                        "description",
+                        "view_count",
+                        "comment_count",
+                        "like_count",
+                    }
+                )
+                updated_videos.append(to_append)
+            else:
+                # we assume it's a new record, so dump everything but
+                # not playlist_id which is not part of the table schema.
+                to_append = record.model_dump(exclude={"playlist_id"}) | {
+                    "downloaded": 0
+                }
+                new_videos.append(to_append)
+
+        if new_videos:
+            self._update_table("videos", records=new_videos)
+        if updated_videos:
+            self._update_table("videos", records=updated_videos)
+        self.log(f"Updated {len(new_videos) + len(updated_videos)} videos(s)")
 
         entries_records = [
             PlaylistEntry(
