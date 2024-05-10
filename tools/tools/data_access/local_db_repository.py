@@ -74,7 +74,13 @@ class LocalDBRepository:
         any.
         """
         table = cast(Table, self.db["playlists"])
-        return tuple(r["id"] for r in table.rows)
+        return tuple(
+            r["id"]
+            for r in table.rows_where(
+                where="enabled = 1",
+                select="id",
+            )
+        )
 
     def _load_data(self, init_data: DBData) -> None:
         """Load data into the in-memory database. Used for testing."""
@@ -131,8 +137,6 @@ class LocalDBRepository:
 
         for record in videos:
             already_downloaded = downloaded_flags.get(record.id)
-            print('---------------------------')
-            print(f"{already_downloaded=} for {record.id}")
             if already_downloaded:
                 # most fields like width, location of thumbnail, etc don't change
                 to_append = record.model_dump(
@@ -372,7 +376,7 @@ class LocalDBRepository:
 
 
 def local_db_repository(
-    logger: Optional[Callable[[str], None]] = None
+    logger: Optional[Callable[[str], None]] = None,
 ) -> LocalDBRepository:
     """
     Return a LocalDBRepository instance.

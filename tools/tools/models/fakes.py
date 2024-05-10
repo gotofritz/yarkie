@@ -75,6 +75,7 @@ class FakePlaylistFactory(ModelFactory[Playlist]):
 
     title = Use(faker_instance.sentence)
     last_updated = Use(lambda: faker_instance.iso8601(end_datetime=datetime.now()))
+    enabled = True
 
 
 class FakeVideoFactory(ModelFactory[Video]):

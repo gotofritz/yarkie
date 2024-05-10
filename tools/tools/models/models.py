@@ -1,6 +1,7 @@
 # tools/models/models.py
 
 """Provide Pydantic models for DB table structure."""
+
 from datetime import datetime
 from typing import Callable, TypeAlias
 
@@ -24,6 +25,7 @@ class Playlist(BaseModel, extra="ignore"):
     title: str
     description: str | None = None
     last_updated: str = Field(default_factory=last_updated_factory)
+    enabled: bool = True
 
 
 class Video(BaseModel, extra="ignore"):
