@@ -1,6 +1,7 @@
 # tools/models/models.py
 
 """Provide Pydantic models for DB table structure."""
+
 from datetime import datetime
 from typing import Callable, TypeAlias
 
@@ -24,6 +25,7 @@ class Playlist(BaseModel, extra="ignore"):
     title: str
     description: str | None = None
     last_updated: str = Field(default_factory=last_updated_factory)
+    enabled: bool = True
 
 
 class Video(BaseModel, extra="ignore"):
@@ -70,7 +72,7 @@ class Video(BaseModel, extra="ignore"):
     last_updated: str = Field(default_factory=last_updated_factory)
 
 
-class DeletedVideo(BaseModel, extra="ignore"):
+class DeletedYoutubeObj(BaseModel, extra="ignore"):
     """Model for deleted video entries in the database.
 
     - id: Unique identifier for the video (cannot be changed as it comes
@@ -89,8 +91,16 @@ class DeletedVideo(BaseModel, extra="ignore"):
     deleted: bool = True
     last_updated: str = Field(default_factory=last_updated_factory)
 
+    def is_playlist(self):
+        """Guess whether entry is a playlist.
 
-YoutubeObj: TypeAlias = Playlist | Video | DeletedVideo
+        This is a guess because this object may have been created
+        without actually connecting to YouTube.
+        """
+        return len(self.id) > 10
+
+
+YoutubeObj: TypeAlias = Playlist | Video | DeletedYoutubeObj
 
 
 class PlaylistEntry(BaseModel):
