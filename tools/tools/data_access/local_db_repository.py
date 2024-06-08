@@ -10,7 +10,7 @@ from sqlite_utils import Database
 from sqlite_utils.db import Table
 
 from tools.models.models import (
-    DeletedVideo,
+    DeletedYoutubeObj,
     Playlist,
     PlaylistEntry,
     Video,
@@ -102,14 +102,25 @@ class LocalDBRepository:
         playlists or videos to update.
         """
         # TODO: needs transactions
-
-        playlists = self._updated_playlists(all_records=all_records)
+        enabled_records = self._remove_deleted(all_records=all_records)
+        playlists = self._updated_playlists(all_records=enabled_records)
         self._clear_playlist_links(playlist_records=playlists)
-        self._updated_videos_and_links(all_records=all_records)
+        self._updated_videos_and_links(all_records=enabled_records)
+
+    def _remove_deleted(
+        self, all_records: list[YoutubeObj]
+    ) -> list[Video | DeletedYoutubeObj]:
+        """Marks deleted videos or playlists as such and removes
+
+        Parameters
+        ----------
+        all_records: A list of YoutubeObj instances representing
+        playlists or videos to update.
+        """
 
     def _updated_videos_and_links(
         self, all_records: list[YoutubeObj]
-    ) -> list[Video | DeletedVideo]:
+    ) -> list[Video | DeletedYoutubeObj]:
         """Update the 'videos' related tables with the provided records.
 
         Parameters
@@ -121,7 +132,9 @@ class LocalDBRepository:
             return []
 
         videos = [
-            video for video in all_records if isinstance(video, (Video, DeletedVideo))
+            video
+            for video in all_records
+            if isinstance(video, (Video, DeletedYoutubeObj))
         ]
         if not videos:
             return []
@@ -169,7 +182,7 @@ class LocalDBRepository:
                 video_id=record.id, playlist_id=record.playlist_id
             ).model_dump()
             for record in all_records
-            if isinstance(record, (Video, DeletedVideo))
+            if isinstance(record, (Video, DeletedYoutubeObj))
             and record.playlist_id is not None
         ]
         if entries_records:
@@ -193,6 +206,13 @@ class LocalDBRepository:
         """
         if not all_records:
             return []
+
+        disabled_playlists = [
+            {"id": deleted_obj.id, "enabled": False}
+            for deleted_obj in all_records
+            if isinstance(deleted_obj, DeletedYoutubeObj) and deleted_obj.is_playlist()
+        ]
+        self._update_table("playlists", records=disabled_playlists)
 
         playlists = [
             playlist for playlist in all_records if isinstance(playlist, Playlist)
@@ -243,7 +263,8 @@ class LocalDBRepository:
         deleted_videos: list[dict[str, Any]] = [
             {"id": video.id, "deleted": 1, "downloaded": 1}
             for video in all_videos
-            if isinstance(video, DeletedVideo) and video.id in downloaded_previously
+            if isinstance(video, DeletedYoutubeObj)
+            and video.id in downloaded_previously
         ]
         self._update_table(table_name="videos", records=deleted_videos)
         self.log(f"Updated {len(deleted_videos)} video(s)")

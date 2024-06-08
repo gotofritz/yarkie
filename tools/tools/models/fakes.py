@@ -10,7 +10,7 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
 from tools.data_access.local_db_repository import LocalDBRepository
-from tools.models.models import DeletedVideo, Playlist, Video
+from tools.models.models import DeletedYoutubeObj, Playlist, Video
 
 faker_instance = Faker()
 
@@ -99,7 +99,7 @@ class FakeVideoFactory(ModelFactory[Video]):
     thumbnail = Use(faker_instance.url)
 
 
-class FakeDeletedVideoFactory(ModelFactory[DeletedVideo]):
+class FakeDeletedVideoFactory(ModelFactory[DeletedYoutubeObj]):
     """
     Factory class for Video instances with mock data.
 
@@ -115,5 +115,5 @@ class FakeDeletedVideoFactory(ModelFactory[DeletedVideo]):
     video = FakeVideoFactory.build()
     """
 
-    __model__ = DeletedVideo
+    __model__ = DeletedYoutubeObj
     __faker__ = faker_instance

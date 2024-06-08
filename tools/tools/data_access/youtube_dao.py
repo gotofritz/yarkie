@@ -2,13 +2,12 @@
 
 """Module providing YouTube Data Access Object (DAO)."""
 
-
 from typing import Any, Callable, Optional
 
 from yt_dlp import DownloadError, YoutubeDL
 
 from tools.data_access.video_logger import SilentVideoLogger
-from tools.models.models import DeletedVideo, Playlist, Video, YoutubeObj
+from tools.models.models import DeletedYoutubeObj, Playlist, Video, YoutubeObj
 
 
 class YoutubeDAO:
@@ -65,6 +64,7 @@ class YoutubeDAO:
                 else:
                     info.extend([self._extract_video_info(video_info=extracted)])
             except DownloadError as e:
+                info.append(DeletedYoutubeObj(id=key))
                 self.log(f"Downloader error: {e}")
 
         return info
@@ -93,7 +93,7 @@ class YoutubeDAO:
 
             return Video.model_validate(video_info)
         except Exception:
-            return DeletedVideo(id=video_info["id"], playlist_id=playlist_id)
+            return DeletedYoutubeObj(id=video_info["id"], playlist_id=playlist_id)
 
 
 def youtube_dao(logger: Optional[Callable[[str], None]] = None) -> YoutubeDAO:
