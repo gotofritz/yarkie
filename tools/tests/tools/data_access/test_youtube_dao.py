@@ -5,7 +5,7 @@ from yt_dlp import DownloadError
 
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.models.fakes import FakePlaylistFactory, FakeVideoFactory
-from tools.models.models import DeletedVideo, Playlist, Video
+from tools.models.models import DeletedYoutubeObj, Playlist, Video
 
 
 @pytest.fixture()
@@ -80,7 +80,7 @@ def test_get_info_video_deleted(mock_model_validate, extract_info_mock, faker):
 
     assert len(info) == 1
     info_obj = info[0]
-    assert isinstance(info_obj, DeletedVideo)
+    assert isinstance(info_obj, DeletedYoutubeObj)
     assert info_obj.id == expected["id"]
     assert info_obj.playlist_id == expected["playlist_id"]
 
