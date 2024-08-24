@@ -117,6 +117,12 @@ class LocalDBRepository:
         all_records: A list of YoutubeObj instances representing
         playlists or videos to update.
         """
+        return [
+            record
+            for record in all_records
+            if (isinstance(record, Playlist) and record.enabled is True)
+            or (not isinstance(record, Playlist))
+        ]
 
     def _updated_videos_and_links(
         self, all_records: list[YoutubeObj]
