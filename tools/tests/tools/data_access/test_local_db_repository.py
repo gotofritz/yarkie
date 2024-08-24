@@ -199,10 +199,15 @@ def test_insert_playlists():
         + FakeDeletedVideoFactory.batch(size=1, playlist_id=None)
     )
     random.shuffle(all_records)
+    playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
+    before = len(playlists_in_db)
 
     sut.update(all_records=all_records)
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
+    after = len(playlists_in_db)
+    assert (before, after) == (1, 3)
+    assert playlists_in_db == mock_data
     assert len(playlists_in_db) == 4
 
     expected_log_messages = [

@@ -121,7 +121,7 @@ class LocalDBRepository:
             record
             for record in all_records
             if (isinstance(record, Playlist) and record.enabled is True)
-            or (isinstance(record, Video))
+            or (not isinstance(record, Playlist))
         ]
 
     def _updated_videos_and_links(
