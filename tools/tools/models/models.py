@@ -91,7 +91,7 @@ class DeletedYoutubeObj(BaseModel, extra="ignore"):
     deleted: bool = True
     last_updated: str = Field(default_factory=last_updated_factory)
 
-    def is_playlist(self):
+    def is_playlist(self) -> bool:
         """Guess whether entry is a playlist.
 
         This is a guess because this object may have been created

@@ -2,21 +2,16 @@ version: "3"
 
 vars:
   ALL: tools/ tests/
-  VENV: venv/bin
+  VENV: .venv/bin
   SOURCES: tools/
 
 tasks:
   # Task to run Bandit, a security linter for Python code
-  bandit:
-    desc: "Run Bandit for security linting"
+  ruff:
+    desc: "Run ruff"
     cmds:
-      - "{{.VENV}}/bandit {{.SOURCES}}"
-
-  # Task to lint Python code with Black (code formatter)
-  black:
-    desc: "Lint Python code with Black"
-    cmds:
-      - "{{.VENV}}/black {{.ALL}}"
+      - "{{.VENV}}/ruff check {{.SOURCES}}"
+      - "{{.VENV}}/ruff format {{.SOURCES}}"
 
   # Task to open the latest coverage report in a web browser
   coverage:
@@ -24,27 +19,12 @@ tasks:
     cmds:
       - open tests/coverage/index.html
 
-  # Task to lint Python code with Flake8
-  flake8:
-    desc: "Lint Python code with Flake8"
-    cmds:
-      - "{{.VENV}}/flake8 {{.ALL}}"
-
-  # Task to sort imports in Python code using isort
-  isort:
-    desc: "Sort imports"
-    cmds:
-      - "{{.VENV}}/isort {{.ALL}}"
-
   # Task to run all linting tasks (isort, black, mypy, flake8, bandit)
   lint:
     desc: "Run all linting tasks"
     deps:
-      - isort
-      - black
+      - ruff
       - mypy
-      - flake8
-      - bandit
 
   # Task to run MyPy for static type checking on the source code
   mypy:

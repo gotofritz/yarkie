@@ -1,6 +1,7 @@
 # tools/commands/playlist/main.py
 
 """Collect all playlist commands."""
+
 import click
 
 from tools.commands.playlist.refresh import refresh

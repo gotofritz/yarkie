@@ -2,16 +2,52 @@
 name = "tools"
 version = "0.1.1"
 description = "Helpers and set up scripts for yarkie"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "aiohttp>=3.11.8",
+    "click>=8.1.7",
+    "pandas>=2.2.3",
+    "pydantic>=2.10.2",
+    "requests>=2.32.3",
+    "sqlite-utils>=3.38",
+    "yt-dlp == 2024.11.27.232921.dev0",
+]
+
+[dependency-groups]
+dev = [
+    "faker>=33.1.0",
+    "mypy>=1.13.0",
+    "pillow>=11.0.0",
+    "polyfactory>=2.18.1",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.1",
+    "types-aiofiles>=24.1.0.20240626",
+]
 
 
 [project.scripts]
 # Entry point for the command-line interface
-tools = "cli:cli"
+tools = "tools.__main__:cli"
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.black]
-# Black code formatter settings
+[tool.ruff]
 line-length = 88
-target-version = ['py312']
-include = '\.py?$'
+target-version = 'py313'
+
+[tool.ruff.lint]
+ignore = ["E731"]
+fixable = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
