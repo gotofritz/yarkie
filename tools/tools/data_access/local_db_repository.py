@@ -117,12 +117,37 @@ class LocalDBRepository:
         all_records: A list of YoutubeObj instances representing
         playlists or videos to update.
         """
-        return [
-            record
-            for record in all_records
-            if (isinstance(record, Playlist) and record.enabled is True)
-            or (not isinstance(record, Playlist))
-        ]
+        filtered = []
+        deleted_playlists = []
+        deleted_videos = []
+
+        # sort videos in one of the three lists above
+        for record in all_records:
+            if isinstance(record, DeletedYoutubeObj):
+                if record.is_playlist():
+                    deleted_playlists.append({"id": record.id, "enabled": False})
+                else:
+                    deleted_videos.append({"id": record.id, "deleted": True})
+            elif isinstance(record, Playlist) and not record.enabled:
+                deleted_playlists.append({"id": record.id, "enabled": False})
+            elif isinstance(record, Video) and record.deleted:
+                print(f"ADDING {record.id} to videos, because Video.deleted")
+                deleted_videos.append({"id": record.id, "deleted": True})
+            else:
+                filtered.append(record)
+
+        if deleted_playlists:
+            self._update_table("playlists", records=deleted_playlists)
+        else:
+            self.log("No playlist were disabled")
+
+        if deleted_videos:
+            self.log(f"Disabling {len(deleted_videos)} videos")
+            self._update_table("videos", records=deleted_videos)
+        else:
+            self.log("No videos were disabled or deleted")
+
+        return filtered
 
     def _updated_videos_and_links(
         self, all_records: list[YoutubeObj]
@@ -137,13 +162,13 @@ class LocalDBRepository:
         if not all_records:
             return []
 
-        videos = [
-            video
-            for video in all_records
-            if isinstance(video, (Video, DeletedYoutubeObj))
-        ]
+        videos = [video for video in all_records if isinstance(video, Video)]
+
         if not videos:
+            self.log("No video to process")
             return []
+
+        self.log(f"{len(videos)} videos to process")
 
         downloaded_flags = self._table_as_map(table_name="videos", field="downloaded")
 
@@ -176,12 +201,12 @@ class LocalDBRepository:
                     "downloaded": 0
                 }
                 new_videos.append(to_append)
-
         if new_videos:
             self._update_table("videos", records=new_videos)
+            self.log(f"Inserted {len(new_videos)} new videos(s)")
         if updated_videos:
             self._update_table("videos", records=updated_videos)
-        self.log(f"Updated {len(new_videos) + len(updated_videos)} videos(s)")
+            self.log(f"Updated {len(updated_videos)} videos(s)")
 
         entries_records = [
             PlaylistEntry(
@@ -197,7 +222,7 @@ class LocalDBRepository:
                 records=entries_records,
                 pk=["playlist_id", "video_id"],
             )
-        self.log(f"Updated {len(entries_records)} videos/playlist link(s)")
+            self.log(f"Updated {len(entries_records)} videos/playlist link(s)")
         return videos
 
     def _updated_playlists(self, all_records: list[YoutubeObj]) -> list[Playlist]:
@@ -213,22 +238,17 @@ class LocalDBRepository:
         if not all_records:
             return []
 
-        disabled_playlists = [
-            {"id": deleted_obj.id, "enabled": False}
-            for deleted_obj in all_records
-            if isinstance(deleted_obj, DeletedYoutubeObj) and deleted_obj.is_playlist()
-        ]
-        self._update_table("playlists", records=disabled_playlists)
-
         playlists = [
             playlist for playlist in all_records if isinstance(playlist, Playlist)
         ]
+
         if not playlists:
+            self.log("No playlists to process")
             return []
 
-        playlist_records = [record.model_dump() for record in playlists]
-        if playlist_records:
-            self._update_table("playlists", records=playlist_records)
+        playlist_records = [playlist.model_dump() for playlist in playlists]
+
+        self._update_table("playlists", records=playlist_records)
 
         return playlists
 
@@ -315,13 +335,16 @@ class LocalDBRepository:
         the first time or need to be reattempted.
         """
         downloaded_flags = self._table_as_map(table_name="videos", field="downloaded")
+        deleted_flags = self._table_as_map(table_name="videos", field="deleted")
 
         # either video is not in the db, or it is but with flag set to
         # false
         needs_download: list[Video] = [
             record
             for record in all_records
-            if isinstance(record, Video) and downloaded_flags.get(record.id, 0) == 0
+            if isinstance(record, Video)
+            and downloaded_flags.get(record.id, 0) == 0
+            and deleted_flags.get(record.id, 0) == 0
         ]
 
         return needs_download

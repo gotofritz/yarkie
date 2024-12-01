@@ -42,6 +42,9 @@ class YoutubeDAO:
                 with YoutubeDL(self.ydl_settings) as ydl:
                     extracted = ydl.extract_info(key, download=False)
 
+                    print(extracted["title"])
+                    print()
+
                 if "entries" in extracted:
                     # it's a playlist
                     info.extend(
@@ -65,7 +68,7 @@ class YoutubeDAO:
                     info.extend([self._extract_video_info(video_info=extracted)])
             except DownloadError as e:
                 info.append(DeletedYoutubeObj(id=key))
-                self.log(f"Downloader error: {e}")
+                self.log(f"Downloader error for playlist/video {key}: {e}")
 
         return info
 
@@ -92,7 +95,8 @@ class YoutubeDAO:
                     video_info[field] = 0
 
             return Video.model_validate(video_info)
-        except Exception:
+        except Exception as e:
+            self.log(f"_extract_video_info error for video {video_info['id']}: {e}")
             return DeletedYoutubeObj(id=video_info["id"], playlist_id=playlist_id)
 
 

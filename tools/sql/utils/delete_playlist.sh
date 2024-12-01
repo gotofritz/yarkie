@@ -8,7 +8,9 @@ fi
 for PLAYLIST_ID in "$@"; do
     echo "Processing PLAYLIST_ID: $PLAYLIST_ID"
 
-    sqlite-utils query ~/.yarkie/db/yarkie.db "UPDATE playlists set enabled=0 WHERE id='$PLAYLIST_ID'"
+    sqlite-utils query ~/.yarkie/db/yarkie.db "DELETE FROM playlist_entries WHERE PLAYLIST_ID='$PLAYLIST_ID'"
+
+    sqlite-utils query ~/.yarkie/db/yarkie.db "DELETE FROM playlists WHERE id='$PLAYLIST_ID'"
 
     echo "Finished processing $PLAYLIST_ID"
     echo

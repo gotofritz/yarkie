@@ -63,8 +63,8 @@ class Video(BaseModel, extra="ignore"):
     comment_count: int = 0
     like_count: int = 0
     upload_date: str = Field(default_factory=last_updated_factory)
-    width: int
-    height: int
+    width: int = 0
+    height: int = 0
     video_file: str = ""
     thumbnail: str = ""
     deleted: bool = False
@@ -97,7 +97,7 @@ class DeletedYoutubeObj(BaseModel, extra="ignore"):
         This is a guess because this object may have been created
         without actually connecting to YouTube.
         """
-        return len(self.id) > 10
+        return self.id[:3] == "PLZ" and len(self.id) > 12
 
 
 YoutubeObj: TypeAlias = Playlist | Video | DeletedYoutubeObj
