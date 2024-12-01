@@ -45,7 +45,11 @@ def test_default_db(faker):
 def test_update_happy_path():
     """Update multiple playlists passed alongside other data."""
     playlists = FakePlaylistFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(playlists=playlists)
+    mock_data = FakeDBFactory.build_json(
+        playlists=playlists,
+        # videos are only needed so that the table is created
+        videos=FakeVideoFactory.build(),
+    )
 
     mock_logger = Mock()
     sut = LocalDBRepository(data=mock_data, logger=mock_logger)
@@ -68,7 +72,7 @@ def test_update_happy_path():
     ]
     all_records = (
         updated_playlists
-        + FakeVideoFactory.batch(size=1, playlist_id=playlists[0].id)
+        + FakeVideoFactory.batch(size=1, playlist_id=playlists[0].id, deleted=0)
         + FakeDeletedVideoFactory.batch(size=1, playlist_id=playlists[0].id)
     )
     random.shuffle(all_records)
@@ -95,15 +99,19 @@ def test_update_happy_path():
         assert original.title != as_obj.title
 
     expected_log_messages = [
+        "No playlist were disabled",
+        "Disabling 1 videos",
         # delete statement runs for both playlists, regardless of whether
         # there are entries for those playlists
         "Removed links to videos (if any) for 2 playlists",
         # there's one Video and one DeletedVideo in our mock
-        "Updated 2 videos(s)",
+        "1 videos to process",
+        "Inserted 1 new videos(s)",
         # we made sure the video mocks have a playlist_id, so both have
         # links which are updated
-        "Updated 2 videos/playlist link(s)",
+        "Updated 1 videos/playlist link(s)",
     ]
+
     assert mock_logger.call_count == len(expected_log_messages)
     mock_calls = mock_logger.call_args_list
 
@@ -121,7 +129,15 @@ def test_update_empty():
 
     sut.update(all_records=[])
 
-    assert mock_logger.call_count == 0
+    expected_log_messages = [
+        "No playlist were disabled",
+        "No videos were disabled or deleted",
+    ]
+
+    assert mock_logger.call_count == len(expected_log_messages)
+
+    for i, msg in enumerate(expected_log_messages):
+        assert mock_logger.call_args_list[i][0][0] == msg
 
 
 def test_update_no_video_data():
@@ -171,10 +187,13 @@ def test_update_no_video_data():
         assert original.title != as_obj.title
 
     expected_log_messages = [
+        "No playlist were disabled",
+        "No videos were disabled or deleted",
         # delete statement runs for both playlists, regardless of whether
         # there are entries for those playlists
         "Removed links to videos (if any) for 2 playlists",
         # there are no videos
+        "No video to process",
     ]
     assert mock_logger.call_count == len(expected_log_messages)
     mock_calls = mock_logger.call_args_list
@@ -186,16 +205,20 @@ def test_update_no_video_data():
 def test_insert_playlists():
     """Insert playlists if no id matches."""
     playlists = FakePlaylistFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(playlists=playlists)
+    mock_data_as_str = FakeDBFactory.build_json(
+        playlists=playlists,
+        # videos are only needed so that the table is created
+        videos=FakeVideoFactory.build(),
+    )
 
     mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+    sut = LocalDBRepository(data=mock_data_as_str, logger=mock_logger)
 
     updated_playlists = FakePlaylistFactory.batch(size=2)
 
     all_records = (
         updated_playlists
-        + FakeVideoFactory.batch(size=1, playlist_id=None)
+        + FakeVideoFactory.batch(size=1, playlist_id=None, deleted=0)
         + FakeDeletedVideoFactory.batch(size=1, playlist_id=None)
     )
     random.shuffle(all_records)
@@ -206,11 +229,11 @@ def test_insert_playlists():
 
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
     after = len(playlists_in_db)
-    assert (before, after) == (1, 3)
-    assert playlists_in_db == mock_data
-    assert len(playlists_in_db) == 4
+    assert (before, after) == (2, 4)
 
     expected_log_messages = [
+        "No playlist were disabled",
+        "Disabling 1 videos",
         # delete statement runs for both playlists, regardless of whether
         # there are entries for those playlists
         "Removed links to videos (if any) for 2 playlists",
@@ -258,12 +281,12 @@ def test_pass_needs_download(faker):
     """A filter that passes videos that need downloading."""
     initial_videos = [
         FakeVideoFactory.build(downloaded=1),
-        FakeVideoFactory.build(downloaded=0),
+        FakeVideoFactory.build(downloaded=0, deleted=0),
         FakeVideoFactory.build(downloaded=1),
         FakeVideoFactory.build(downloaded=1),
-        FakeVideoFactory.build(downloaded=0),
-        FakeVideoFactory.build(downloaded=0),
-        FakeVideoFactory.build(downloaded=0),
+        FakeVideoFactory.build(downloaded=0, deleted=1),
+        FakeVideoFactory.build(downloaded=0, deleted=0),
+        FakeVideoFactory.build(downloaded=0, deleted=0),
         FakeVideoFactory.build(downloaded=1),
     ]
     mock_data = FakeDBFactory.build_json(videos=initial_videos)
@@ -289,8 +312,8 @@ def test_pass_needs_download(faker):
         FakeVideoFactory.build(downloaded=0, id=initial_videos[1].id),
         # yes
         FakeVideoFactory.build(downloaded=0),
-        # yes
-        FakeVideoFactory.build(downloaded=0),
+        # no - deleted is 1
+        FakeVideoFactory.build(downloaded=0, deleted=1),
         # yes
         FakeVideoFactory.build(downloaded=0, id=initial_videos[4].id),
         FakeVideoFactory.build(downloaded=0, id=initial_videos[5].id),
@@ -298,7 +321,7 @@ def test_pass_needs_download(faker):
         FakeVideoFactory.build(downloaded=0, id=initial_videos[7].id),
     ]
     need_download = sut.pass_needs_download(all_records=records)
-    assert len(need_download) == 6
+    assert len(need_download) == 5
 
 
 def test_downloaded_video(faker):

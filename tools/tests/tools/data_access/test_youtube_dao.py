@@ -31,9 +31,10 @@ def test_get_info_with_downloader_error(extract_info_mock, faker):
 
     info = sut.get_info((faker.uuid4(), expected[1]["id"]))
 
-    assert len(info) == 1
-    assert isinstance(info[0], Video)
-    assert info[0].id == expected[1]["id"]
+    assert len(info) == 2
+    assert isinstance(info[0], DeletedYoutubeObj)
+    assert isinstance(info[1], Video)
+    assert info[1].id == expected[1]["id"]
 
 
 def test_get_info_video_happy_path(extract_info_mock, faker):

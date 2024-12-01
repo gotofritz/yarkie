@@ -1,6 +1,7 @@
 # tools/cli.py
 
 """Define the main entry point of the program."""
+
 import click
 
 from tools.commands.playlist.main import playlist

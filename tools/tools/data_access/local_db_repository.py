@@ -107,9 +107,7 @@ class LocalDBRepository:
         self._clear_playlist_links(playlist_records=playlists)
         self._updated_videos_and_links(all_records=enabled_records)
 
-    def _remove_deleted(
-        self, all_records: list[YoutubeObj]
-    ) -> list[Video | DeletedYoutubeObj]:
+    def _remove_deleted(self, all_records: list[YoutubeObj]) -> list[YoutubeObj]:
         """Marks deleted videos or playlists as such and removes
 
         Parameters
@@ -117,7 +115,7 @@ class LocalDBRepository:
         all_records: A list of YoutubeObj instances representing
         playlists or videos to update.
         """
-        filtered = []
+        filtered: list[YoutubeObj] = []
         deleted_playlists = []
         deleted_videos = []
 
@@ -149,9 +147,7 @@ class LocalDBRepository:
 
         return filtered
 
-    def _updated_videos_and_links(
-        self, all_records: list[YoutubeObj]
-    ) -> list[Video | DeletedYoutubeObj]:
+    def _updated_videos_and_links(self, all_records: list[YoutubeObj]) -> list[Video]:
         """Update the 'videos' related tables with the provided records.
 
         Parameters
