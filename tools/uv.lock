@@ -640,7 +640,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.10.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sqlite-utils", specifier = ">=3.38" },
-    { name = "yt-dlp", specifier = "==2024.11.27.232921.dev0" },
+    { name = "yt-dlp", specifier = "==2024.12.26.232815.dev0" },
 ]
 
 [package.metadata.requires-dev]
@@ -724,9 +724,9 @@ wheels = [
 
 [[package]]
 name = "yt-dlp"
-version = "2024.11.27.232921.dev0"
+version = "2024.12.26.232815.dev0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/43/5e/815af3f52049afae11bd35c5d617a73ebb329a2f78a06d110e0b25b17ccb/yt_dlp-2024.11.27.232921.dev0.tar.gz", hash = "sha256:31e3bbf18b327c26d477ba93a5d6020bc74a383df55d12cfaa1c327db5b958c7", size = 2910253 }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/4e/4d00460da342717080f3b95989ef3561aacc11507d0a92a557e46d4bebe0/yt_dlp-2024.12.26.232815.dev0.tar.gz", hash = "sha256:29e1b64c9dd1f12c74b0482f635732abd9fc64e12ea8d3375ab6b23c662d9640", size = 2915567 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/39/8a2c6e79eb871ecd93443db8e03fea5115e1372fd0266ec740121d3d9daf/yt_dlp-2024.11.27.232921.dev0-py3-none-any.whl", hash = "sha256:f7f4a408cf856b037ac75b399b49a374dc2fcb7f94b5538cf5d59e637e0f3611", size = 3174404 },
+    { url = "https://files.pythonhosted.org/packages/e2/ec/337b094dd9833d701a85d11518104a19d40848cbfa8c8c747d221fd280a5/yt_dlp-2024.12.26.232815.dev0-py3-none-any.whl", hash = "sha256:9f39364871518a8aabf2b5e7a7279b370e7e8e74c1599de1afe1a0c968487132", size = 3177056 },
 ]

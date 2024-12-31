@@ -11,7 +11,7 @@ dependencies = [
     "pydantic>=2.10.2",
     "requests>=2.32.3",
     "sqlite-utils>=3.38",
-    "yt-dlp == 2024.11.27.232921.dev0",
+    "yt-dlp == 2024.12.26.232815.dev0",
 ]
 
 [dependency-groups]
