@@ -184,9 +184,6 @@ class LocalDBRepository:
                         "id",
                         "title",
                         "description",
-                        "view_count",
-                        "comment_count",
-                        "like_count",
                     }
                 )
                 updated_videos.append(to_append)

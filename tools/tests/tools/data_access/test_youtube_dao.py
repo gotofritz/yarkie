@@ -20,12 +20,7 @@ def test_get_info_with_downloader_error(extract_info_mock, faker):
     sut = YoutubeDAO()
     expected = [
         DownloadError(msg="ouch"),
-        FakeVideoFactory.build(
-            comment_count=faker.pyint(min_value=2, max_value=10),
-            like_count=faker.pyint(min_value=4, max_value=10),
-            view_count=faker.pyint(min_value=8, max_value=10),
-            size=2,
-        ).model_dump(),
+        FakeVideoFactory.build(size=2).model_dump(),
     ]
     extract_info_mock.side_effect = expected
 
@@ -40,15 +35,7 @@ def test_get_info_with_downloader_error(extract_info_mock, faker):
 def test_get_info_video_happy_path(extract_info_mock, faker):
     """Get information for single videos with counts."""
     sut = YoutubeDAO()
-    expected = [
-        video.model_dump()
-        for video in FakeVideoFactory.batch(
-            comment_count=faker.pyint(min_value=2, max_value=10),
-            like_count=faker.pyint(min_value=4, max_value=10),
-            view_count=faker.pyint(min_value=8, max_value=10),
-            size=2,
-        )
-    ]
+    expected = [video.model_dump() for video in FakeVideoFactory.batch(size=2)]
     extract_info_mock.side_effect = expected
 
     info = sut.get_info(
@@ -62,9 +49,6 @@ def test_get_info_video_happy_path(extract_info_mock, faker):
     for i in range(len(info)):
         assert isinstance(info[i], Video)
         assert info[i].id == expected[i]["id"]
-        assert info[i].comment_count > 1
-        assert info[i].like_count > 3
-        assert info[i].view_count > 7
 
 
 @patch("tools.data_access.youtube_dao.Video.model_validate")
@@ -90,20 +74,12 @@ def test_get_info_video_no_counts(extract_info_mock, faker):
     """Get information for a single video without counts."""
     sut = YoutubeDAO()
     expected = FakeVideoFactory.build().model_dump()
-    # the info coming from YT is not limited by our pydantic model.
-    # These three fields in particular are often problematic.
-    expected["comment_count"] = None
-    del expected["like_count"]
-    del expected["view_count"]
     extract_info_mock.return_value = expected
 
     info = sut.get_info((expected["id"],))
 
     assert len(info) == 1
     assert info[0].id == expected["id"]
-    assert info[0].comment_count == 0
-    assert info[0].like_count == 0
-    assert info[0].view_count == 0
 
 
 def test_get_info_playlist_happy_path(extract_info_mock, faker):

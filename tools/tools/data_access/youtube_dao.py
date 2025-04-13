@@ -89,10 +89,6 @@ class YoutubeDAO:
         """
         try:
             video_info["playlist_id"] = playlist_id
-            # TODO: this should somehow happen in Video.model_validate
-            for field in ["comment_count", "like_count", "view_count"]:
-                if field not in video_info or video_info[field] is None:
-                    video_info[field] = 0
 
             return Video.model_validate(video_info)
         except Exception as e:

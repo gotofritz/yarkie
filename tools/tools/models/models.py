@@ -32,25 +32,35 @@ class Video(BaseModel, extra="ignore"):
     """
     Data structure for basic rows of Videos table in DB.
 
-    Attributes: - id: Unique identifier for the video (cannot be changed
-    as it comes from DB).  - playlist_id: Identifier linking the video
-    to a specific playlist.  - title: Title of the video.  -
-    description: Optional description of the video.  - uploader:
-    Uploader or creator of the video.  - duration: Duration of the
-    video.  - view_count: Number of views for the video.  -
-    comment_count: Number of comments on the video.  - like_count:
-    Number of likes received by the video.  - upload_date: Timestamp
-    indicating the upload date (default is the current
-                   timestamp).
+    Attributes:
+    ----------
+    - id: Unique identifier for the video (cannot be changed
+    as it comes from DB).
+
+    - playlist_id: Identifier linking the video
+    to a specific playlist.
+
+    - title: Title of the video.
+
+    - description: Optional description of the video.
+
+    - uploader: Uploader or creator of the video.
+
+    - duration: Duration of the video timestamp.
+
     - width: Width of the video.
+
     - height: Height of the video.
+
     - video_file: File path or URL of the video.
+
     - thumbnail: File path or URL of the video thumbnail.
+
     - deleted: Boolean indicating whether the video is marked as
-      deleted.
-    - last_updated: Timestamp indicating the last update time (default
-      is the current
-                    timestamp).
+    deleted.
+
+    - last_updated: Timestamp indicating the last update time
+        (default is the current timestamp).
     """
 
     id: str  # noqa: A003
@@ -59,9 +69,6 @@ class Video(BaseModel, extra="ignore"):
     description: str | None = None
     uploader: str | None = None
     duration: float
-    view_count: int = 0
-    comment_count: int = 0
-    like_count: int = 0
     upload_date: str = Field(default_factory=last_updated_factory)
     width: int = 0
     height: int = 0
