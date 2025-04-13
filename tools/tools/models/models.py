@@ -24,7 +24,7 @@ class Playlist(BaseModel, extra="ignore"):
     id: str  # noqa: A003
     title: str
     description: str | None = None
-    last_updated: str = Field(default_factory=last_updated_factory)
+    last_updated: datetime = Field(default_factory=datetime.now)
     enabled: bool = True
 
 
@@ -76,7 +76,7 @@ class Video(BaseModel, extra="ignore"):
     thumbnail: str = ""
     deleted: bool = False
     downloaded: bool = False
-    last_updated: str = Field(default_factory=last_updated_factory)
+    last_updated: datetime = Field(default_factory=datetime.now)
 
 
 class DeletedYoutubeObj(BaseModel, extra="ignore"):
@@ -96,7 +96,7 @@ class DeletedYoutubeObj(BaseModel, extra="ignore"):
     id: str  # noqa: A003 # cannot be changed as it comes from DB
     playlist_id: str | None = None
     deleted: bool = True
-    last_updated: str = Field(default_factory=last_updated_factory)
+    last_updated: datetime = Field(default_factory=datetime.now)
 
     def is_playlist(self) -> bool:
         """Guess whether entry is a playlist.
@@ -121,3 +121,31 @@ class PlaylistEntry(BaseModel):
 
     video_id: str
     playlist_id: str
+
+
+class DiscogsArtist(BaseModel):
+    id: int  # noqa: A003
+    name: str
+    profile: str | None = None
+    uri: str
+    last_updated: datetime = Field(default_factory=datetime.now)
+
+
+class DiscogsRelease(BaseModel):
+    id: int  # noqa: A003
+    title: str
+    country: str
+    genres: list[str] = Field(default_factory=list)
+    styles: list[str] = Field(default_factory=list)
+    released: int
+    uri: str
+    last_updated: datetime = Field(default_factory=datetime.now)
+
+
+class DiscogsTrack(BaseModel):
+    id: int  # noqa: A003
+    release_id: int
+    title: str
+    duration: str | None = None
+    position: str | None = None
+    type_: str | None = None
