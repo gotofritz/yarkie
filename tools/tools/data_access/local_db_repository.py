@@ -3,19 +3,33 @@
 """Provide a DataRepository class for managing db connection."""
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeAlias, cast
 
+from sqlalchemy import and_, create_engine, insert, update
+from sqlalchemy.orm import Session
 from sqlite_utils import Database
 from sqlite_utils.db import Table
 
+from tools.config.app_config import YarkieSettings
 from tools.models.models import (
     DeletedYoutubeObj,
+    DiscogsArtist,
+    DiscogsRelease,
+    DiscogsTrack,
     Playlist,
     PlaylistEntry,
     Video,
     YoutubeObj,
     last_updated_factory,
+)
+from tools.orm.schema import (
+    DiscogsArtistTable,
+    DiscogsReleaseTable,
+    DiscogsTrackTable,
+    ReleaseArtistsTable,
+    VideosTable,
 )
 from tools.settings import DB_PATH
 
@@ -37,7 +51,10 @@ class LocalDBRepository:
     """
 
     def __init__(
-        self, logger: Optional[Callable[[str], None]] = None, data: DBData | None = None
+        self,
+        logger: Optional[Callable[[str], None]] = None,
+        data: DBData | None = None,
+        config: Optional[YarkieSettings] = None,
     ):
         """
         Initialize the database instance.
@@ -66,6 +83,12 @@ class LocalDBRepository:
             # Using the default database file path
             self.dbpath = DB_PATH
             self.db = Database(self.dbpath)
+
+            # starting to migrate away from sqlite_utils to sqlalchemy,
+            # so we need to create the engine. Config is also part of
+            # 2.0, so if it's not there then we are not ready
+            if config:
+                self.engine = create_engine(f"sqlite:///{config.db_path}")
 
     def get_all_playlists_keys(self) -> tuple[str]:
         """Return all the playlists keys.
@@ -416,6 +439,178 @@ class LocalDBRepository:
                 },
             )
         self.log(f"{_so_many + 1} videos flagged as downloaded")
+
+    def next_without_discogs(self) -> tuple[str, list[str]] | None:
+        """
+        Get the next playlist or video that doesn't have Discogs data.
+
+        Returns:
+            list of potential search strings
+        """
+        if not hasattr(self, "_last_processed_offset"):
+            self._last_processed_offset = 0
+
+        with Session(self.engine) as session:
+            stmt = (
+                session.query(
+                    VideosTable.id,
+                    VideosTable.title,
+                    VideosTable.uploader,
+                    VideosTable.description,
+                )
+                .filter(
+                    and_(
+                        VideosTable.discogs_track_id.is_(None),
+                        VideosTable.is_tune.is_(True),
+                    )
+                )
+                .limit(1)
+                .offset(self._last_processed_offset)
+            )
+            result = session.execute(stmt).first()
+
+        if result is None:
+            self._last_processed_offset = 0
+            return None
+
+        self._last_processed_offset += 1
+
+        strings: list[str] = []
+        title = re.sub(r" \(.*?\)", "", result.title).strip()
+        strings.append(title)
+
+        if result.uploader:
+            strings.append(f"{title} - {result.uploader.replace(' - Topic', '')}")
+
+        if result.description:
+            description_lines = result.description.splitlines()
+            if len(description_lines) >= 3:
+                description = description_lines[2]
+            else:
+                description = description_lines[0][:64]
+            description = description.replace(" · ", " ")
+            if title in description:
+                strings.append(description)
+            else:
+                strings.append(f"{title} - {description}")
+
+        return [result.id, strings]
+
+    def upsert_discogs_release(self, record: DiscogsRelease) -> int:
+        with Session(self.engine) as session:
+            exists_query = session.query(
+                session.query(DiscogsReleaseTable)
+                .filter(DiscogsReleaseTable.id == record.id)
+                .exists()
+            ).scalar()
+
+            if exists_query:
+                self.log(f"Release {record.title} already in DB")
+                return record.id
+
+            insert_stmt = insert(DiscogsReleaseTable).values(
+                id=record.id,
+                title=record.title,
+                released=record.released,
+                country=record.country,
+                genre=record.genres,
+                style=record.styles,
+                uri=record.uri,
+            )
+
+            session.execute(insert_stmt)
+            session.commit()
+            return record.id
+
+    def upsert_discogs_artist(
+        self, *, role: Optional[str] = None, release_id: int, record: DiscogsArtist
+    ) -> id:
+        with Session(self.engine) as session:
+            exists_query = session.query(
+                session.query(ReleaseArtistsTable)
+                .filter(
+                    and_(
+                        ReleaseArtistsTable.release_id == release_id,
+                        ReleaseArtistsTable.artist_id == record.id,
+                    )
+                )
+                .exists()
+            ).scalar()
+
+            if exists_query:
+                self.log(f"Artist {record.name} already linked to release")
+                return record.id
+
+            exists_query = session.query(
+                session.query(DiscogsArtistTable)
+                .filter(DiscogsArtistTable.id == record.id)
+                .exists()
+            ).scalar()
+
+            name = re.sub(r" *\(.*?\)", "", record.name).strip()
+            name = re.sub(r"^the", "", name, flags=re.IGNORECASE).strip()
+
+            if not exists_query:
+                insert_stmt = insert(DiscogsArtistTable).values(
+                    id=record.id,
+                    name=name,
+                    profile=record.profile,
+                    uri=record.uri,
+                )
+                session.execute(insert_stmt)
+
+            link_stmt = insert(ReleaseArtistsTable).values(
+                release_id=release_id,
+                artist_id=record.id,
+                role=role,
+                is_main=1,
+            )
+            session.execute(link_stmt)
+            session.commit()
+            return record.id
+
+    def upsert_discogs_track(self, *, record: DiscogsTrack, video_id: str) -> int:
+        with Session(self.engine) as session:
+            track_stmt = (
+                session.query(DiscogsTrackTable.id)
+                .filter(
+                    and_(
+                        DiscogsTrackTable.title == record.title,
+                        DiscogsTrackTable.release_id == record.release_id,
+                    )
+                )
+                .limit(1)
+            )
+            result = session.execute(track_stmt).first()
+
+            if result is None:
+                insert_stmt = insert(DiscogsTrackTable).values(
+                    title=record.title,
+                    duration=record.duration,
+                    position=record.position,
+                    type_=record.type_,
+                    release_id=record.release_id,
+                )
+                result = session.execute(insert_stmt)
+                track_id = int(result.inserted_primary_key[0])
+            else:
+                self.log(f"Track {record.title} already in DB")
+                track_id = int(result[0])
+
+            update_stmt = (
+                update(VideosTable)
+                .values(discogs_track_id=track_id)
+                .where(
+                    and_(
+                        VideosTable.discogs_track_id.is_(None),
+                        VideosTable.id == video_id,
+                    )
+                )
+            )
+            result = session.execute(update_stmt)
+            session.commit()
+
+            return track_id
 
 
 def local_db_repository(

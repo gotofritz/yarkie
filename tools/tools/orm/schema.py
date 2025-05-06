@@ -10,7 +10,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class Playlists(Base):
+class PlaylistsTable(Base):
     __tablename__ = "playlists"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
@@ -23,12 +23,12 @@ class Playlists(Base):
         Boolean, nullable=False, server_default=text("1")
     )
 
-    video: Mapped[list["Videos"]] = relationship(
-        "Videos", secondary="playlist_entries", back_populates="playlist"
+    video: Mapped[list["VideosTable"]] = relationship(
+        "VideosTable", secondary="playlist_entries", back_populates="playlist"
     )
 
 
-class Videos(Base):
+class VideosTable(Base):
     __tablename__ = "videos"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
@@ -53,13 +53,17 @@ class Videos(Base):
     downloaded: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("0")
     )
-
-    playlist: Mapped[list["Playlists"]] = relationship(
-        "Playlists", secondary="playlist_entries", back_populates="video"
+    is_tune: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("1")
     )
 
+    playlist: Mapped[list["PlaylistsTable"]] = relationship(
+        "PlaylistsTable", secondary="playlist_entries", back_populates="video"
+    )
+    discogs_track = relationship("DiscogsTrackTable", back_populates="videos")
 
-class PlaylistEntries(Base):
+
+class PlaylistEntriesTable(Base):
     __tablename__ = "playlist_entries"
 
     playlist_id: Mapped[str] = mapped_column(
@@ -70,7 +74,7 @@ class PlaylistEntries(Base):
     )
 
 
-class DiscogsArtist(Base):
+class DiscogsArtistTable(Base):
     __tablename__ = "discogs_artist"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -83,11 +87,11 @@ class DiscogsArtist(Base):
 
     # Define relationships
     releases = relationship(
-        "DiscogRelease", secondary="release_artists", back_populates="artists"
+        "DiscogsReleaseTable", secondary="release_artists", back_populates="artists"
     )
 
 
-class DiscogsRelease(Base):
+class DiscogsReleaseTable(Base):
     __tablename__ = "discogs_release"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -103,15 +107,15 @@ class DiscogsRelease(Base):
 
     # Define relationships
     artists = relationship(
-        "DiscogArtist", secondary="release_artists", back_populates="releases"
+        "DiscogsArtistTable", secondary="release_artists", back_populates="releases"
     )
-    tracks = relationship("DiscogTrack", back_populates="release")
+    tracks = relationship("DiscogsTrackTable", back_populates="release")
 
 
-class DiscogsTrack(Base):
+class DiscogsTrackTable(Base):
     __tablename__ = "discogs_track"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     duration: Mapped[str] = mapped_column(Text, nullable=True)
     position: Mapped[str] = mapped_column(Text, nullable=False)
@@ -119,16 +123,16 @@ class DiscogsTrack(Base):
     release_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("discogs_release.id"), nullable=False
     )
+    last_updated: Mapped[datetime] = mapped_column(
+        Text, nullable=False, server_default=func.datetime("now", "utc")
+    )
 
     # Define relationships
-    release = relationship("DiscogRelease", back_populates="tracks")
-    artists = relationship(
-        "DiscogArtist", secondary="track_artists", back_populates="tracks"
-    )
-    videos = relationship("Video", back_populates="discogs_track")
+    release = relationship("DiscogsReleaseTable", back_populates="tracks")
+    videos = relationship("VideosTable", back_populates="discogs_track")
 
 
-class ReleaseArtists(Base):
+class ReleaseArtistsTable(Base):
     __tablename__ = "release_artists"
 
     release_id: Mapped[int] = mapped_column(

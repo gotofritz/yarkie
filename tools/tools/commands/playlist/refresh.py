@@ -5,10 +5,9 @@
 import click
 
 from tools.services.archiver_service import ArchiverService
-from tools.settings import CONTEXT_SETTINGS
 
 
-@click.command(context_settings=CONTEXT_SETTINGS)
+@click.command()
 @click.argument("keys", type=click.STRING, nargs=-1)
 @click.pass_context
 def refresh(ctx: click.Context, keys: tuple[str] | None) -> None:

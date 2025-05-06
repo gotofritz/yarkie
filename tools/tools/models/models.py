@@ -3,7 +3,7 @@
 """Provide Pydantic models for DB table structure."""
 
 from datetime import datetime
-from typing import Callable, TypeAlias
+from typing import Callable, Optional, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -143,7 +143,7 @@ class DiscogsRelease(BaseModel):
 
 
 class DiscogsTrack(BaseModel):
-    id: int  # noqa: A003
+    id: Optional[int] = Field(default=None)  # noqa: A003
     release_id: int
     title: str
     duration: str | None = None
