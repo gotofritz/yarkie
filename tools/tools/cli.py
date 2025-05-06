@@ -4,12 +4,15 @@
 
 import click
 
+from tools.commands.discogs.main import discogs
 from tools.commands.playlist.main import playlist
 from tools.data_access.local_db_repository import DBData, LocalDBRepository
-from tools.settings import CONTEXT_SETTINGS
 
 
-@click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
+@click.group(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    invoke_without_command=True,
+)
 @click.version_option()
 @click.option(
     "--mock-data", default=None, help="Provide fake DB data as JSON for testing."
@@ -35,3 +38,4 @@ def cli(
 
 # Add the 'playlist' command to the CLI.
 cli.add_command(playlist)
+cli.add_command(discogs)

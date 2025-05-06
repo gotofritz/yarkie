@@ -5,10 +5,9 @@
 import click
 
 from tools.commands.playlist.refresh import refresh
-from tools.settings import CONTEXT_SETTINGS
 
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+@click.group()
 @click.pass_context
 def playlist(ctx: click.Context) -> None:
     """
