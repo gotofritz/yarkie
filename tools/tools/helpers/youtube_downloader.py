@@ -8,7 +8,7 @@ from typing import Any, Optional
 from yt_dlp import YoutubeDL, postprocessor
 
 from tools.data_access.file_repository import FileRepository, file_repository
-from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
+from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.video_logger import SilentVideoLogger
 from tools.helpers.hooks import downloading_hook
 from tools.settings import DOWNLOAD_PATH, VIDEO_EXT
@@ -51,8 +51,8 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
 
 def youtube_downloader(
     keys: list[str],
+    local_db: LocalDBRepository,
     file_repo: Optional[FileRepository] = None,
-    local_db: Optional[LocalDBRepository] = None,
 ) -> None:
     """Download videos from YouTube using provided keys.
 
@@ -65,8 +65,6 @@ def youtube_downloader(
     """
     if not file_repo:
         file_repo = file_repository()
-    if not local_db:
-        local_db = local_db_repository()
 
     with YoutubeDL(ydl_settings) as ydl:
         ydl.add_post_processor(

@@ -4,7 +4,8 @@ from unittest.mock import MagicMock, Mock
 
 from sqlite_utils import Database
 
-from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
+from tools.data_access.local_db_repository import LocalDBRepository
+from tools.data_access.sql_client import SQLClient
 from tools.models.fakes import (
     FakeDBFactory,
     FakeDeletedVideoFactory,
@@ -429,7 +430,7 @@ def test_file_repository_function():
     """Factory function for FileRepository."""
     mock = MagicMock()
 
-    sut = local_db_repository(logger=mock)
+    sut = LocalDBRepository(logger=mock, sql_client=MagicMock(spec=SQLClient))
     assert isinstance(sut, LocalDBRepository)
     assert isinstance(sut.db, Database)
     assert not is_db_in_memory(sut.db)

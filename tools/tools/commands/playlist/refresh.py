@@ -4,6 +4,7 @@
 
 import click
 
+from tools.app_context import AppContext
 from tools.services.archiver_service import ArchiverService
 
 
@@ -17,6 +18,7 @@ def refresh(ctx: click.Context, keys: tuple[str] | None) -> None:
     Args:
         - key: The identifier of the playlist to refresh.
     """
-    archiver = ArchiverService(logger=click.echo)
+    app_context: AppContext = ctx.obj
+    archiver = ArchiverService(logger=app_context.logger, local_db=app_context.db)
     archiver.refresh_playlist(keys=keys)
     click.echo("Finished")

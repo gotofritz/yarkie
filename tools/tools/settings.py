@@ -2,9 +2,10 @@
 
 """Constants used across the application."""
 
+# TODO: replace with app_config
+
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_ROOT = Path().home() / ".yarkie"
 DOWNLOAD_PATH = DATA_ROOT / "tmp"
 DB_PATH = DATA_ROOT / "db" / "yarkie.db"

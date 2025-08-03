@@ -1,18 +1,14 @@
-# tools/data_access/local_db_repository.py
-
-"""Provide a DataRepository class for managing db connection."""
-
-import json
 import re
-from pathlib import Path
-from typing import Any, Callable, Optional, TypeAlias, cast
+from logging import Logger, getLogger
+from typing import Any, Optional, TypeAlias
 
-from sqlalchemy import and_, create_engine, insert, update
+from sqlalchemy import and_, delete, insert, select, update
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from sqlite_utils import Database
-from sqlite_utils.db import Table
 
 from tools.config.app_config import YarkieSettings
+from tools.data_access.sql_client import SQLClient
 from tools.models.models import (
     DeletedYoutubeObj,
     DiscogsArtist,
@@ -28,10 +24,11 @@ from tools.orm.schema import (
     DiscogsArtistTable,
     DiscogsReleaseTable,
     DiscogsTrackTable,
+    PlaylistEntriesTable,
+    PlaylistsTable,
     ReleaseArtistsTable,
     VideosTable,
 )
-from tools.settings import DB_PATH
 
 DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
@@ -42,75 +39,72 @@ class LocalDBRepository:
 
     This class provides methods for initializing the database, updating
     playlists and videos, and handling download-related operations.
-
-
-    Attributes
-    ----------
-    db: The database instance.
-    dbpath: The path to the database file (None if in-memory).
     """
 
     def __init__(
         self,
-        logger: Optional[Callable[[str], None]] = None,
-        data: DBData | None = None,
+        sql_client: SQLClient,
+        logger: Optional[Logger] = None,
         config: Optional[YarkieSettings] = None,
     ):
         """
         Initialize the database instance.
 
-        If initialization data is provided, it creates an in-memory
-        database for testing; otherwise, it reads from the default file.
-
-
         Parameters
         ----------
-        data: If provided, the database is meant for testing, and this
-        is interpreted as the initialization data in JSON format.
+        sql_client: An instance of SQLClient to manage database connections
+        logger: An optional logger function for logging messages
+        config: An optional configuration object for settings
         """
-        self.db: Database
-        self.dbpath: Path | None = None
-        self.log = logger or (lambda _: None)
-        inited = False
-        if isinstance(data, str):
-            parsed = json.loads(data)
-            if isinstance(parsed, dict):
-                # Creating an in-memory database for testing
-                self.db = Database(memory=True)
-                self._load_data(parsed)
-                inited = True
-        if not inited:
-            # Using the default database file path
-            self.dbpath = DB_PATH
-            self.db = Database(self.dbpath)
+        self.sql_client = sql_client
+        self.l = logger or getLogger(__name__)
+        self.config = config
+        if not hasattr(self, "_last_processed_offset"):
+            self._last_processed_offset = 0
 
-            # starting to migrate away from sqlite_utils to sqlalchemy,
-            # so we need to create the engine. Config is also part of
-            # 2.0, so if it's not there then we are not ready
-            if config:
-                self.engine = create_engine(f"sqlite:///{config.db_path}")
-
-    def get_all_playlists_keys(self) -> tuple[str]:
+    def get_all_playlists_keys(self) -> tuple[str, ...]:
         """Return all the playlists keys.
 
-        Typically used to download all playlists if the user didn't pass
-        any.
+        Typically used to download all playlists if the user didn't pass any.
         """
-        table = cast(Table, self.db["playlists"])
-        return tuple(
-            r["id"]
-            for r in table.rows_where(
-                where="enabled = 1",
-                select="id",
-            )
-        )
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = select(PlaylistsTable.id).where(PlaylistsTable.enabled.is_(True))
+                result = session.execute(stmt)
+                playlist_ids = [row.id for row in result]
+                return tuple(playlist_ids)
+        except SQLAlchemyError as e:
+            self.l.error(f"Error retrieving playlist keys: {e}")
+            return tuple()
 
     def _load_data(self, init_data: DBData) -> None:
-        """Load data into the in-memory database. Used for testing."""
-        for table_name, data in init_data.items():
-            # Type casting to keep mypy happy
-            table = cast(Table, self.db[table_name])
-            table.insert_all(data, pk="id")
+        """Load data into the database. Used for testing."""
+        try:
+            with Session(self.sql_client.engine) as session:
+                table_class: Any
+                for table_name, data in init_data.items():
+                    if table_name == "playlists":
+                        table_class = PlaylistsTable
+                    elif table_name == "videos":
+                        table_class = VideosTable
+                    elif table_name == "playlist_entries":
+                        table_class = PlaylistEntriesTable
+                    elif table_name == "discogs_artist":
+                        table_class = DiscogsArtistTable
+                    elif table_name == "discogs_release":
+                        table_class = DiscogsReleaseTable
+                    elif table_name == "discogs_track":
+                        table_class = DiscogsTrackTable
+                    elif table_name == "release_artists":
+                        table_class = ReleaseArtistsTable
+                    else:
+                        continue
+
+                    stmt = insert(table_class).values(data)
+                    session.execute(stmt)
+                session.commit()
+        except SQLAlchemyError as e:
+            self.l.error(f"Error loading test data: {e}")
 
     def update(self, all_records: list[YoutubeObj]) -> None:
         """Update YT objects requested by users.
@@ -160,13 +154,13 @@ class LocalDBRepository:
         if deleted_playlists:
             self._update_table("playlists", records=deleted_playlists)
         else:
-            self.log("No playlist were disabled")
+            self.l.info("No playlist were disabled")
 
         if deleted_videos:
-            self.log(f"Disabling {len(deleted_videos)} videos")
+            self.l.info(f"Disabling {len(deleted_videos)} videos")
             self._update_table("videos", records=deleted_videos)
         else:
-            self.log("No videos were disabled or deleted")
+            self.l.info("No videos were disabled or deleted")
 
         return filtered
 
@@ -184,10 +178,10 @@ class LocalDBRepository:
         videos = [video for video in all_records if isinstance(video, Video)]
 
         if not videos:
-            self.log("No video to process")
+            self.l.warning("No video to process")
             return []
 
-        self.log(f"{len(videos)} videos to process")
+        self.l.info(f"{len(videos)} videos to process")
 
         downloaded_flags = self._table_as_map(table_name="videos", field="downloaded")
 
@@ -219,10 +213,10 @@ class LocalDBRepository:
                 new_videos.append(to_append)
         if new_videos:
             self._update_table("videos", records=new_videos)
-            self.log(f"Inserted {len(new_videos)} new videos(s)")
+            self.l.debug(f"Inserted {len(new_videos)} new videos(s)")
         if updated_videos:
             self._update_table("videos", records=updated_videos)
-            self.log(f"Updated {len(updated_videos)} videos(s)")
+            self.l.debug(f"Updated {len(updated_videos)} videos(s)")
 
         entries_records = [
             PlaylistEntry(
@@ -233,12 +227,12 @@ class LocalDBRepository:
             and record.playlist_id is not None
         ]
         if entries_records:
-            table = cast(Table, self.db["playlist_entries"])
-            table.upsert_all(
+            self._upsert_all(
+                "playlist_entries",
                 records=entries_records,
                 pk=["playlist_id", "video_id"],
             )
-            self.log(f"Updated {len(entries_records)} videos/playlist link(s)")
+            self.l.info(f"Updated {len(entries_records)} videos/playlist link(s)")
         return videos
 
     def _updated_playlists(self, all_records: list[YoutubeObj]) -> list[Playlist]:
@@ -259,7 +253,7 @@ class LocalDBRepository:
         ]
 
         if not playlists:
-            self.log("No playlists to process")
+            self.l.warning("No playlists to process")
             return []
 
         playlist_records = [playlist.model_dump() for playlist in playlists]
@@ -275,33 +269,34 @@ class LocalDBRepository:
 
         Parameters
         ----------
-        all_records: A list of YoutubeObj instances representing
-        playlists or videos to update.
+        playlist_records: A list of Playlist instances representing
+        playlists to clear links for.
         """
         if not playlist_records:
             return
 
-        table = cast(Table, self.db["playlist_entries"])
-        where_args = ", ".join([f'"{playlist.id}"' for playlist in playlist_records])
-        table.delete_where(
-            where=f"playlist_id IN ({where_args})",
-        )
-        self.log(
-            f"Removed links to videos (if any) for {len(playlist_records)} playlists"
-        )
+        playlist_ids = [playlist.id for playlist in playlist_records]
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = delete(PlaylistEntriesTable).where(
+                    PlaylistEntriesTable.playlist_id.in_(playlist_ids)
+                )
+                session.execute(stmt)
+                session.commit()
+                self.l.info(
+                    f"Removed links to videos (if any) for {len(playlist_records)} playlists"
+                )
+        except SQLAlchemyError as e:
+            self.l.error(f"Error clearing playlist links: {e}")
 
     def refresh_deleted_videos(self, all_videos: list[YoutubeObj]) -> None:
-        """Determine with videos were deleted and update table accordingly."""
-        # Type casting to keep mypy happy
-        table = cast(Table, self.db["videos"])
+        """Determine which videos were deleted and update table accordingly."""
+        # Get list of previously downloaded video IDs
+        downloaded_previously = set(
+            self._table_as_map(table_name="videos", field="id").keys()
+        )
 
-        # deleted_videos will be upserted, but only for convenience,
-        # because there is no `update_all` command. We don't want them
-        # to be created if not already in the DB, because by then it's
-        # too late, we won't be able to download the videos any more
-        # anyway. So we check if downloaded_previously before adding
-        # them to the delete list.
-        downloaded_previously = {row["id"] for row in table.rows_where(select="id")}
         deleted_videos: list[dict[str, Any]] = [
             {"id": video.id, "deleted": 1, "downloaded": 1}
             for video in all_videos
@@ -309,28 +304,94 @@ class LocalDBRepository:
             and video.id in downloaded_previously
         ]
         self._update_table(table_name="videos", records=deleted_videos)
-        self.log(f"Updated {len(deleted_videos)} video(s)")
+        self.l.info(f"Updated {len(deleted_videos)} video(s)")
 
     def _update_table(self, table_name: str, records: list[dict[str, Any]]) -> None:
         """Upsert records into the specified table.
 
         Parameters
         ----------
-        table: The name of the table to update.
-        records: A list of YoutubeObj instances representing records to
-        upsert.
+        table_name: The name of the table to update.
+        records: A list of dictionaries representing records to upsert.
         """
-        table = cast(Table, self.db[table_name])
+        if not records:
+            return
+
+        # Add last_updated to all records
         last_updated = {"last_updated": last_updated_factory()}
-        table.upsert_all(records=[record | last_updated for record in records], pk="id")
+        updated_records = [record | last_updated for record in records]
+
+        self._upsert_all(table_name, records=updated_records, pk="id")
+
+    def _upsert_all(
+        self, table_name: str, records: list[dict[str, Any]], pk: str | list[str]
+    ) -> None:
+        """SQLAlchemy replacement for sqlite_utils upsert_all."""
+        if not records:
+            return
+
+        # Map table names to SQLAlchemy table classes
+        table_map = {
+            "playlists": PlaylistsTable,
+            "videos": VideosTable,
+            "playlist_entries": PlaylistEntriesTable,
+            "discogs_artist": DiscogsArtistTable,
+            "discogs_release": DiscogsReleaseTable,
+            "discogs_track": DiscogsTrackTable,
+            "release_artists": ReleaseArtistsTable,
+        }
+
+        table_class = table_map.get(table_name)
+        if not table_class:
+            self.l.error(f"Unknown table: {table_name}")
+            return
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                # Use SQLite's INSERT OR REPLACE for upsert behaviour
+                stmt = sqlite_insert(table_class).values(records)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=[pk] if isinstance(pk, str) else pk,
+                    set_={
+                        col.name: stmt.excluded[col.name]
+                        for col in table_class.__table__.columns
+                        if col.name != "id"
+                    },
+                )
+                session.execute(stmt)
+                session.commit()
+        except SQLAlchemyError as e:
+            self.l.error(f"Error upserting to {table_name}: {e}")
 
     def _table_as_map(self, table_name: str, field: str) -> dict[str, Any]:
         """Generate a lookup for table, where value is field."""
-        table = cast(Table, self.db[table_name])
         table_map = {
-            r["id"]: r[field] for r in list(table.rows_where(select=f"id, {field}"))
+            "playlists": PlaylistsTable,
+            "videos": VideosTable,
+            "playlist_entries": PlaylistEntriesTable,
+            "discogs_artist": DiscogsArtistTable,
+            "discogs_release": DiscogsReleaseTable,
+            "discogs_track": DiscogsTrackTable,
+            "release_artists": ReleaseArtistsTable,
         }
-        return table_map
+
+        table_class = table_map.get(table_name)
+        if not table_class:
+            return {}
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                # Get the id column and the requested field column
+                id_col = getattr(table_class, "id")
+                field_col = getattr(table_class, field)
+
+                stmt = select(id_col, field_col)
+                result = session.execute(stmt)
+
+                return {row[0]: row[1] for row in result}
+        except (SQLAlchemyError, AttributeError) as e:
+            self.l.error(f"Error creating table map for {table_name}.{field}: {e}")
+            return {}
 
     def pass_needs_download(self, all_records: list[YoutubeObj]) -> list[Video]:
         """
@@ -393,12 +454,17 @@ class LocalDBRepository:
         key: The unique identifier of the video.
         updates: A dictionary containing the fields to update.
         """
-        # Type casting to keep mypy happy
-        table = cast(Table, self.db["videos"])
-        table.update(
-            updates=updates | {"last_updated": last_updated_factory()},
-            pk_values=[key],
-        )
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = (
+                    update(VideosTable)
+                    .where(VideosTable.id == key)
+                    .values(**updates, last_updated=last_updated_factory())
+                )
+                session.execute(stmt)
+                session.commit()
+        except SQLAlchemyError as e:
+            self.l.error(f"Error updating video {key}: {e}")
 
     def refresh_download_field(self) -> None:
         """
@@ -407,219 +473,208 @@ class LocalDBRepository:
         This method updates the 'downloaded' field for videos where the
         conditions (downloaded = 0, video_file not empty, thumbnail does
         not start with 'http') are met.
-
-        First approach was to do it all on the sql side with
-
-        UPDATE videos SET downloaded=1, last_updated= :last_updated
-        WHERE downloaded = 0 AND video_file <> '' AND thumbnail NOT LIKE
-        'http%'
-
-        But some weird caching means sqlite_utils tells me the rows were
-        affected, but then they still show up as not.
         """
-        table = cast(Table, self.db["videos"])
-
-        _so_many = -1
-        # it seems insane to have to do it this way, but there is no
-        # bulk update statement in sqlite_utils, and running a db query
-        # directly seem to mess up the cache
-        for _so_many, row in enumerate(
-            table.rows_where(
-                where="""
-                    downloaded = 0 AND video_file <> '' AND thumbnail NOT LIKE 'http%'
-                    """,
-                select="id",
-            )
-        ):
-            table.update(
-                row["id"],
-                {
-                    "downloaded": 1,
-                    "last_updated": last_updated_factory(),
-                },
-            )
-        self.log(f"{_so_many + 1} videos flagged as downloaded")
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = (
+                    update(VideosTable)
+                    .where(
+                        and_(
+                            VideosTable.downloaded.is_(False),
+                            VideosTable.video_file != "",
+                            ~VideosTable.thumbnail.like("http%"),
+                        )
+                    )
+                    .values(downloaded=True, last_updated=last_updated_factory())
+                )
+                result = session.execute(stmt)
+                session.commit()
+                self.l.info(f"{result.rowcount} videos flagged as downloaded")
+        except SQLAlchemyError as e:
+            self.l.error(f"Error refreshing download field: {e}")
 
     def next_without_discogs(self) -> tuple[str, list[str]] | None:
         """
         Get the next playlist or video that doesn't have Discogs data.
 
         Returns:
-            list of potential search strings
+            tuple of (video_id, list of potential search strings) or None
         """
-        if not hasattr(self, "_last_processed_offset"):
-            self._last_processed_offset = 0
-
-        with Session(self.engine) as session:
-            stmt = (
-                session.query(
-                    VideosTable.id,
-                    VideosTable.title,
-                    VideosTable.uploader,
-                    VideosTable.description,
-                )
-                .filter(
-                    and_(
-                        VideosTable.discogs_track_id.is_(None),
-                        VideosTable.is_tune.is_(True),
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = (
+                    select(
+                        VideosTable.id,
+                        VideosTable.title,
+                        VideosTable.uploader,
+                        VideosTable.description,
                     )
+                    .where(
+                        and_(
+                            VideosTable.discogs_track_id.is_(None),
+                            VideosTable.is_tune.is_(True),
+                        )
+                    )
+                    .limit(1)
+                    .offset(self._last_processed_offset)
                 )
-                .limit(1)
-                .offset(self._last_processed_offset)
-            )
-            result = session.execute(stmt).first()
+                result = session.execute(stmt).first()
 
-        if result is None:
-            self._last_processed_offset = 0
+            if result is None:
+                self._last_processed_offset = 0
+                return None
+
+            self._last_processed_offset += 1
+
+            strings: list[str] = []
+            title = re.sub(r" \(.*?\)", "", result.title).strip()
+            strings.append(title)
+
+            if result.uploader:
+                strings.append(f"{title} - {result.uploader.replace(' - Topic', '')}")
+
+            if result.description:
+                description_lines = result.description.splitlines()
+                if len(description_lines) >= 3:
+                    description = description_lines[2]
+                else:
+                    description = description_lines[0][:64]
+                description = description.replace(" · ", " ")
+                if title in description:
+                    strings.append(description)
+                else:
+                    strings.append(f"{title} - {description}")
+
+            return (result.id, strings)
+
+        except SQLAlchemyError as e:
+            self.l.error(f"Error getting next video without Discogs: {e}")
             return None
 
-        self._last_processed_offset += 1
-
-        strings: list[str] = []
-        title = re.sub(r" \(.*?\)", "", result.title).strip()
-        strings.append(title)
-
-        if result.uploader:
-            strings.append(f"{title} - {result.uploader.replace(' - Topic', '')}")
-
-        if result.description:
-            description_lines = result.description.splitlines()
-            if len(description_lines) >= 3:
-                description = description_lines[2]
-            else:
-                description = description_lines[0][:64]
-            description = description.replace(" · ", " ")
-            if title in description:
-                strings.append(description)
-            else:
-                strings.append(f"{title} - {description}")
-
-        return [result.id, strings]
-
     def upsert_discogs_release(self, record: DiscogsRelease) -> int:
-        with Session(self.engine) as session:
-            exists_query = session.query(
-                session.query(DiscogsReleaseTable)
-                .filter(DiscogsReleaseTable.id == record.id)
-                .exists()
-            ).scalar()
+        try:
+            with Session(self.sql_client.engine) as session:
+                exists_query = session.query(
+                    session.query(DiscogsReleaseTable)
+                    .filter(DiscogsReleaseTable.id == record.id)
+                    .exists()
+                ).scalar()
 
-            if exists_query:
-                self.log(f"Release {record.title} already in DB")
+                if exists_query:
+                    self.l.warning(f"Release {record.title} already in DB")
+                    return record.id
+
+                insert_stmt = insert(DiscogsReleaseTable).values(
+                    id=record.id,
+                    title=record.title,
+                    released=record.released,
+                    country=record.country,
+                    genre=record.genres,
+                    style=record.styles,
+                    uri=record.uri,
+                )
+
+                session.execute(insert_stmt)
+                session.commit()
                 return record.id
-
-            insert_stmt = insert(DiscogsReleaseTable).values(
-                id=record.id,
-                title=record.title,
-                released=record.released,
-                country=record.country,
-                genre=record.genres,
-                style=record.styles,
-                uri=record.uri,
-            )
-
-            session.execute(insert_stmt)
-            session.commit()
+        except SQLAlchemyError as e:
+            self.l.error(f"Error upserting Discogs release: {e}")
             return record.id
 
     def upsert_discogs_artist(
         self, *, role: Optional[str] = None, release_id: int, record: DiscogsArtist
-    ) -> id:
-        with Session(self.engine) as session:
-            exists_query = session.query(
-                session.query(ReleaseArtistsTable)
-                .filter(
-                    and_(
-                        ReleaseArtistsTable.release_id == release_id,
-                        ReleaseArtistsTable.artist_id == record.id,
+    ) -> int:
+        try:
+            with Session(self.sql_client.engine) as session:
+                exists_query = session.query(
+                    session.query(ReleaseArtistsTable)
+                    .filter(
+                        and_(
+                            ReleaseArtistsTable.release_id == release_id,
+                            ReleaseArtistsTable.artist_id == record.id,
+                        )
                     )
-                )
-                .exists()
-            ).scalar()
+                    .exists()
+                ).scalar()
 
-            if exists_query:
-                self.log(f"Artist {record.name} already linked to release")
+                if exists_query:
+                    self.l.warning(f"Artist {record.name} already linked to release")
+                    return record.id
+
+                exists_query = session.query(
+                    session.query(DiscogsArtistTable)
+                    .filter(DiscogsArtistTable.id == record.id)
+                    .exists()
+                ).scalar()
+
+                name = re.sub(r" *\(.*?\)", "", record.name).strip()
+                name = re.sub(r"^the", "", name, flags=re.IGNORECASE).strip()
+
+                if not exists_query:
+                    insert_stmt = insert(DiscogsArtistTable).values(
+                        id=record.id,
+                        name=name,
+                        profile=record.profile,
+                        uri=record.uri,
+                    )
+                    session.execute(insert_stmt)
+
+                link_stmt = insert(ReleaseArtistsTable).values(
+                    release_id=release_id,
+                    artist_id=record.id,
+                    role=role,
+                    is_main=1,
+                )
+                session.execute(link_stmt)
+                session.commit()
                 return record.id
-
-            exists_query = session.query(
-                session.query(DiscogsArtistTable)
-                .filter(DiscogsArtistTable.id == record.id)
-                .exists()
-            ).scalar()
-
-            name = re.sub(r" *\(.*?\)", "", record.name).strip()
-            name = re.sub(r"^the", "", name, flags=re.IGNORECASE).strip()
-
-            if not exists_query:
-                insert_stmt = insert(DiscogsArtistTable).values(
-                    id=record.id,
-                    name=name,
-                    profile=record.profile,
-                    uri=record.uri,
-                )
-                session.execute(insert_stmt)
-
-            link_stmt = insert(ReleaseArtistsTable).values(
-                release_id=release_id,
-                artist_id=record.id,
-                role=role,
-                is_main=1,
-            )
-            session.execute(link_stmt)
-            session.commit()
+        except SQLAlchemyError as e:
+            self.l.error(f"Error upserting Discogs artist: {e}")
             return record.id
 
     def upsert_discogs_track(self, *, record: DiscogsTrack, video_id: str) -> int:
-        with Session(self.engine) as session:
-            track_stmt = (
-                session.query(DiscogsTrackTable.id)
-                .filter(
-                    and_(
-                        DiscogsTrackTable.title == record.title,
-                        DiscogsTrackTable.release_id == record.release_id,
+        try:
+            with Session(self.sql_client.engine) as session:
+                track_stmt = (
+                    session.query(DiscogsTrackTable.id)
+                    .filter(
+                        and_(
+                            DiscogsTrackTable.title == record.title,
+                            DiscogsTrackTable.release_id == record.release_id,
+                        )
+                    )
+                    .limit(1)
+                )
+                existing_track = session.execute(track_stmt).first()
+
+                if existing_track is None:
+                    insert_stmt = insert(DiscogsTrackTable).values(
+                        title=record.title,
+                        duration=record.duration,
+                        position=record.position,
+                        type_=record.type_,
+                        release_id=record.release_id,
+                    )
+                    insert_result = session.execute(insert_stmt)
+                    track_id = int(insert_result.inserted_primary_key[0])
+                else:
+                    self.l.warning(f"Track {record.title} already in DB")
+                    track_id = int(existing_track[0])
+
+                update_stmt = (
+                    update(VideosTable)
+                    .values(discogs_track_id=track_id)
+                    .where(
+                        and_(
+                            VideosTable.discogs_track_id.is_(None),
+                            VideosTable.id == video_id,
+                        )
                     )
                 )
-                .limit(1)
-            )
-            result = session.execute(track_stmt).first()
+                session.execute(update_stmt)
+                session.commit()
 
-            if result is None:
-                insert_stmt = insert(DiscogsTrackTable).values(
-                    title=record.title,
-                    duration=record.duration,
-                    position=record.position,
-                    type_=record.type_,
-                    release_id=record.release_id,
-                )
-                result = session.execute(insert_stmt)
-                track_id = int(result.inserted_primary_key[0])
-            else:
-                self.log(f"Track {record.title} already in DB")
-                track_id = int(result[0])
-
-            update_stmt = (
-                update(VideosTable)
-                .values(discogs_track_id=track_id)
-                .where(
-                    and_(
-                        VideosTable.discogs_track_id.is_(None),
-                        VideosTable.id == video_id,
-                    )
-                )
-            )
-            result = session.execute(update_stmt)
-            session.commit()
-
-            return track_id
-
-
-def local_db_repository(
-    logger: Optional[Callable[[str], None]] = None,
-) -> LocalDBRepository:
-    """
-    Return a LocalDBRepository instance.
-
-    Returns:
-        An instance of the LocalDBRepository class.
-    """
-    return LocalDBRepository(logger=logger)
+                return track_id
+        except SQLAlchemyError as e:
+            self.l.error(f"Error upserting Discogs track: {e}")
+            return 0
