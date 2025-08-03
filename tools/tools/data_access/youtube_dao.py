@@ -2,7 +2,8 @@
 
 """Module providing YouTube Data Access Object (DAO)."""
 
-from typing import Any, Callable, Optional
+from logging import Logger, getLogger
+from typing import Any, Optional
 
 from yt_dlp import DownloadError, YoutubeDL
 
@@ -20,9 +21,9 @@ class YoutubeDAO:
         "ignore_no_formats_error": True,
     }
 
-    def __init__(self, logger: Optional[Callable[[str], None]] = None):
+    def __init__(self, logger: Optional[Logger] = None):
         """Initialize the YouTube DAO."""
-        self.log = logger or (lambda _: None)
+        self.l = logger or getLogger(__name__)
 
     def get_info(self, keys: tuple[str]) -> list[YoutubeObj]:
         """Retrieve YouTube information for the given key.
@@ -36,7 +37,7 @@ class YoutubeDAO:
         info: list[YoutubeObj] = []
 
         for key in keys:
-            self.log(f"Tackling {key}")
+            self.l.info(f"Tackling {key}")
             extracted: dict[str, Any] = {}
             try:
                 with YoutubeDL(self.ydl_settings) as ydl:
@@ -68,7 +69,7 @@ class YoutubeDAO:
                     info.extend([self._extract_video_info(video_info=extracted)])
             except DownloadError as e:
                 info.append(DeletedYoutubeObj(id=key))
-                self.log(f"Downloader error for playlist/video {key}: {e}")
+                self.l.error(f"Downloader error for playlist/video {key}: {e}")
 
         return info
 
@@ -92,10 +93,10 @@ class YoutubeDAO:
 
             return Video.model_validate(video_info)
         except Exception as e:
-            self.log(f"_extract_video_info error for video {video_info['id']}: {e}")
+            self.l.error(f"_extract_video_info error for video {video_info['id']}: {e}")
             return DeletedYoutubeObj(id=video_info["id"], playlist_id=playlist_id)
 
 
-def youtube_dao(logger: Optional[Callable[[str], None]] = None) -> YoutubeDAO:
+def youtube_dao(logger: Optional[Logger] = None) -> YoutubeDAO:
     """Return a YoutubeDAO instance."""
     return YoutubeDAO(logger=logger)

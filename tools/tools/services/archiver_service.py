@@ -2,9 +2,10 @@
 
 """Service for archiving YouTube data."""
 
-from typing import Callable, Optional
+from logging import Logger, getLogger
+from typing import Optional
 
-from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
+from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader
 from tools.helpers.youtube_downloader import youtube_downloader
@@ -16,9 +17,9 @@ class ArchiverService:
 
     def __init__(
         self,
+        local_db: LocalDBRepository,
         youtube: Optional[YoutubeDAO] = None,
-        local_db: Optional[LocalDBRepository] = None,
-        logger: Optional[Callable[[str], None]] = None,
+        logger: Optional[Logger] = None,
     ):
         """Initialize the ArchiverService.
 
@@ -31,11 +32,9 @@ class ArchiverService:
         logger : Optional[Callable[[str], None]], optional
             An optional logger callable, by default None.
         """
-        self.log = logger or (lambda _: None)
-        self.youtube = youtube or youtube_dao(logger=self.log)
-        self.local_db: LocalDBRepository = local_db or local_db_repository(
-            logger=self.log
-        )
+        self.l = logger or getLogger(__name__)
+        self.youtube = youtube or youtube_dao(logger=self.l)
+        self.local_db: LocalDBRepository = local_db
 
     def refresh_playlist(self, keys: tuple[str] | None = None) -> None:
         """Refresh the specified playlist.
@@ -48,14 +47,14 @@ class ArchiverService:
         if not keys:
             keys = self.local_db.get_all_playlists_keys()
 
-        self.log(f"Now refreshing: {keys}")
+        self.l.info(f"Now refreshing: {keys}")
 
         # Get fresh information from YouTube
         fresh_info = self._get_info_from_youtube(keys=keys)
 
         # Check if there are videos
         if not fresh_info:
-            self.log("...no videos found")
+            self.l.warning("...no videos found")
             return
 
         # Add fresh info to the DB, it will be refreshed later as we get
@@ -65,7 +64,7 @@ class ArchiverService:
         # only download videos which we don't have yet
         videos_to_download = self._get_videos_to_download(fresh_info=fresh_info)
         if not videos_to_download:
-            self.log("No videos need downloading")
+            self.l.warning("No videos need downloading")
             return
 
         self._download_videos(videos_to_download=videos_to_download)
@@ -80,10 +79,10 @@ class ArchiverService:
         List of YouTube objects containing information about videos
         and playlists.
         """
-        self.log("Getting info from youtube (this will take a while)...")
+        self.l.info("Getting info from youtube (this will take a while)...")
         fresh_info = self.youtube.get_info(keys)
         if fresh_info:
-            self.log(f"...found {len(fresh_info) - 1} videos in total")
+            self.l.debug(f"...found {len(fresh_info) - 1} videos in total")
         return fresh_info
 
     def _update_db_records(self, fresh_info: list[YoutubeObj]) -> None:
@@ -91,7 +90,7 @@ class ArchiverService:
 
         For now, all playlists are simply overwritten.
         """
-        self.log("Updating DB record for playlist...")
+        self.l.info("Updating DB record for playlist...")
 
         self.local_db.update(fresh_info)
 
@@ -108,29 +107,31 @@ class ArchiverService:
         # That will be dealt with by the downloaders.
         videos_to_download = self.local_db.pass_needs_download(fresh_info)
         if videos_to_download:
-            self.log(f"{len(videos_to_download)} need downloading")
+            self.l.debug(f"{len(videos_to_download)} need downloading")
         return videos_to_download
 
     def _download_videos(self, videos_to_download: list[Video]) -> None:
         """Download videos."""
-        self.log("Downloading videos...")
+        self.l.info("Downloading videos...")
         youtube_downloader(
-            keys=[video.id for video in videos_to_download if not video.video_file]
+            keys=[video.id for video in videos_to_download if not video.video_file],
+            local_db=self.local_db,
         )
 
     def _download_thumbnails(self, videos_to_download: list[Video]) -> None:
         """Download thumbnails."""
-        self.log("Downloading thumbnails...")
+        self.l.info("Downloading thumbnails...")
         thumbnails_downloader(
+            local_db=self.local_db,
             key_url_pairs=[
                 (video.id, video.thumbnail)
                 for video in videos_to_download
                 if video.thumbnail.startswith("http")
-            ]
+            ],
         )
 
     def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
         """Refresh the database."""
-        self.log("Refreshing database...")
+        self.l.info("Refreshing database...")
         self.local_db.refresh_deleted_videos(all_videos=fresh_info)
         self.local_db.refresh_download_field()

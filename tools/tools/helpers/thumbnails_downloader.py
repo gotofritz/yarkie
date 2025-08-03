@@ -8,13 +8,13 @@ from typing import Optional
 from aiohttp import ClientResponse, ClientSession
 
 from tools.data_access.file_repository import FileRepository, file_repository
-from tools.data_access.local_db_repository import LocalDBRepository, local_db_repository
+from tools.data_access.local_db_repository import LocalDBRepository
 
 
 def thumbnails_downloader(
     key_url_pairs: list[tuple[str, str]],
+    local_db: LocalDBRepository,
     file_repo: Optional[FileRepository] = None,
-    local_db: Optional[LocalDBRepository] = None,
 ) -> None:
     """Download thumbnails for the given key-url pairs.
 
@@ -28,8 +28,6 @@ def thumbnails_downloader(
     """
     if not file_repo:
         file_repo = file_repository()
-    if not local_db:
-        local_db = local_db_repository()
 
     async def run_fetch_jobs() -> None:
         """Run asynchronous jobs to fetch thumbnails."""

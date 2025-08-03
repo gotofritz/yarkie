@@ -7,6 +7,7 @@ from pathlib import Path
 
 import aiofiles
 
+# todo: must use app_config
 from tools.settings import DATA_ROOT, THUMBNAIL_EXT, VIDEO_EXT
 
 
