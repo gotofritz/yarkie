@@ -15,7 +15,7 @@ dependencies = [
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
     "sqlite-utils>=3.38",
-    "yt-dlp==2025.04.23.232926.dev0",
+    "yt-dlp==2025.07.19.233203.dev0",
 ]
 
 [dependency-groups]
