@@ -5,6 +5,7 @@
 from logging import Logger, getLogger
 from typing import Optional
 
+from tools.data_access.file_repository import FileRepository
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader
@@ -20,6 +21,7 @@ class ArchiverService:
         local_db: LocalDBRepository,
         youtube: Optional[YoutubeDAO] = None,
         logger: Optional[Logger] = None,
+        file_repo: Optional[FileRepository] = None,
     ):
         """Initialize the ArchiverService.
 
@@ -35,6 +37,7 @@ class ArchiverService:
         self.logger = logger or getLogger(__name__)
         self.youtube = youtube or youtube_dao(logger=self.logger)
         self.local_db: LocalDBRepository = local_db
+        self.file_repo = file_repo or FileRepository()
 
     def refresh_playlist(self, keys: tuple[str, ...] | None = None) -> None:
         """Refresh the specified playlist.
@@ -134,3 +137,57 @@ class ArchiverService:
         self.logger.info("Refreshing database...")
         self.local_db.refresh_deleted_videos(all_videos=fresh_info)
         self.local_db.refresh_download_field()
+
+    def sync_local(self, *, download: bool = False) -> int:
+        """Sync local DB with actual files on disk.
+
+        Returns
+        -------
+        int
+            Number of records updated.
+        """
+        potentials = self.local_db.get_videos_needing_download()
+        self.logger.info(
+            f"Syncing local DB with files on disk for {len(potentials)} videos..."
+        )
+        records = []
+        for video in potentials:
+            dirty = False
+            if not video.video_file:
+                self.logger.debug(f"Needs video {video.id} {video.title}...")
+                if download and not self.file_repo.video_file_exists(video.id):
+                    self.logger.info(f"Downloading file for video {video.id}.")
+                    youtube_downloader(keys=[video.id], local_db=self.local_db)
+
+                if self.file_repo.video_file_exists(video.id):
+                    self.logger.debug("...file found for video, updating record.")
+                    video.video_file = str(self.file_repo.make_video_path(video.id))
+                    dirty = True
+
+            if not video.thumbnail:
+                self.logger.debug(f"Needs thumbnail {video.id} {video.title}...")
+                if download and not self.file_repo.thumbnail_file_exists(video.id):
+                    self.logger.info(f"Downloading file for thumbnail {video.id}.")
+                    thumbnails_downloader(keys=[video.id], local_db=self.local_db)
+
+                if self.file_repo.thumbnail_file_exists(video.id):
+                    self.logger.debug("...file found for thumbnail, updating record.")
+                    video.thumbnail = str(self.file_repo.make_thumbnail_path(video.id))
+                    dirty = True
+
+            if video.thumbnail and video.video_file:
+                self.logger.debug(f"Flipping downloaded flag for {video.id}")
+                video.downloaded = True
+                dirty = True
+
+            if dirty:
+                self.logger.debug(f"Updating video {video.id} {video.title}...")
+                records.append(
+                    video.model_dump(
+                        include={"id", "thumbnail", "video_file", "downloaded"}
+                    )
+                )
+
+        self.local_db.update_videos(records)
+        self.logger.info(f"Synced {len(records)} records.")
+        return len(records)

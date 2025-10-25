@@ -6,8 +6,8 @@ import pytest
 
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.youtube_dao import YoutubeDAO
+from tools.models.fake_db import FakeDBFactory
 from tools.models.fakes import (
-    FakeDBFactory,
     FakeDeletedVideoFactory,
     FakePlaylistFactory,
     FakeVideoFactory,

@@ -98,6 +98,20 @@ class FileRepository:
         shutil.move(src_path, target_path)
         return target_path.as_posix()
 
+    def video_file_exists(self, video_id: str) -> bool:
+        """
+        Check if a video file exists in the filesystem.
+        """
+        video_path = self.make_video_path(video_id)
+        return video_path.exists()
+
+    def thumbnail_file_exists(self, video_id: str) -> bool:
+        """
+        Check if a thumbnail file exists in the filesystem.
+        """
+        thumbnail_path = self.make_thumbnail_path(video_id)
+        return thumbnail_path.exists()
+
 
 def file_repository() -> FileRepository:
     """

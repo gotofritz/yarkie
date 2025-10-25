@@ -7,7 +7,8 @@ import pytest
 
 from tools.cli import cli
 from tools.commands.playlist.refresh import refresh
-from tools.models.fakes import FakeDBFactory, FakePlaylistFactory
+from tools.models.fake_db import FakeDBFactory
+from tools.models.fakes import FakePlaylistFactory
 
 
 @pytest.fixture()
