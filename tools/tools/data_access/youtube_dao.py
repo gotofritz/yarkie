@@ -25,7 +25,7 @@ class YoutubeDAO:
         """Initialize the YouTube DAO."""
         self.l = logger or getLogger(__name__)
 
-    def get_info(self, keys: tuple[str]) -> list[YoutubeObj]:
+    def get_info(self, keys: tuple[str, ...]) -> list[YoutubeObj]:
         """Retrieve YouTube information for the given key.
 
         Args:

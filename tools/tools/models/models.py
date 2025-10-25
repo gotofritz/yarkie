@@ -68,7 +68,7 @@ class Video(BaseModel, extra="ignore"):
     title: str
     description: str | None = None
     uploader: str | None = None
-    duration: float
+    duration: float = 0.0
     upload_date: str = Field(default_factory=last_updated_factory)
     width: int = 0
     height: int = 0

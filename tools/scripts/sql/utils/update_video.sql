@@ -1,0 +1,1 @@
+UPDATE discogs_release Set title='Street Spirit (Fade Out)' WHERE id=73763;

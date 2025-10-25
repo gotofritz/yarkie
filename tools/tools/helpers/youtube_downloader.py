@@ -45,7 +45,7 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
         """Run the post-processing steps after a video is downloaded."""
         moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
         self.local_db.downloaded_video(info.get("id"), moved_to)
-        print(f"    Moved to {moved_to}")
+        print(f"    Moved from {Path(info['_filename'])} to {moved_to}")
         return [], info
 
 

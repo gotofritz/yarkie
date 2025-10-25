@@ -6,7 +6,7 @@ vars:
   SOURCES: tools/
 
 tasks:
-  # Task to run Bandit, a security linter for Python code
+  # Task to run Bandssit, a security linter for Python code
   ruff:
     desc: "Run ruff"
     cmds:
@@ -30,7 +30,7 @@ tasks:
   mypy:
     desc: "Run MyPy for static type checking"
     cmds:
-      - "{{.VENV}}/mypy {{.SOURCES}}"
+      - "{{.VENV}}/mypy --ignore-missing-imports {{.SOURCES}}"
 
   # Task to run linting and tests
   qa:

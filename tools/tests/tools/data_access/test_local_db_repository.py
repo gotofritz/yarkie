@@ -1,8 +1,5 @@
-import json
 import random
 from unittest.mock import MagicMock, Mock
-
-from sqlite_utils import Database
 
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.sql_client import SQLClient
@@ -22,25 +19,6 @@ def is_db_in_memory(db: Database) -> bool:
     # database_name is either the path to the file if NOT in memory, or
     # an empty string or None.
     return not bool(database_name)
-
-
-def test_in_memory_db():
-    """Valid data will be loaded in an in-memory db."""
-    playlist = FakePlaylistFactory.build()
-    mock_data = FakeDBFactory.build_json(playlists=playlist)
-    sut = LocalDBRepository(data=mock_data)
-    assert is_db_in_memory(sut.db)
-
-
-def test_default_db(faker):
-    """Invalid data or no data will be loaded in standard db."""
-    # data needs to be a serialised dict
-    invalid_data = json.dumps(faker.pylist(), default=str)
-    sut = LocalDBRepository(data=invalid_data)
-    assert not is_db_in_memory(sut.db)
-
-    sut = LocalDBRepository()
-    assert not is_db_in_memory(sut.db)
 
 
 def test_update_happy_path():

@@ -11,7 +11,7 @@ from tools.services.archiver_service import ArchiverService
 @click.command()
 @click.argument("keys", type=click.STRING, nargs=-1)
 @click.pass_context
-def refresh(ctx: click.Context, keys: tuple[str] | None) -> None:
+def refresh(ctx: click.Context, keys: tuple[str, ...] | None) -> None:
     """
     Fetch playlist info and match to DB.
 

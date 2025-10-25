@@ -8,13 +8,14 @@ dependencies = [
     "aiohttp>=3.11.8",
     "alembic>=1.15.2",
     "click>=8.1.7",
+    "go-task-bin>=3.44.1",
     "pandas>=2.2.3",
     "pydantic>=2.10.2",
     "pydantic-settings>=2.8.1",
     "python3-discogs-client>=2.8",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
-    "yt-dlp==2025.08.02.233207.dev0",
+    "yt-dlp==2025.10.24.232923.dev0",
 ]
 
 [dependency-groups]
@@ -54,5 +55,3 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = false
 docstring-code-line-length = "dynamic"
-
-

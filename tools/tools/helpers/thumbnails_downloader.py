@@ -51,6 +51,7 @@ def thumbnails_downloader(
             image: bytes = await resp.read()
             moved_to = await file_repo.write_thumbnail(key=key, image=image)
             local_db.downloaded_thumbnail(key=key, local_file=moved_to)
+            # self.local_db.video_repository.mark_thumbnail_downloaded(info.get("id"),
         except Exception:
             """Errors are ignored."""
 

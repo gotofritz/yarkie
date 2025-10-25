@@ -175,10 +175,7 @@ def postprocess(ctx: click.Context) -> None:
         potential_artists = [artist for artist in master.data["artists"]]
         for artist in potential_artists:
             click.echo(json.dumps(artist, indent=2))
-            yes_or_no = click.confirm(
-                "Use artist?",
-                default="y",
-            )
+            yes_or_no = click.confirm("Use artist?", default=True, show_default=True)
             if not yes_or_no:
                 continue
 
