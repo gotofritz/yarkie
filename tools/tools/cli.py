@@ -5,6 +5,7 @@
 import click
 
 from tools.app_context import AppContext
+from tools.commands.db.main import db
 from tools.commands.discogs.main import discogs
 from tools.commands.playlist.main import playlist
 
@@ -35,3 +36,4 @@ def cli(
 # Add the 'playlist' command to the CLI.
 cli.add_command(playlist)
 cli.add_command(discogs)
+cli.add_command(db)

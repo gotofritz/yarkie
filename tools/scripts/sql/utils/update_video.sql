@@ -1,1 +1,1 @@
-UPDATE discogs_release Set title='Street Spirit (Fade Out)' WHERE id=73763;
+UPDATE videos Set id='Ea0CIEh0zGs' WHERE id='k-C1RZMU59Y';

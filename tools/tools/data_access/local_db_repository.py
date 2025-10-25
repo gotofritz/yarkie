@@ -2,13 +2,14 @@ import re
 from logging import Logger, getLogger
 from typing import Any, Optional, TypeAlias
 
-from sqlalchemy import Boolean, and_, delete, desc, insert, select, update
+from sqlalchemy import Boolean, and_, delete, desc, insert, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from tools.config.app_config import YarkieSettings
 from tools.data_access.sql_client import SQLClient
+from tools.models.fakes import FakeVideoFactory
 from tools.models.models import (
     DeletedYoutubeObj,
     DiscogsArtist,
@@ -674,3 +675,75 @@ class LocalDBRepository:
         except SQLAlchemyError as e:
             self.logger.error(f"Error upserting Discogs track: {e}")
             return 0
+
+    def get_videos_needing_download(
+        self, *, videos: Optional[Boolean] = None, thumbnails: Optional[Boolean] = None
+    ) -> list[Video]:
+        """Retrieve videos that need downloading."""
+        if videos is None and thumbnails is None:
+            videos = True
+            thumbnails = True
+        else:
+            videos = videos or False
+            thumbnails = thumbnails or False
+        assert isinstance(videos, bool)
+        assert isinstance(thumbnails, bool)
+
+        or_conditions = [VideosTable.downloaded.is_(False)]
+        if videos:
+            or_conditions.append(VideosTable.video_file.is_(None))
+        if thumbnails:
+            or_conditions.append(VideosTable.thumbnail.is_(None))
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = select(VideosTable).where(
+                    and_(
+                        VideosTable.deleted.is_(False),
+                        or_(*or_conditions),
+                    )
+                )
+                result = session.execute(stmt)
+                videos = [
+                    Video.model_validate(row[0].__dict__) for row in result.fetchall()
+                ]
+                return videos
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error retrieving videos needing download: {e}")
+            return []
+
+    def update_videos(self, video_data: list[dict[str, Any]]) -> int:
+        """Update multiple video records in the database.
+
+        Moving away from using _update_table because it was a bad design.
+
+        Parameters
+        ----------
+        video_data: A list of dictionaries representing video records to update.
+        """
+
+        # To validate the data, we try to create Video instances. But
+        # since there may be missing fields, we use fake data to fill in
+        # the gaps. The important part is that what _is_ there is valid.
+        # The only exception the id field, which must be provided.
+        fake_video_data = FakeVideoFactory.build().model_dump(exclude={"id"})
+        try:
+            all(Video.model_validate(record | fake_video_data) for record in video_data)
+        except Exception as e:
+            self.logger.error(f"Invalid video data provided: {e}")
+            return 0
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                for video_dict in video_data:
+                    stmt = (
+                        update(VideosTable)
+                        .values(
+                            **{k: v for k, v in video_dict.items() if k != "id"},
+                        )
+                        .where(VideosTable.id == video_dict["id"])
+                    )
+
+                    session.execute(stmt)
+                session.commit()
+        except (SQLAlchemyError, TypeError) as e:
+            self.logger.error(f"Error updating VideosTable: {e}")

@@ -3,22 +3,13 @@ from unittest.mock import MagicMock, Mock
 
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.sql_client import SQLClient
+from tools.models.fake_db import FakeDBFactory
 from tools.models.fakes import (
-    FakeDBFactory,
     FakeDeletedVideoFactory,
     FakePlaylistFactory,
     FakeVideoFactory,
 )
 from tools.models.models import Playlist
-
-
-def is_db_in_memory(db: Database) -> bool:
-    """Determine whether db is in memory."""
-    connection_info = db.conn.execute("PRAGMA database_list;").fetchall()
-    database_name = connection_info[0][2] if connection_info else None
-    # database_name is either the path to the file if NOT in memory, or
-    # an empty string or None.
-    return not bool(database_name)
 
 
 def test_update_happy_path():
@@ -410,8 +401,6 @@ def test_file_repository_function():
 
     sut = LocalDBRepository(logger=mock, sql_client=MagicMock(spec=SQLClient))
     assert isinstance(sut, LocalDBRepository)
-    assert isinstance(sut.db, Database)
-    assert not is_db_in_memory(sut.db)
 
     sut.log("123")
     mock.assert_called_once_with("123")
