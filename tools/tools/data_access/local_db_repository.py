@@ -135,7 +135,7 @@ class LocalDBRepository:
 
         if deleted_videos:
             self.logger.info(f"Disabling {len(deleted_videos)} videos")
-            self._update_table("videos", records=deleted_videos)
+            self._update_video_table(records=deleted_videos)
         else:
             self.logger.info("No videos were disabled or deleted")
 
@@ -189,10 +189,10 @@ class LocalDBRepository:
                 }
                 new_videos.append(to_append)
         if new_videos:
-            self._update_table("videos", records=new_videos)
+            self._update_video_table(records=new_videos)
             self.logger.debug(f"Inserted {len(new_videos)} new videos(s)")
         if updated_videos:
-            self._update_table("videos", records=updated_videos)
+            self._update_video_table(records=updated_videos)
             self.logger.debug(f"Updated {len(updated_videos)} videos(s)")
 
         entries_records = [
@@ -280,8 +280,52 @@ class LocalDBRepository:
             if isinstance(video, DeletedYoutubeObj)
             and video.id in downloaded_previously
         ]
-        self._update_table(table_name="videos", records=deleted_videos)
+        self._update_video_table(records=deleted_videos)
         self.logger.info(f"Updated {len(deleted_videos)} video(s)")
+
+    def _update_video_table(self, records: list[dict[str, Any]]) -> None:
+        """Upsert records into the specified table.
+
+        Parameters
+        ----------
+        table_name: The name of the table to update.
+        records: A list of dictionaries representing records to upsert.
+        """
+        if not records:
+            return
+
+        defaults = {"last_updated": last_updated_factory(), "deleted": False}
+        updated_records = []
+        for record in records:
+            if not (record.get("id")):
+                continue
+
+            updated_records.append(
+                {k: v for k, v in record.items() if not (k == "title" and v is None)}
+                | defaults
+            )
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                updates = {}
+
+                stmt = sqlite_insert(VideosTable).values(records)
+                for col in VideosTable.__table__.columns:
+                    if col.name == "id":
+                        continue
+                    if col.type == Boolean and col.name in updates:
+                        updates[col.name] = stmt.excluded[col.name].isinstance(bool)
+                    else:
+                        updates[col.name] = stmt.excluded[col.name]
+
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["id"],
+                    set_=updates,
+                )
+                session.execute(stmt)
+                session.commit()
+        except (SQLAlchemyError, TypeError) as e:
+            self.logger.error(f"Error upserting to VideosTable: {e}")
 
     def _update_table(self, table_name: str, records: list[dict[str, Any]]) -> None:
         """Upsert records into the specified table.

@@ -68,12 +68,12 @@ class Video(BaseModel, extra="ignore"):
     title: str
     description: str | None = None
     uploader: str | None = None
-    duration: float = 0.0
-    upload_date: str = Field(default_factory=last_updated_factory)
-    width: int = 0
-    height: int = 0
-    video_file: str = ""
-    thumbnail: str = ""
+    duration: Optional[float] = 0.0
+    upload_date: Optional[str] = Field(default_factory=last_updated_factory)
+    width: Optional[int] = 0
+    height: Optional[int] = 0
+    video_file: Optional[str] = ""
+    thumbnail: Optional[str] = ""
     deleted: bool = False
     downloaded: bool = False
     last_updated: datetime = Field(default_factory=datetime.now)
