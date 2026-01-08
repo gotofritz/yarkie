@@ -91,6 +91,10 @@ Change project to a modern src/ set up
 
 #### Step 0.0.3
 
+Add github workflow to run task qa on merge and prevent merge if not passing; and to run task qa on every push
+
+#### Step 0.0.4
+
 **File:** `README.md`
 
 **Change:** Update with current status / plan
@@ -333,7 +337,7 @@ For each step, ensure:
    ```
 
    - All Ruff linting passes
-   - All type checks pass (mypy/pyright)
+   - All type checks pass
 
 2. ✅ **Run Full Test Suite**
 

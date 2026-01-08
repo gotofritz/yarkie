@@ -10,7 +10,8 @@
       "Bash(.venv/bin/ty check:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(task lint)"
+      "Bash(task lint)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []
