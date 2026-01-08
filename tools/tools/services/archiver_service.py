@@ -133,7 +133,7 @@ class ArchiverService:
             key_url_pairs=[
                 (video.id, video.thumbnail)
                 for video in videos_to_download
-                if video.thumbnail.startswith("http")
+                if video.thumbnail is not None and video.thumbnail.startswith("http")
             ],
             config=self.config,
         )
@@ -176,14 +176,7 @@ class ArchiverService:
 
             if not video.thumbnail:
                 self.logger.debug(f"Needs thumbnail {video.id} {video.title}...")
-                if download and not self.file_repo.thumbnail_file_exists(video.id):
-                    self.logger.info(f"Downloading file for thumbnail {video.id}.")
-                    thumbnails_downloader(
-                        keys=[video.id],
-                        local_db=self.local_db,
-                        config=self.config,
-                    )
-
+                # Check if thumbnail file exists locally (may have been downloaded separately)
                 if self.file_repo.thumbnail_file_exists(video.id):
                     self.logger.debug("...file found for thumbnail, updating record.")
                     video.thumbnail = str(self.file_repo.make_thumbnail_path(video.id))

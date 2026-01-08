@@ -29,7 +29,7 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
         self.file_repo = file_repo
         self.local_db = local_db
 
-    def run(self, info: Any) -> tuple[list[Any], Any]:
+    def run(self, info):  # type: ignore[override]
         """Run the post-processing steps after a video is downloaded."""
         moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
         self.local_db.downloaded_video(info.get("id"), moved_to)
