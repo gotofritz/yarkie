@@ -46,14 +46,16 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 **Subtasks:**
 
-1. **Split into Domain-Specific Repositories**
+1. ✅ **Split into Domain-Specific Repositories**
 
    - **Create `PlaylistRepository`** (`data_access/playlist_repository.py`)
+
      - `get_all_playlists_keys()` (from line 67)
      - `update_playlists()` (from lines 211-234)
      - `clear_playlist_links()` (from lines 236-262)
 
    - **Create `VideoRepository`** (`data_access/video_repository.py`)
+
      - `update_videos()` (from lines 745-782)
      - `get_videos_needing_download()` (from lines 711-743)
      - `mark_video_downloaded()` / `mark_thumbnail_downloaded()` (from lines 458-476)
@@ -70,6 +72,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 2. **Extract Business Logic to Services**
 
    - **Create `DiscogsSearchService`** (`services/discogs_search_service.py`)
+
      - `generate_search_strings()` - Extract string manipulation from lines 559-576
      - `next_video_to_process()` - Orchestrates repository query + search string generation
      - Remove stateful `_last_processed_offset` - pass as parameter instead
@@ -145,24 +148,28 @@ The refactoring will be done in small, incremental steps with full test coverage
    - Extract to helper functions or service methods
 
 3. **Create Command Helper Module** (if needed)
+
    - `commands/helpers.py` or similar
    - Functions for common command patterns (e.g., error formatting, success messages)
 
 4. **Refine ArchiverService** (`services/archiver_service.py`)
 
    - **Refactor `sync_local()` method** (lines 148-198)
+
      - Extract `_sync_video_with_filesystem()` to handle per-video logic
      - Extract `_sync_video_file()`, `_sync_thumbnail_file()`, `_update_downloaded_flag()`
      - Reduce complexity from 50 lines mixing multiple concerns
      - Eliminate state mutation in loop (use immutable updates)
 
    - **Convert module functions to injectable services**
+
      - Create `VideoDownloaderService` wrapping `youtube_downloader()` (lines 122-126, 165-170)
      - Create `ThumbnailDownloaderService` wrapping `thumbnails_downloader()` (lines 131-140)
      - Inject as dependencies instead of importing as functions
      - Improves testability and follows dependency injection principle
 
    - **Extract filtering logic to methods**
+
      - Create `_filter_videos_needing_files()` (from line 123)
      - Create `_filter_videos_needing_thumbnails()` (from line 136)
      - Make inline list comprehensions more readable and reusable
