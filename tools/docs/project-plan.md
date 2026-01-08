@@ -50,18 +50,9 @@ The refactoring will be done in small, incremental steps with full test coverage
 
    Complete [See](./dev-logs/2026-01-08-2257-90d7d0f-split-into-domain-specific-repositories.md)
 
-2. **Extract Business Logic to Services**
+2. ✅ **Extract Business Logic to Services**
 
-   - **Create `DiscogsSearchService`** (`services/discogs_search_service.py`)
-
-     - `generate_search_strings()` - Extract string manipulation from lines 559-576
-     - `next_video_to_process()` - Orchestrates repository query + search string generation
-     - Remove stateful `_last_processed_offset` - pass as parameter instead
-
-   - **Create `VideoSyncService`** (`services/video_sync_service.py`)
-     - `sync_youtube_data()` - Orchestrates the update flow from lines 87-103
-     - Add proper transaction support (addresses TODO on line 99)
-     - `handle_deleted_videos()` - Coordinate deletion logic across repositories
+   Complete [See](./dev-logs/2026-01-08-2331-c3dc23b-extract-business-logic-to-services.md)
 
 3. **Extract Common Infrastructure**
 
