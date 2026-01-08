@@ -85,7 +85,7 @@ These should be done first as they are simple bug fixes with no architectural ch
 
 replace mypy with ty and fix all linting errors. Update both pyproject.toml and Taskfile accordingly
 
-#### Step 0.0.2
+#### ✅ Step 0.0.2
 
 Change project to a modern src/ set up
 
