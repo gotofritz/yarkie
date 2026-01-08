@@ -4,7 +4,7 @@ from typing import Any, Optional, TypeAlias
 
 from sqlalchemy import Boolean, and_, delete, desc, insert, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.engine import CursorResult
+from sqlalchemy.engine import Result
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -527,9 +527,9 @@ class LocalDBRepository:
                     )
                     .values(downloaded=True, last_updated=last_updated_factory())
                 )
-                result: CursorResult[Any] = session.execute(stmt)
+                result: Result[Any] = session.execute(stmt)
                 session.commit()
-                self.logger.info(f"{result.rowcount} videos flagged as downloaded")
+                self.logger.info(f"{result.rowcount} videos flagged as downloaded")  # type: ignore[attr-defined]
         except SQLAlchemyError as e:
             self.logger.error(f"Error refreshing download field: {e}")
 
@@ -697,8 +697,8 @@ class LocalDBRepository:
                         type_=record.type_,
                         release_id=record.release_id,
                     )
-                    insert_result: CursorResult[Any] = session.execute(insert_stmt)
-                    track_id = int(insert_result.inserted_primary_key[0])
+                    insert_result: Result[Any] = session.execute(insert_stmt)
+                    track_id = int(insert_result.inserted_primary_key[0])  # type: ignore[attr-defined]
                 else:
                     self.logger.warning(f"Track {record.title} already in DB")
                     track_id = int(existing_track[0])
