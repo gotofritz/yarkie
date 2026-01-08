@@ -1,25 +1,33 @@
 import logging
-from typing import Optional
 
 from tools.config.app_config import YarkieSettings
 from tools.data_access.local_db_repository import LocalDBRepository
-from tools.data_access.sql_client import SQLClient
 
 
 class AppContext:
-    """Holds all the objects needed by commands"""
+    """Holds all the objects needed by commands."""
 
     def __init__(
         self,
-        logger: Optional[logging.Logger] = None,
-        db: Optional[LocalDBRepository] = None,
+        *,
+        config: YarkieSettings,
+        logger: logging.Logger,
+        db: LocalDBRepository,
     ) -> None:
-        self.config = YarkieSettings()
-        self.logger = logger or logging.getLogger(__name__)
-        sql_client = SQLClient(db_url=self.config.db_path)
-        self.db = db or LocalDBRepository(
-            sql_client=sql_client, logger=self.logger, config=self.config
-        )
+        """Initialize AppContext with injected dependencies.
+
+        Parameters
+        ----------
+        config : YarkieSettings
+            The application configuration.
+        logger : logging.Logger
+            The logger instance.
+        db : LocalDBRepository
+            The local database repository.
+        """
+        self.config = config
+        self.logger = logger
+        self.db = db
 
         logging.getLogger("urllib3").setLevel(logging.WARNING)
         logging.basicConfig(
