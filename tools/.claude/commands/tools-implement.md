@@ -12,3 +12,5 @@ Ask if user wants new branch. If yes:
   - create branch from {slugified step}
 
 Create todos, follow CLAUDE.md standards, atomic commits.
+
+When work is completed, mark it as such in the project plan.
