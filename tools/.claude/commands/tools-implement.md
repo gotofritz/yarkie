@@ -13,4 +13,4 @@ Ask if user wants new branch. If yes:
 
 Create todos, follow CLAUDE.md standards, atomic commits.
 
-When work is completed, mark it as such in the project plan. If a major step was completed, compact the step description.
+When work is completed, run ./tool-archive {step}

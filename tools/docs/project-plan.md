@@ -81,91 +81,21 @@ These should be done first as they are simple bug fixes with no architectural ch
 
 ### ✅ Step 0.0: Update tooling and README
 
-**Completed:** Modern tooling setup and documentation
-
-- Replaced mypy with ty for type checking
-- Migrated to modern src/ layout
-- Added GitHub Actions workflow for automated QA on push/PR
-- Updated README with status badges and current project state
+Complete [See](./dev-logs/2026-01-08-1518-cbb8d5e-update-tooling-and-readme.md)
 
 ### ✅ Step 0.1: Fix CLI Property Access Bug
 
-**Completed:** Fixed debug output property access
-
-- Changed `ctx.obj.dbpath` to `ctx.obj.config.db_path` in `src/tools/cli.py:31`
-- Fixes AttributeError from incomplete configuration refactoring
-- Verified with `tools --debug` - no errors, correct output
-
----
+Complete [See](./dev-logs/2026-01-08-1519-cbb8d5e-fix-cli-property-access-bug.md)
 
 ## 4. Incremental Refactoring Breakdown
 
-### ✅ Step 1: unify Configuration (COMPLETED)
+### ✅ Step 1: Unify Configuration
 
-- Removed legacy `settings.py`
-- All code uses `config/app_config.py` (Pydantic-based)
-- Configuration accessed via `AppContext.config`
+Complete [See](./dev-logs/2026-01-08-1520-cbb8d5e-unify-configuration.md)
 
-### Step 2: Decouple Services from AppContext
+### ✅ Step 2: Decouple Services from AppContext
 
-**Goal:** Break tight coupling between `AppContext` and service creation. Make sure all new code has high code coverage.
-
-**Subtasks:**
-
-1. **Create Service Factory Module** (`factories.py`)
-
-   - Add `create_sql_client(config: YarkieSettings) -> SQLClient`
-   - Add `create_local_db_repository(sql_client, logger, config) -> LocalDBRepository`
-   - Add `create_archiver_service(local_db, config, logger) -> ArchiverService`
-
-2. **Refactor AppContext to Accept Injected Dependencies**
-
-   ```python
-   class AppContext:
-       def __init__(
-           self,
-           config: YarkieSettings,
-           logger: logging.Logger,
-           db: LocalDBRepository,
-       ) -> None:
-           self.config = config
-           self.logger = logger
-           self.db = db
-   ```
-
-3. **Update CLI Entry Point** (`cli.py`)
-
-   - Use factory functions to create services
-   - Pass fully-constructed services to `AppContext`
-   - Example:
-     ```python
-     config = YarkieSettings()
-     logger = setup_logger()
-     sql_client = create_sql_client(config)
-     db = create_local_db_repository(sql_client, logger, config)
-     ctx.obj = AppContext(config=config, logger=logger, db=db)
-     ```
-
-4. **Update Command Factories**
-   - Add `create_archiver_service(ctx: AppContext) -> ArchiverService` helper
-   - Commands use factory instead of manual instantiation
-
-**Reasoning:**
-
-- Adheres to Single Responsibility Principle
-- Makes testing dramatically easier (inject mocks via factory)
-- Centralizes dependency construction logic
-- Enables future dependency injection container if needed
-
-**Dependencies:** Step 0.1 (bug fix)
-
-**Complexity:** Medium
-
-**Testing:**
-
-- All existing tests must pass
-- Add new tests for factory functions
-- Add integration tests verifying service wiring
+Complete [See](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcontext.md)
 
 ### Step 3: Extract Shared Command Logic to Services
 

@@ -31,4 +31,5 @@ def mock_config() -> YarkieSettings:
     config.video_ext = "mp4"
     config.DEFAULT_DATA_ROOT = Path(".")
     config.download_path = "/tmp"
+    config.db_path = Path(":memory:")
     return config

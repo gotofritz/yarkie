@@ -196,3 +196,28 @@ class ArchiverService:
         self.local_db.update_videos(records)
         self.logger.info(f"Synced {len(records)} records.")
         return len(records)
+
+
+def create_archiver_service(
+    *,
+    local_db: LocalDBRepository,
+    config: YarkieSettings,
+    logger: Optional[Logger] = None,
+) -> ArchiverService:
+    """Create an ArchiverService instance with the given dependencies.
+
+    Parameters
+    ----------
+    local_db : LocalDBRepository
+        The local database repository for data persistence.
+    config : YarkieSettings
+        The application configuration.
+    logger : Optional[Logger], optional
+        Logger instance, by default None.
+
+    Returns
+    -------
+    ArchiverService
+        A configured ArchiverService instance.
+    """
+    return ArchiverService(local_db=local_db, config=config, logger=logger)

@@ -1,7 +1,7 @@
 # Project Info
 
 - Issue tracker: Github
-- Repository: Use `gh` CLI for all GitHub operations
+- Repository: Do not use `gh` CLI for all GitHub operations
 - Task runner is go-task
 
 ## Development Standards
