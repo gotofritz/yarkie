@@ -19,6 +19,9 @@ def refresh(ctx: click.Context, keys: tuple[str, ...] | None) -> None:
         - key: The identifier of the playlist to refresh.
     """
     app_context: AppContext = ctx.obj
-    archiver = ArchiverService(logger=app_context.logger, local_db=app_context.db)
+    config = app_context.config
+    archiver = ArchiverService(
+        logger=app_context.logger, local_db=app_context.db, config=config
+    )
     archiver.refresh_playlist(keys=keys)
     click.echo("Finished")

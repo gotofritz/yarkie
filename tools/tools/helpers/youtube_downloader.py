@@ -1,5 +1,3 @@
-# tools/helpers/youtube_downloader.py
-
 """Module providing a YouTube downloader utility."""
 
 from pathlib import Path
@@ -7,21 +5,11 @@ from typing import Any, Optional
 
 from yt_dlp import YoutubeDL, postprocessor
 
+from tools.config.app_config import YarkieSettings
 from tools.data_access.file_repository import FileRepository, file_repository
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.video_logger import SilentVideoLogger
 from tools.helpers.hooks import downloading_hook
-from tools.settings import DOWNLOAD_PATH, VIDEO_EXT
-
-ydl_settings = {
-    "logger": SilentVideoLogger(),
-    "progress_hooks": [downloading_hook],
-    "format": VIDEO_EXT,
-    "concurrent_fragment_downloads": 8,
-    "ignore_no_formats_error": True,
-    "outtmpl": f"{DOWNLOAD_PATH}/%(id)s.%(ext)s",
-    "retries": 3,
-}
 
 
 # error: Class cannot subclass "PostProcessor" (has type "Any")
@@ -50,9 +38,11 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
 
 
 def youtube_downloader(
+    *,
     keys: list[str],
     local_db: LocalDBRepository,
     file_repo: Optional[FileRepository] = None,
+    config: YarkieSettings,
 ) -> None:
     """Download videos from YouTube using provided keys.
 
@@ -64,7 +54,17 @@ def youtube_downloader(
           created).
     """
     if not file_repo:
-        file_repo = file_repository()
+        file_repo = file_repository(config=config)
+
+    ydl_settings = {
+        "logger": SilentVideoLogger(),
+        "progress_hooks": [downloading_hook],
+        "format": config.video_ext,
+        "concurrent_fragment_downloads": 8,
+        "ignore_no_formats_error": True,
+        "outtmpl": f"{config.download_path}/%(id)s.%(ext)s",
+        "retries": 3,
+    }
 
     with YoutubeDL(ydl_settings) as ydl:
         ydl.add_post_processor(

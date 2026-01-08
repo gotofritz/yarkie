@@ -5,6 +5,7 @@
 from logging import Logger, getLogger
 from typing import Optional
 
+from tools.config.app_config import YarkieSettings
 from tools.data_access.file_repository import FileRepository
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
@@ -18,7 +19,9 @@ class ArchiverService:
 
     def __init__(
         self,
+        *,
         local_db: LocalDBRepository,
+        config: YarkieSettings,
         youtube: Optional[YoutubeDAO] = None,
         logger: Optional[Logger] = None,
         file_repo: Optional[FileRepository] = None,
@@ -37,7 +40,8 @@ class ArchiverService:
         self.logger = logger or getLogger(__name__)
         self.youtube = youtube or youtube_dao(logger=self.logger)
         self.local_db: LocalDBRepository = local_db
-        self.file_repo = file_repo or FileRepository()
+        self.config = config
+        self.file_repo = file_repo or FileRepository(config=self.config)
 
     def refresh_playlist(self, keys: tuple[str, ...] | None = None) -> None:
         """Refresh the specified playlist.
@@ -118,6 +122,7 @@ class ArchiverService:
         youtube_downloader(
             keys=[video.id for video in videos_to_download if not video.video_file],
             local_db=self.local_db,
+            config=self.config,
         )
 
     def _download_thumbnails(self, videos_to_download: list[Video]) -> None:
@@ -130,6 +135,7 @@ class ArchiverService:
                 for video in videos_to_download
                 if video.thumbnail.startswith("http")
             ],
+            config=self.config,
         )
 
     def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
@@ -157,7 +163,11 @@ class ArchiverService:
                 self.logger.debug(f"Needs video {video.id} {video.title}...")
                 if download and not self.file_repo.video_file_exists(video.id):
                     self.logger.info(f"Downloading file for video {video.id}.")
-                    youtube_downloader(keys=[video.id], local_db=self.local_db)
+                    youtube_downloader(
+                        keys=[video.id],
+                        local_db=self.local_db,
+                        config=self.config,
+                    )
 
                 if self.file_repo.video_file_exists(video.id):
                     self.logger.debug("...file found for video, updating record.")
@@ -168,7 +178,11 @@ class ArchiverService:
                 self.logger.debug(f"Needs thumbnail {video.id} {video.title}...")
                 if download and not self.file_repo.thumbnail_file_exists(video.id):
                     self.logger.info(f"Downloading file for thumbnail {video.id}.")
-                    thumbnails_downloader(keys=[video.id], local_db=self.local_db)
+                    thumbnails_downloader(
+                        keys=[video.id],
+                        local_db=self.local_db,
+                        config=self.config,
+                    )
 
                 if self.file_repo.thumbnail_file_exists(video.id):
                     self.logger.debug("...file found for thumbnail, updating record.")

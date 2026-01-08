@@ -15,7 +15,7 @@ dependencies = [
     "python3-discogs-client>=2.8",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
-    "yt-dlp==2025.11.03.233024.dev0",
+    "yt-dlp==2025.12.30.233018.dev0",
 ]
 
 [dependency-groups]

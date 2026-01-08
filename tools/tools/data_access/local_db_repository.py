@@ -55,7 +55,7 @@ class LocalDBRepository:
         ----------
         sql_client: An instance of SQLClient to manage database connections
         logger: An optional logger function for logging messages
-        config: An optional configuration object for settings
+        config: An optional configuration object for config
         """
         self.sql_client = sql_client
         self.logger = logger or getLogger(__name__)

@@ -7,8 +7,7 @@ from pathlib import Path
 
 import aiofiles
 
-# todo: must use app_config
-from tools.settings import DATA_ROOT, THUMBNAIL_EXT, VIDEO_EXT
+from tools.config.app_config import YarkieSettings
 
 
 class FileRepository:
@@ -24,15 +23,17 @@ class FileRepository:
         - videos_root: The path for storing videos.
     """
 
-    def __init__(self, root: Path | None = None):
+    def __init__(self, config: YarkieSettings, root: Path | None = None):
         """
         Initialize the FileRepository instance.
 
         Args:
+            - config: The YarkieSettings object containing application configuration.
             - root: The root path for storing files. If not provided, the
-              default root from settings is used.
+              default root from config is used.
         """
-        self.root = root or DATA_ROOT
+        self.config = config
+        self.root = root or self.config.DEFAULT_DATA_ROOT
         self.thumbnails_root = self.root / "thumbnails"
         self.videos_root = self.root / "videos"
 
@@ -48,7 +49,7 @@ class FileRepository:
         """
         dest_folder = self.thumbnails_root / key[0].lower()
         dest_folder.mkdir(parents=True, exist_ok=True)
-        return dest_folder / f"{key}.{THUMBNAIL_EXT}"
+        return dest_folder / f"{key}.{self.config.thumbnail_ext}"
 
     def make_video_path(self, key: str) -> Path:
         """
@@ -62,7 +63,7 @@ class FileRepository:
         """
         dest_folder = self.videos_root / key[0].lower()
         dest_folder.mkdir(parents=True, exist_ok=True)
-        return dest_folder / f"{key}.{VIDEO_EXT}"
+        return dest_folder / f"{key}.{self.config.video_ext}"
 
     async def write_thumbnail(self, key: str, image: bytes | None = None) -> str:
         """
@@ -113,11 +114,11 @@ class FileRepository:
         return thumbnail_path.exists()
 
 
-def file_repository() -> FileRepository:
+def file_repository(config: YarkieSettings) -> FileRepository:
     """
     Return a FileRepository instance.
 
     Returns:
         An instance of the FileRepository class.
     """
-    return FileRepository()
+    return FileRepository(config=config)
