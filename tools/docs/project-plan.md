@@ -81,7 +81,7 @@ These should be done first as they are simple bug fixes with no architectural ch
 
 ### Step 0.0: Update tooling and README
 
-#### Step 0.0.1: replace mypy with ty
+#### ✅ Step 0.0.1: replace mypy with ty
 
 replace mypy with ty and fix all linting errors. Update both pyproject.toml and Taskfile accordingly
 

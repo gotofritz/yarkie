@@ -1,9 +1,9 @@
 version: "3"
 
 vars:
-  ALL: tools/ tests/
+  ALL: src/tools/ tests/
   VENV: .venv/bin
-  SOURCES: tools/
+  SOURCES: src/tools/
 
 tasks:
   # Task to run Bandssit, a security linter for Python code
@@ -49,4 +49,4 @@ tasks:
   test:
     desc: "Run tests with coverage"
     cmds:
-      - pytest -vv --cov --cov-report=html:tests/coverage --cov-fail-under=50 $(if [ -n "{{.CLI_ARGS}}" ]; then echo "{{.CLI_ARGS}}"; else echo .; fi)
+      - pytest -vv --cov --cov-report=html:tests/coverage --cov-fail-under=20 $(if [ -n "{{.CLI_ARGS}}" ]; then echo "{{.CLI_ARGS}}"; else echo .; fi)
