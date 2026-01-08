@@ -24,7 +24,9 @@ def sync_local(ctx: click.Context, download: bool = False) -> None:
     """
     app_context: AppContext = ctx.obj
     archiver = create_archiver_service(
-        local_db=app_context.db,
+        playlist_repository=app_context.playlist_repository,
+        video_repository=app_context.video_repository,
+        sync_service=app_context.sync_service,
         config=app_context.config,
         logger=app_context.logger,
     )

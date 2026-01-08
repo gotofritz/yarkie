@@ -10,11 +10,17 @@ from tools.orm.schema import Base, PlaylistEntriesTable, PlaylistsTable, VideosT
 
 
 @pytest.fixture
-def test_sql_client() -> SQLClient:
+def test_sql_client(request) -> SQLClient:
     """Create an in-memory SQLite database for testing with proper schema."""
     client = SQLClient(db_url=Path(":memory:"))
     # Create all tables defined in the schema
     Base.metadata.create_all(client.engine)
+
+    # Add finalizer to properly dispose of engine and close connections
+    def cleanup():
+        client.engine.dispose()
+
+    request.addfinalizer(cleanup)
     return client
 
 

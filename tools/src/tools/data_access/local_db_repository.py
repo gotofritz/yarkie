@@ -37,10 +37,20 @@ DBData: TypeAlias = dict[str, list[dict[str, Any]]]
 
 class LocalDBRepository:
     """
-    Manages a local database for storing YouTube data.
+    DEPRECATED: This class is deprecated and will be removed in a future version.
 
-    This class provides methods for initializing the database, updating
-    playlists and videos, and handling download-related operations.
+    Use the new domain-specific repositories instead:
+    - PlaylistRepository for playlist operations
+    - VideoRepository for video operations
+    - VideoSyncService for synchronizing YouTube data
+    - DiscogsRepository (coming in Step 4) for Discogs operations
+
+    This class is currently only used by discogs commands and will be removed
+    once Step 4 (Extract Discogs Logic) is completed.
+
+    Legacy class that manages a local database for storing YouTube data.
+    Provides methods for initializing the database, updating playlists and
+    videos, and handling download-related operations.
     """
 
     def __init__(
@@ -789,6 +799,11 @@ def create_local_db_repository(
     config: Optional[YarkieSettings] = None,
 ) -> LocalDBRepository:
     """Create a LocalDBRepository instance with the given dependencies.
+
+    .. deprecated::
+        This factory is deprecated. Use the new domain-specific repository
+        factories instead: create_playlist_repository(), create_video_repository().
+        This function will be removed once Step 4 (Extract Discogs Logic) is completed.
 
     Parameters
     ----------
