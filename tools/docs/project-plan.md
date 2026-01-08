@@ -116,11 +116,11 @@ if debug:
 
 ## 4. Incremental Refactoring Breakdown
 
-### Step 1: ✅ Unify Configuration (COMPLETED)
+### ✅ Step 1: unify Configuration (COMPLETED)
 
-- ✅ Removed legacy `settings.py`
-- ✅ All code uses `config/app_config.py` (Pydantic-based)
-- ✅ Configuration accessed via `AppContext.config`
+- Removed legacy `settings.py`
+- All code uses `config/app_config.py` (Pydantic-based)
+- Configuration accessed via `AppContext.config`
 
 ### Step 2: Decouple Services from AppContext
 
