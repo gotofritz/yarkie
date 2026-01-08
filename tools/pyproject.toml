@@ -2,7 +2,7 @@
 name = "tools"
 version = "0.1.1"
 description = "Helpers and set up scripts for yarkie"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
   "aiofiles>=24.1.0",
   "aiohttp>=3.11.8",
