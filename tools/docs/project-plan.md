@@ -16,16 +16,18 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 ### Completed Work
 
-✅ **Step 1: Unified Configuration** - The legacy `tools/settings.py` has been removed and replaced with Pydantic-based `tools/config/app_config.py`.
+✅ **Step 1: Unified Configuration** - The legacy `settings.py` has been removed and replaced with Pydantic-based `config/app_config.py`.
 
 ### Architectural Issues from Abandoned Refactoring
 
 **1. Bug: Invalid Property Access in CLI** (tools/cli.py:33)
+
 - References `ctx.obj.dbpath` which doesn't exist
 - Should be `ctx.obj.config.db_path`
 - This is a remnant from incomplete refactoring of configuration access
 
 **2. Tight Coupling in AppContext** (tools/app_context.py:12-22)
+
 - `AppContext.__init__` creates `SQLClient` and `LocalDBRepository` internally
 - Violates Single Responsibility Principle (service locator + factory)
 - Makes unit testing difficult (can't easily inject mocks)
@@ -40,6 +42,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 #### 3. Duplicate Service Instantiation Pattern
 
 Commands repeatedly create `ArchiverService` with identical parameters
+
 - Examples in `playlist/refresh.py:23-24` and `db/sync_local.py:27-28`:
   ```python
   archiver = ArchiverService(
@@ -66,7 +69,7 @@ Commands repeatedly create `ArchiverService` with identical parameters
 
 ### Current Architecture Strengths
 
-- ✅ Clear separation between Pydantic DTOs (`tools/models`) and SQLAlchemy ORM (`tools/orm`)
+- ✅ Clear separation between Pydantic DTOs (`models`) and SQLAlchemy ORM (`orm`)
 - ✅ `ArchiverService` demonstrates good dependency injection pattern
 - ✅ Repository pattern well-implemented in `LocalDBRepository`
 - ✅ Comprehensive test infrastructure with 95% coverage requirement
@@ -76,11 +79,28 @@ Commands repeatedly create `ArchiverService` with identical parameters
 
 These should be done first as they are simple bug fixes with no architectural changes required.
 
+### Step 0.0: Update tooling and README
+
+#### Step 0.0.1: replace mypy with ty
+
+replace mypy with ty and fix all linting errors. Update both pyproject.toml and Taskfile accordingly
+
+#### Step 0.0.2
+
+Change project to a modern src/ set up
+
+#### Step 0.0.3
+
+**File:** `README.md`
+
+**Change:** Update with current status / plan
+
 ### Step 0.1: Fix CLI Property Access Bug
 
-**File:** `tools/cli.py:33`
+**File:** `cli.py:33`
 
 **Change:**
+
 ```python
 # Before
 if debug:
@@ -105,8 +125,8 @@ if debug:
 
 ### Step 1: ✅ Unify Configuration (COMPLETED)
 
-- ✅ Removed legacy `tools/settings.py`
-- ✅ All code uses `tools/config/app_config.py` (Pydantic-based)
+- ✅ Removed legacy `settings.py`
+- ✅ All code uses `config/app_config.py` (Pydantic-based)
 - ✅ Configuration accessed via `AppContext.config`
 
 ### Step 2: Decouple Services from AppContext
@@ -115,12 +135,14 @@ if debug:
 
 **Subtasks:**
 
-1. **Create Service Factory Module** (`tools/factories.py`)
+1. **Create Service Factory Module** (`factories.py`)
+
    - Add `create_sql_client(config: YarkieSettings) -> SQLClient`
    - Add `create_local_db_repository(sql_client, logger, config) -> LocalDBRepository`
    - Add `create_archiver_service(local_db, config, logger) -> ArchiverService`
 
 2. **Refactor AppContext to Accept Injected Dependencies**
+
    ```python
    class AppContext:
        def __init__(
@@ -134,7 +156,8 @@ if debug:
            self.db = db
    ```
 
-3. **Update CLI Entry Point** (`tools/cli.py`)
+3. **Update CLI Entry Point** (`cli.py`)
+
    - Use factory functions to create services
    - Pass fully-constructed services to `AppContext`
    - Example:
@@ -151,6 +174,7 @@ if debug:
    - Commands use factory instead of manual instantiation
 
 **Reasoning:**
+
 - Adheres to Single Responsibility Principle
 - Makes testing dramatically easier (inject mocks via factory)
 - Centralizes dependency construction logic
@@ -161,6 +185,7 @@ if debug:
 **Complexity:** Medium
 
 **Testing:**
+
 - All existing tests must pass
 - Add new tests for factory functions
 - Add integration tests verifying service wiring
@@ -171,7 +196,8 @@ if debug:
 
 **Subtasks:**
 
-1. **Extract Discogs Logic to Service** (`tools/services/discogs_service.py`)
+1. **Extract Discogs Logic to Service** (`services/discogs_service.py`)
+
    - Move interactive search logic from `discogs/postprocess.py`
    - Methods:
      - `search_discogs_for_video(video_id) -> DiscogsRelease | None`
@@ -180,15 +206,17 @@ if debug:
    - Command becomes thin orchestrator calling service methods
 
 2. **Analyze Common Patterns Across Commands**
+
    - Review `playlist/refresh.py`, `db/sync_local.py`, `discogs/postprocess.py`
    - Identify shared error handling, logging, or data validation
    - Extract to helper functions or service methods
 
 3. **Create Command Helper Module** (if needed)
-   - `tools/commands/helpers.py` or similar
+   - `commands/helpers.py` or similar
    - Functions for common command patterns (e.g., error formatting, success messages)
 
 **Reasoning:**
+
 - Reduces code duplication
 - Improves testability (test business logic separately from CLI)
 - Makes commands easier to understand (declarative intent)
@@ -199,6 +227,7 @@ if debug:
 **Complexity:** Medium
 
 **Testing:**
+
 - Unit tests for new `DiscogsService`
 - Integration tests verifying command behavior unchanged
 - Refactor existing command tests to use mocked services
@@ -210,15 +239,18 @@ if debug:
 **Subtasks:**
 
 1. **Audit Each Script**
+
    - Document purpose and last usage of each script
    - Classify as: Integrate, Keep as utility, or Delete
 
 2. **Delete Obsolete Scripts**
+
    - `scripts/missing_videos.py` - DUPLICATE of `db sync-local`
    - `scripts/randomiser*.py` (all 4) - IF no longer needed
    - Reasoning: Duplicates existing functionality
 
 3. **Analyze SQL Scripts** (`scripts/sql/utils/`)
+
    - Determine if shell scripts provide functionality not in CLI:
      - `delete_playlist.sh` - Should be CLI command?
      - `delete_video.sh` - Should be CLI command?
@@ -229,6 +261,7 @@ if debug:
      - **Delete:** If obsolete or redundant
 
 4. **Handle Migration Scripts** (`scripts/sql/migrations/`)
+
    - Compare with Alembic migrations
    - If duplicate: delete
    - If unique: Either integrate into Alembic or document as pre-Alembic legacy
@@ -238,6 +271,7 @@ if debug:
    - Document how to run them and when they're needed
 
 **Reasoning:**
+
 - Reduces codebase clutter and confusion
 - Ensures all functionality is discoverable via CLI
 - Prevents duplicate maintenance burden
@@ -248,6 +282,7 @@ if debug:
 **Complexity:** Small to Medium (depends on script analysis)
 
 **Testing:**
+
 - If integrating scripts as commands, add tests
 - If deleting, verify no critical workflow depends on them
 
@@ -258,10 +293,12 @@ if debug:
 **Subtasks:**
 
 1. **Create Command Testing Guide**
+
    - Document how to test commands with mocked services
    - Provide examples of integration vs unit tests
 
 2. **Refactor Existing Command Tests**
+
    - Use factory-injected mocks
    - Separate unit tests (service logic) from integration tests (CLI behavior)
 
@@ -270,6 +307,7 @@ if debug:
    - Target: maintain 95% coverage
 
 **Reasoning:**
+
 - Establishes best practices for future command development
 - Prevents regression of architectural improvements
 - Makes test suite more maintainable
@@ -289,26 +327,32 @@ Each step should be implemented on a **separate feature branch** and merged indi
 For each step, ensure:
 
 1. ✅ **Run Quality Assurance**
+
    ```bash
    task qa
    ```
+
    - All Ruff linting passes
    - All type checks pass (mypy/pyright)
 
 2. ✅ **Run Full Test Suite**
+
    ```bash
    task test
    ```
+
    - All existing tests pass
    - Coverage ≥ 95%
    - No flaky tests
 
 3. ✅ **Add New Tests**
+
    - Unit tests for new factories/services
    - Integration tests for refactored workflows
    - Update fixtures as needed
 
 4. ✅ **Manual Smoke Testing**
+
    - Run key commands manually:
      - `tools playlist refresh`
      - `tools db sync-local`
@@ -335,6 +379,7 @@ Step 5 (Testing Patterns) [Optional]
 ```
 
 **Recommended Timeline:**
+
 - Step 0.1: 30 minutes
 - Step 2: 3-4 hours
 - Step 3: 4-6 hours
@@ -352,6 +397,7 @@ Step 5 (Testing Patterns) [Optional]
 **Risk:** Scripts in `scripts/` may be used by external tools or workflows not visible in the codebase.
 
 **Mitigation:**
+
 - Don't delete scripts until after thorough analysis
 - Check git history for usage patterns
 - Ask team members about script usage
@@ -362,6 +408,7 @@ Step 5 (Testing Patterns) [Optional]
 **Risk:** Existing tests may break when `AppContext` changes to accept injected services.
 
 **Mitigation:**
+
 - Update test fixtures incrementally
 - Use pytest parametrization to test both old and new patterns during transition
 - Maintain backward compatibility temporarily with deprecation warnings
@@ -371,6 +418,7 @@ Step 5 (Testing Patterns) [Optional]
 **Risk:** Extracting `postprocess.py` logic without full understanding could introduce bugs.
 
 **Mitigation:**
+
 - Thoroughly document current behavior before refactoring
 - Add comprehensive tests for current behavior
 - Use git bisect-friendly commits (one logical change per commit)
@@ -381,6 +429,7 @@ Step 5 (Testing Patterns) [Optional]
 **Risk:** Changes to `AppContext` or factories might break production deployments.
 
 **Mitigation:**
+
 - Step 1 already completed (configuration unified)
 - Add integration tests that verify full CLI workflows end-to-end
 - Test in staging environment before production deployment
@@ -409,13 +458,14 @@ The refactoring is complete when:
 
 **After this refactoring:**
 
-- New commands should use service factories from `tools/factories.py`
-- Business logic should live in `tools/services/`, not in command files
+- New commands should use service factories from `factories.py`
+- Business logic should live in `services/`, not in command files
 - Scripts should only exist for one-off operations, not core functionality
 - Configuration must always come from `YarkieSettings` (Pydantic)
 - Services should accept dependencies via constructor (dependency injection)
 
 **Code Review Checklist for Future PRs:**
+
 - [ ] Does command manually instantiate services? → Should use factory
 - [ ] Is business logic in command file? → Should move to service
 - [ ] Is configuration hardcoded? → Should use YarkieSettings

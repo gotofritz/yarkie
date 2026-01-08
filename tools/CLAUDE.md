@@ -1,59 +1,35 @@
-# Yarkie Tools
+# Project Info
 
-When you need to refer to the current plan or architecture, refer to [`claude/project-plan.md`](claude/project-plan.md).
+- Issue tracker: Github
+- Repository: Use `gh` CLI for all GitHub operations
+- Task runner is go-task
 
-## Code Conventions
+## Development Standards
 
-### Python
+**Start here:** tools/README.md for purpose, docs/project-plan.md for current state
 
-- Ruff formatting (line length 88, double quotes, 4-space indentation)
-- Type hints throughout (modern Python 3.13+ syntax like `str | None`)
-- Pydantic models
-- Prefer async if possible
+## Code
 
-### Development tasks
+- Every important file has a docstring at the top explaining its purpose
+- Type hints on all function signatures. Use native types when possible, i.e. `list` and not `List`
+- Use pydantic for data models
+- All imports root-relative
+- When adding an import, prefer adding to the top of the file rather than in the body
+- All commands should be run from the project root
+- At the start of a session run source .venv/bin/activate
+- Organise work in small, atomic commits
+- At the end of a big set of changes, run `{TASK_RUNNER} qa`
+- Limit linting exceptions. If you have to, add a comment explaining why you think you have to.
 
-- Task is set up to l
+## Python
 
-### Architecture Patterns
+- Tools: uv, ruff, mypy, pytest
+- CLI: click
+- Enforce named arguments for functions with >1 parameter
+- Testing: pytest with faker, polyfactory, pytest-data
+- Always create a conftest for mocks
 
-- Click for CLI with command groups and dependency injection via `@click.pass_context`
-- Repository pattern for data access with explicit dependency injection
-- Service layer for business logic (`ArchiverService`)
-- SQLAlchemy Core (not ORM) with explicit sessions
+## Enforcement
 
-### Data storage
-
-- sqlite is used to store data
-- alembic is used to manage migrations
-- the local file system is used to store files, the location is in app_config.DEFAULT_DATA_ROOT
-
-### File Organization
-
-- `__init__.py` files are mostly empty (11 instances)
-- `main.py` for command group collectors
-- Clear module separation: `data_access/`, `models/`, `services/`, `helpers/`
-- Configuration in `config/app_config.py` using Pydantic Settings
-
-### Error Handling
-
-- Custom exceptions in `exceptions.py` (currently minimal, to be preferred)
-- Avoid `except Exception` unless unavoidable
-- Logging with structured messages
-
-### Testing
-
-- 95% coverage requirement
-- Pytest function-based tests with async support
-- Faker, polyfactory and pytest-data for test data generation
-
-### Commands
-
-- Dev tas
-
-## Important file locations
-
-- The main python package is in tools/
-- Config lives in tools/config/
-- migrations are in alembic/versions/
-- scripts/ contains generic one off files, which can normally be ignored
+- Pre-commit: ruff, mypy
+- CI: full test suite
