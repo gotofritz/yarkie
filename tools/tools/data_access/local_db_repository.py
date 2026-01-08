@@ -4,6 +4,7 @@ from typing import Any, Optional, TypeAlias
 
 from sqlalchemy import Boolean, and_, delete, desc, insert, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -526,7 +527,7 @@ class LocalDBRepository:
                     )
                     .values(downloaded=True, last_updated=last_updated_factory())
                 )
-                result = session.execute(stmt)
+                result: CursorResult[Any] = session.execute(stmt)
                 session.commit()
                 self.logger.info(f"{result.rowcount} videos flagged as downloaded")
         except SQLAlchemyError as e:
@@ -696,7 +697,7 @@ class LocalDBRepository:
                         type_=record.type_,
                         release_id=record.release_id,
                     )
-                    insert_result = session.execute(insert_stmt)
+                    insert_result: CursorResult[Any] = session.execute(insert_stmt)
                     track_id = int(insert_result.inserted_primary_key[0])
                 else:
                     self.logger.warning(f"Track {record.title} already in DB")
@@ -721,22 +722,23 @@ class LocalDBRepository:
             return 0
 
     def get_videos_needing_download(
-        self, *, videos: Optional[Boolean] = None, thumbnails: Optional[Boolean] = None
+        self, *, videos: Optional[bool] = None, thumbnails: Optional[bool] = None
     ) -> list[Video]:
         """Retrieve videos that need downloading."""
+        need_videos: bool
+        need_thumbnails: bool
+
         if videos is None and thumbnails is None:
-            videos = True
-            thumbnails = True
+            need_videos = True
+            need_thumbnails = True
         else:
-            videos = videos or False
-            thumbnails = thumbnails or False
-        assert isinstance(videos, bool)
-        assert isinstance(thumbnails, bool)
+            need_videos = videos or False
+            need_thumbnails = thumbnails or False
 
         or_conditions = [VideosTable.downloaded.is_(False)]
-        if videos:
+        if need_videos:
             or_conditions.append(VideosTable.video_file.is_(None))
-        if thumbnails:
+        if need_thumbnails:
             or_conditions.append(VideosTable.thumbnail.is_(None))
         try:
             with Session(self.sql_client.engine) as session:
@@ -747,10 +749,10 @@ class LocalDBRepository:
                     )
                 )
                 result = session.execute(stmt)
-                videos = [
+                video_list = [
                     Video.model_validate(row[0].__dict__) for row in result.fetchall()
                 ]
-                return videos
+                return video_list
         except SQLAlchemyError as e:
             self.logger.error(f"Error retrieving videos needing download: {e}")
             return []
@@ -789,5 +791,7 @@ class LocalDBRepository:
 
                     session.execute(stmt)
                 session.commit()
+                return len(video_data)
         except (SQLAlchemyError, TypeError) as e:
             self.logger.error(f"Error updating VideosTable: {e}")
+            return 0
