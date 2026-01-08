@@ -9,7 +9,8 @@
       "Bash(source .venv/bin/activate:*)",
       "Bash(.venv/bin/ty check:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(task lint)"
     ],
     "deny": [],
     "ask": []

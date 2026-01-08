@@ -1,5 +1,6 @@
 import random
 from unittest.mock import MagicMock, Mock
+import pytest
 
 from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.sql_client import SQLClient
@@ -12,17 +13,20 @@ from tools.models.fakes import (
 from tools.models.models import Playlist
 
 
-def test_update_happy_path():
+@pytest.fixture
+def test_sql_client():
+    """Create an in-memory SQLite database for testing."""
+    return SQLClient(db_url=":memory:")
+
+
+def test_update_happy_path(test_sql_client):
     """Update multiple playlists passed alongside other data."""
     playlists = FakePlaylistFactory.batch(size=2)
-    mock_data = FakeDBFactory.build_json(
-        playlists=playlists,
-        # videos are only needed so that the table is created
-        videos=FakeVideoFactory.build(),
-    )
-
     mock_logger = Mock()
-    sut = LocalDBRepository(data=mock_data, logger=mock_logger)
+    sut = LocalDBRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Pre-populate the database with initial playlists
+    sut.insert_playlists(all_records=playlists)
 
     # the db contains what we expect
     playlists_in_db = sut.db.conn.execute("SELECT * FROM playlists;").fetchall()
