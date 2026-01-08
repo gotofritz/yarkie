@@ -124,7 +124,7 @@ if debug:
 
 ### Step 2: Decouple Services from AppContext
 
-**Goal:** Break tight coupling between `AppContext` and service creation.
+**Goal:** Break tight coupling between `AppContext` and service creation. Make sure all new code has high code coverage.
 
 **Subtasks:**
 
@@ -185,7 +185,7 @@ if debug:
 
 ### Step 3: Extract Shared Command Logic to Services
 
-**Goal:** Remove code duplication and separate business logic from CLI concerns.
+**Goal:** Remove code duplication and separate business logic from CLI concerns. Make sure all new code has high code coverage.
 
 **Subtasks:**
 
@@ -227,7 +227,7 @@ if debug:
 
 ### Step 4: Clean Up Scripts Directory
 
-**Goal:** Eliminate obsolete code and integrate useful utilities into main application.
+**Goal:** Eliminate obsolete code and integrate useful utilities into main application. Make sure all new code has high code coverage.
 
 **Subtasks:**
 
