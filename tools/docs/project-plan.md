@@ -79,25 +79,13 @@ Commands repeatedly create `ArchiverService` with identical parameters
 
 These should be done first as they are simple bug fixes with no architectural changes required.
 
-### Step 0.0: Update tooling and README
+### ✅ Step 0.0: Update tooling and README
 
-#### ✅ Step 0.0.1: replace mypy with ty
-
-replace mypy with ty and fix all linting errors. Update both pyproject.toml and Taskfile accordingly
-
-#### Step 0.0.2
-
-Change project to a modern src/ set up
-
-#### Step 0.0.3
-
-Add github workflow to run task qa on merge and prevent merge if not passing; and to run task qa on every push
-
-#### Step 0.0.4
-
-**File:** `README.md`
-
-**Change:** Update with current status / plan
+**Completed:** Modern tooling setup and documentation
+- Replaced mypy with ty for type checking
+- Migrated to modern src/ layout
+- Added GitHub Actions workflow for automated QA on push/PR
+- Updated README with status badges and current project state
 
 ### Step 0.1: Fix CLI Property Access Bug
 
