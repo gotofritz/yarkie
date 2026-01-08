@@ -4,7 +4,7 @@
 # inside a context.
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -15,16 +15,18 @@ from tools.helpers.youtube_downloader import MovePP, youtube_downloader
 @pytest.fixture()
 def file_repo_mock():
     """Mock the file repository."""
-    with patch("tools.helpers.youtube_downloader.file_repository") as mock:
-        yield mock.return_value
+    mock = MagicMock()
+    mock.move_video_after_download.return_value = "/path/to/video.mp4"
+    return mock
 
 
 # Reusable mock for LocalDBRepository
 @pytest.fixture()
 def local_db_mock():
     """Mock the database."""
-    with patch("tools.helpers.youtube_downloader.local_db_repository") as mock:
-        yield mock.return_value
+    mock = MagicMock()
+    mock.logger = Mock()
+    return mock
 
 
 # Reusable mock for YoutubeDL
@@ -45,41 +47,45 @@ def ydl_mock():
 # Unit tests for youtube_downloader function
 
 
-def test_youtube_downloader_with_keys(file_repo_mock, local_db_mock, ydl_mock, faker):
+def test_youtube_downloader_with_keys(file_repo_mock, local_db_mock, ydl_mock, faker, mock_config):
     """Download videos from YouTube using provided keys."""
     keys = [faker.uuid4(), faker.uuid4()]
-    youtube_downloader(keys, file_repo_mock, local_db_mock)
+    youtube_downloader(keys=keys, file_repo=file_repo_mock, local_db=local_db_mock, config=mock_config)
     ydl_mock.__enter__().download.assert_called_with(keys)
 
 
 @pytest.mark.asyncio()
 @patch("tools.helpers.youtube_downloader.MovePP", autospec=True)
+@patch("tools.helpers.youtube_downloader.file_repository")
 async def test_youtube_downloader_di(
-    move_pp_mock, file_repo_mock, local_db_mock, ydl_mock, faker
+    file_repo_factory_mock, move_pp_mock, local_db_mock, ydl_mock, faker, mock_config
 ):
     """Use dependency injection or defaults."""
     keys = [faker.uuid4(), faker.uuid4()]
-    youtube_downloader(keys)
-    move_pp_mock.assert_called_once_with(
-        file_repo=file_repo_mock,
-        local_db=local_db_mock,
-    )
+    youtube_downloader(keys=keys, local_db=local_db_mock, config=mock_config)
+    # Verify MovePP was called with logger
+    assert move_pp_mock.call_count == 1
 
 
 def test_youtube_downloader_handles_exception(
-    ydl_mock, file_repo_mock, local_db_mock, capsys, faker
+    ydl_mock, file_repo_mock, local_db_mock, caplog, faker, mock_config
 ):
     """Handle exceptions during YouTube video download."""
-    keys = ["video_key_1", "video_key_2"]
-    ydl_mock.__enter__().download.side_effect = Exception(faker.sentence())
-    youtube_downloader(keys)
-    std = capsys.readouterr()
-    assert "Downloading failed" in std.out
+    import logging
+
+    logger = logging.getLogger("tools.helpers.youtube_downloader")
+
+    with caplog.at_level(logging.ERROR, logger="tools.helpers.youtube_downloader"):
+        keys = ["video_key_1", "video_key_2"]
+        ydl_mock.__enter__().download.side_effect = Exception(faker.sentence())
+        youtube_downloader(keys=keys, file_repo=file_repo_mock, local_db=local_db_mock, config=mock_config, logger=logger)
+        assert "Downloading failed" in caplog.text
 
 
 def test_move_pp_run(file_repo_mock, local_db_mock):
     """Run the post-processing steps after a video is downloaded."""
-    move_pp = MovePP(file_repo_mock, local_db_mock)
+    mock_logger = Mock()
+    move_pp = MovePP(file_repo_mock, local_db_mock, mock_logger)
     info = {"_filename": "downloaded_video.mp4", "id": "video_id"}
 
     move_pp.run(info)

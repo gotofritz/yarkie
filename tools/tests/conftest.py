@@ -1,6 +1,7 @@
 # tests/conftest.py
 
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,6 +29,6 @@ def mock_config() -> YarkieSettings:
     config = MagicMock(spec=YarkieSettings)
     config.thumbnail_ext = "webp"
     config.video_ext = "mp4"
-    config.DEFAULT_DATA_ROOT = "."
+    config.DEFAULT_DATA_ROOT = Path(".")
     config.download_path = "/tmp"
     return config
