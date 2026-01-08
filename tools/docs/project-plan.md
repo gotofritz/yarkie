@@ -89,7 +89,7 @@ replace mypy with ty and fix all linting errors. Update both pyproject.toml and 
 
 Change project to a modern src/ set up
 
-#### Step 0.0.3
+#### ✅ Step 0.0.3
 
 Add github workflow to run task qa on merge and prevent merge if not passing; and to run task qa on every push
 
