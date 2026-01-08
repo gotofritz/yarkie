@@ -7,5 +7,5 @@ Tool to manage YT videos locally. Inspired by yark
 
 ## Code organisation
 
-├── [tools](./tools/) # cli app
+├── [tools](./tools/) # cli app<br>
 └── [ui](./ui/) # web frontend
