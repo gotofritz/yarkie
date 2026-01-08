@@ -88,43 +88,27 @@ These should be done first as they are simple bug fixes with no architectural ch
 - Added GitHub Actions workflow for automated QA on push/PR
 - Updated README with status badges and current project state
 
-### Step 0.1: Fix CLI Property Access Bug
+### ✅ Step 0.1: Fix CLI Property Access Bug
 
-**File:** `cli.py:33`
+**Completed:** Fixed debug output property access
 
-**Change:**
-
-```python
-# Before
-if debug:
-    click.echo(ctx.obj.db)
-    click.echo(ctx.obj.dbpath)
-
-# After
-if debug:
-    click.echo(ctx.obj.db)
-    click.echo(ctx.obj.config.db_path)
-```
-
-**Reasoning:** Fixes broken debug output from incomplete configuration refactoring.
-
-**Complexity:** Trivial
-
-**Testing:** Run `tools --debug` and verify no AttributeError is raised.
+- Changed `ctx.obj.dbpath` to `ctx.obj.config.db_path` in `src/tools/cli.py:31`
+- Fixes AttributeError from incomplete configuration refactoring
+- Verified with `tools --debug` - no errors, correct output
 
 ---
 
 ## 4. Incremental Refactoring Breakdown
 
-### Step 1: ✅ Unify Configuration (COMPLETED)
+### ✅ Step 1: unify Configuration (COMPLETED)
 
-- ✅ Removed legacy `settings.py`
-- ✅ All code uses `config/app_config.py` (Pydantic-based)
-- ✅ Configuration accessed via `AppContext.config`
+- Removed legacy `settings.py`
+- All code uses `config/app_config.py` (Pydantic-based)
+- Configuration accessed via `AppContext.config`
 
 ### Step 2: Decouple Services from AppContext
 
-**Goal:** Break tight coupling between `AppContext` and service creation.
+**Goal:** Break tight coupling between `AppContext` and service creation. Make sure all new code has high code coverage.
 
 **Subtasks:**
 
@@ -185,7 +169,7 @@ if debug:
 
 ### Step 3: Extract Shared Command Logic to Services
 
-**Goal:** Remove code duplication and separate business logic from CLI concerns.
+**Goal:** Remove code duplication and separate business logic from CLI concerns. Make sure all new code has high code coverage.
 
 **Subtasks:**
 
@@ -227,7 +211,7 @@ if debug:
 
 ### Step 4: Clean Up Scripts Directory
 
-**Goal:** Eliminate obsolete code and integrate useful utilities into main application.
+**Goal:** Eliminate obsolete code and integrate useful utilities into main application. Make sure all new code has high code coverage.
 
 **Subtasks:**
 
