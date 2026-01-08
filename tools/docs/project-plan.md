@@ -48,26 +48,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 1. ✅ **Split into Domain-Specific Repositories**
 
-   - **Create `PlaylistRepository`** (`data_access/playlist_repository.py`)
-
-     - `get_all_playlists_keys()` (from line 67)
-     - `update_playlists()` (from lines 211-234)
-     - `clear_playlist_links()` (from lines 236-262)
-
-   - **Create `VideoRepository`** (`data_access/video_repository.py`)
-
-     - `update_videos()` (from lines 745-782)
-     - `get_videos_needing_download()` (from lines 711-743)
-     - `mark_video_downloaded()` / `mark_thumbnail_downloaded()` (from lines 458-476)
-     - `refresh_download_field()` (from lines 498-523)
-     - `refresh_deleted_videos()` (from lines 264-275)
-     - `pass_needs_download()` (from lines 425-456)
-
-   - **Create `DiscogsRepository`** (`data_access/discogs_repository.py`)
-     - `upsert_discogs_release()` (from lines 583-611)
-     - `upsert_discogs_artist()` (from lines 613-662)
-     - `upsert_discogs_track()` (from lines 664-709)
-     - `get_videos_without_discogs()` (query only, from lines 525-581)
+   Complete [See](./dev-logs/2026-01-08-2257-90d7d0f-split-into-domain-specific-repositories.md)
 
 2. **Extract Business Logic to Services**
 
