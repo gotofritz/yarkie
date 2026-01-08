@@ -26,16 +26,6 @@ The refactoring will be done in small, incremental steps with full test coverage
   - ✅ [Subtask 3](./dev-logs/2026-01-09-0014-9ebdaff-extract-common-infrastructure.md): Extract Common Infrastructure
   - ✅ Subtask 4: Update Existing Code (ArchiverService, helper functions, CLI, commands, tests)
 
-### Current Architecture Strengths
-
-- ✅ Clear separation between Pydantic DTOs (`models`) and SQLAlchemy ORM (`orm`)
-- ✅ `ArchiverService` demonstrates good dependency injection pattern
-- ✅ Repository pattern well-implemented with domain-specific repositories (`PlaylistRepository`, `VideoRepository`, `BaseRepository`)
-- ✅ Service layer handles business logic (`VideoSyncService`, `DiscogsSearchService`, `ArchiverService`)
-- ✅ Comprehensive test infrastructure with 95% coverage requirement
-- ✅ Clean file organization with distinct layers
-- ✅ All repositories are stateless and thread-safe
-
 ## 3. Remaining Work
 
 ### Step 4: Extract Shared Command Logic to Services
@@ -63,6 +53,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 
    - `commands/helpers.py` or similar
    - Functions for common command patterns (e.g., error formatting, success messages)
+   - Decorator for common cli arguments (e.g. video_id)
 
 4. **Refine ArchiverService** (`services/archiver_service.py`)
 
