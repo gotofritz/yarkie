@@ -7,11 +7,13 @@ from typing import Optional
 
 from tools.config.app_config import YarkieSettings
 from tools.data_access.file_repository import FileRepository
-from tools.data_access.local_db_repository import LocalDBRepository
+from tools.data_access.playlist_repository import PlaylistRepository
+from tools.data_access.video_repository import VideoRepository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
 from tools.helpers.thumbnails_downloader import thumbnails_downloader
 from tools.helpers.youtube_downloader import youtube_downloader
 from tools.models.models import Video, YoutubeObj
+from tools.services.video_sync_service import VideoSyncService
 
 
 class ArchiverService:
@@ -20,7 +22,9 @@ class ArchiverService:
     def __init__(
         self,
         *,
-        local_db: LocalDBRepository,
+        playlist_repository: PlaylistRepository,
+        video_repository: VideoRepository,
+        sync_service: VideoSyncService,
         config: YarkieSettings,
         youtube: Optional[YoutubeDAO] = None,
         logger: Optional[Logger] = None,
@@ -30,16 +34,26 @@ class ArchiverService:
 
         Parameters
         ----------
+        playlist_repository : PlaylistRepository
+            Repository for playlist operations.
+        video_repository : VideoRepository
+            Repository for video operations.
+        sync_service : VideoSyncService
+            Service for synchronizing YouTube data.
+        config : YarkieSettings
+            Application configuration.
         youtube : Optional[YoutubeDAO], optional
             An optional instance of the YoutubeDAO, by default None.
-        local_db : Optional[LocalDBRepository], optional
-            An optional instance of the LocalDBRepository, by default None.
-        logger : Optional[Callable[[str], None]], optional
-            An optional logger callable, by default None.
+        logger : Optional[Logger], optional
+            An optional logger instance, by default None.
+        file_repo : Optional[FileRepository], optional
+            An optional file repository instance, by default None.
         """
         self.logger = logger or getLogger(__name__)
         self.youtube = youtube or youtube_dao(logger=self.logger)
-        self.local_db: LocalDBRepository = local_db
+        self.playlist_repository = playlist_repository
+        self.video_repository = video_repository
+        self.sync_service = sync_service
         self.config = config
         self.file_repo = file_repo or FileRepository(config=self.config)
 
@@ -51,7 +65,7 @@ class ArchiverService:
         keys : The keys identifying the playlist. If empty it will do
         _all_ the playlists in the DB (but not the videos)
         """
-        playlist_keys = keys or self.local_db.get_all_playlists_keys()
+        playlist_keys = keys or self.playlist_repository.get_all_playlists_keys()
 
         self.logger.info(f"Now refreshing: {playlist_keys}")
 
@@ -98,7 +112,7 @@ class ArchiverService:
         """
         self.logger.info("Updating DB record for playlist...")
 
-        self.local_db.update(fresh_info)
+        self.sync_service.sync_youtube_data(all_records=fresh_info)
 
     def _get_videos_to_download(self, fresh_info: list[YoutubeObj]) -> list[Video]:
         """Get videos that need downloading.
@@ -111,7 +125,7 @@ class ArchiverService:
         # Videos to download contain videos that need 'something'.
         # We don't know whether it's a thumbnail, video, or both yet.
         # That will be dealt with by the downloaders.
-        videos_to_download = self.local_db.pass_needs_download(fresh_info)
+        videos_to_download = self.video_repository.pass_needs_download(fresh_info)
         if videos_to_download:
             self.logger.debug(f"{len(videos_to_download)} need downloading")
         return videos_to_download
@@ -121,7 +135,7 @@ class ArchiverService:
         self.logger.info("Downloading videos...")
         youtube_downloader(
             keys=[video.id for video in videos_to_download if not video.video_file],
-            local_db=self.local_db,
+            video_repository=self.video_repository,
             config=self.config,
         )
 
@@ -129,7 +143,7 @@ class ArchiverService:
         """Download thumbnails."""
         self.logger.info("Downloading thumbnails...")
         thumbnails_downloader(
-            local_db=self.local_db,
+            video_repository=self.video_repository,
             key_url_pairs=[
                 (video.id, video.thumbnail)
                 for video in videos_to_download
@@ -142,8 +156,8 @@ class ArchiverService:
     def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
         """Refresh the database."""
         self.logger.info("Refreshing database...")
-        self.local_db.refresh_deleted_videos(all_videos=fresh_info)
-        self.local_db.refresh_download_field()
+        self.video_repository.refresh_deleted_videos(all_videos=fresh_info)
+        self.video_repository.refresh_download_field()
 
     def sync_local(self, *, download: bool = False) -> int:
         """Sync local DB with actual files on disk.
@@ -153,7 +167,7 @@ class ArchiverService:
         int
             Number of records updated.
         """
-        potentials = self.local_db.get_videos_needing_download()
+        potentials = self.video_repository.get_videos_needing_download()
         self.logger.info(f"Syncing local DB with files on disk for {len(potentials)} videos...")
         records = []
         for video in potentials:
@@ -164,7 +178,7 @@ class ArchiverService:
                     self.logger.info(f"Downloading file for video {video.id}.")
                     youtube_downloader(
                         keys=[video.id],
-                        local_db=self.local_db,
+                        video_repository=self.video_repository,
                         config=self.config,
                         logger=self.logger,
                     )
@@ -193,14 +207,16 @@ class ArchiverService:
                     video.model_dump(include={"id", "thumbnail", "video_file", "downloaded"})
                 )
 
-        self.local_db.update_videos(records)
+        self.video_repository.update_videos(records)
         self.logger.info(f"Synced {len(records)} records.")
         return len(records)
 
 
 def create_archiver_service(
     *,
-    local_db: LocalDBRepository,
+    playlist_repository: PlaylistRepository,
+    video_repository: VideoRepository,
+    sync_service: VideoSyncService,
     config: YarkieSettings,
     logger: Optional[Logger] = None,
 ) -> ArchiverService:
@@ -208,8 +224,12 @@ def create_archiver_service(
 
     Parameters
     ----------
-    local_db : LocalDBRepository
-        The local database repository for data persistence.
+    playlist_repository : PlaylistRepository
+        Repository for playlist operations.
+    video_repository : VideoRepository
+        Repository for video operations.
+    sync_service : VideoSyncService
+        Service for synchronizing YouTube data.
     config : YarkieSettings
         The application configuration.
     logger : Optional[Logger], optional
@@ -220,4 +240,10 @@ def create_archiver_service(
     ArchiverService
         A configured ArchiverService instance.
     """
-    return ArchiverService(local_db=local_db, config=config, logger=logger)
+    return ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=config,
+        logger=logger,
+    )

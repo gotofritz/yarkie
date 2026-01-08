@@ -12,7 +12,10 @@ from tools.commands.discogs.main import discogs
 from tools.commands.playlist.main import playlist
 from tools.config.app_config import YarkieSettings
 from tools.data_access.local_db_repository import create_local_db_repository
+from tools.data_access.playlist_repository import create_playlist_repository
 from tools.data_access.sql_client import create_sql_client
+from tools.data_access.video_repository import create_video_repository
+from tools.services.video_sync_service import VideoSyncService
 
 
 @click.group(
@@ -31,14 +34,38 @@ def cli(
     config = YarkieSettings()
     logger = logging.getLogger(__name__)
     sql_client = create_sql_client(config=config, logger=logger)
-    db_repo = create_local_db_repository(sql_client=sql_client, logger=logger, config=config)
+
+    # Create new domain-specific repositories
+    playlist_repo = create_playlist_repository(sql_client=sql_client, logger=logger, config=config)
+    video_repo = create_video_repository(sql_client=sql_client, logger=logger, config=config)
+
+    # Create sync service
+    sync_service = VideoSyncService(
+        playlist_repository=playlist_repo,
+        video_repository=video_repo,
+        sql_client=sql_client,
+        logger=logger,
+    )
+
+    # DEPRECATED: Create LocalDBRepository for backwards compatibility with discogs commands
+    # TODO: Remove this in Step 4 when discogs functionality is extracted
+    legacy_db_repo = create_local_db_repository(sql_client=sql_client, logger=logger, config=config)
 
     # Create AppContext with injected dependencies
-    ctx.obj = AppContext(config=config, logger=logger, db=db_repo)
+    ctx.obj = AppContext(
+        config=config,
+        logger=logger,
+        sql_client=sql_client,
+        playlist_repository=playlist_repo,
+        video_repository=video_repo,
+        sync_service=sync_service,
+        db=legacy_db_repo,
+    )
 
     # Print debug information if the '--debug' option is provided.
     if debug:
-        click.echo(ctx.obj.db)
+        click.echo(ctx.obj.playlist_repository)
+        click.echo(ctx.obj.video_repository)
         click.echo(ctx.obj.config.db_path)
 
 

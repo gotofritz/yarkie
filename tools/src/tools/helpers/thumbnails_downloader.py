@@ -3,19 +3,19 @@
 """Module providing a thumbnails downloader utility."""
 
 import asyncio
-from logging import Logger
+from logging import Logger, getLogger
 from typing import Optional
 
 from aiohttp import ClientResponse, ClientSession
 
 from tools.config.app_config import YarkieSettings
 from tools.data_access.file_repository import FileRepository, file_repository
-from tools.data_access.local_db_repository import LocalDBRepository
+from tools.data_access.video_repository import VideoRepository
 
 
 def thumbnails_downloader(
     key_url_pairs: list[tuple[str, str]],
-    local_db: LocalDBRepository,
+    video_repository: VideoRepository,
     config: YarkieSettings,
     file_repo: Optional[FileRepository] = None,
     logger: Optional[Logger] = None,
@@ -25,13 +25,12 @@ def thumbnails_downloader(
     Args:
         - key_url_pairs: A list of tuples containing video keys and
           thumbnail URLs.
-        - file_repo: An optional FileRepository instance (default is
-          created).
-        - local_db: An optional LocalDBRepository instance (default is
-          created).
+        - video_repository: A VideoRepository instance for marking downloads.
+        - config: Application configuration settings.
+        - file_repo: An optional FileRepository instance (default is created).
         - logger: Optional logger instance for consistent logging across the app.
     """
-    log = logger or local_db.logger
+    log = logger or getLogger(__name__)
     if not file_repo:
         file_repo = file_repository(config=config, logger=log)
 
@@ -54,8 +53,7 @@ def thumbnails_downloader(
             resp.raise_for_status()
             image: bytes = await resp.read()
             moved_to = await file_repo.write_thumbnail(key=key, image=image)
-            local_db.downloaded_thumbnail(key=key, local_file=moved_to)
-            # self.local_db.video_repository.mark_thumbnail_downloaded(info.get("id"),
+            video_repository.mark_thumbnail_downloaded(key=key, local_file=moved_to)
         except Exception:
             """Errors are ignored."""
 

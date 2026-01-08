@@ -1,7 +1,7 @@
 """Module providing a YouTube downloader utility."""
 
 from functools import partial
-from logging import Logger
+from logging import Logger, getLogger
 from pathlib import Path
 from typing import Any, Optional
 
@@ -9,8 +9,8 @@ from yt_dlp import YoutubeDL, postprocessor
 
 from tools.config.app_config import YarkieSettings
 from tools.data_access.file_repository import FileRepository, file_repository
-from tools.data_access.local_db_repository import LocalDBRepository
 from tools.data_access.video_logger import SilentVideoLogger
+from tools.data_access.video_repository import VideoRepository
 from tools.helpers.hooks import downloading_hook
 
 
@@ -22,7 +22,7 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
     def __init__(
         self,
         file_repo: FileRepository,
-        local_db: LocalDBRepository,
+        video_repository: VideoRepository,
         logger: Logger,
         *args: tuple[Any],
         **kwargs: dict[str, Any],
@@ -30,13 +30,13 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
         """Move downloaded videos to the final destination."""
         super().__init__(*args, **kwargs)
         self.file_repo = file_repo
-        self.local_db = local_db
+        self.video_repository = video_repository
         self.logger = logger
 
     def run(self, info):  # type: ignore[override]
         """Run the post-processing steps after a video is downloaded."""
         moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
-        self.local_db.downloaded_video(info.get("id"), moved_to)
+        self.video_repository.mark_video_downloaded(key=info.get("id"), local_file=moved_to)
         self.logger.debug(f"Moved from {Path(info['_filename'])} to {moved_to}")
         return [], info
 
@@ -44,7 +44,7 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
 def youtube_downloader(
     *,
     keys: list[str],
-    local_db: LocalDBRepository,
+    video_repository: VideoRepository,
     file_repo: Optional[FileRepository] = None,
     config: YarkieSettings,
     logger: Optional[Logger] = None,
@@ -53,13 +53,12 @@ def youtube_downloader(
 
     Args:
         - keys: A list of video keys to download.
-        - file_repo: An optional FileRepository instance (default is
-          created).
-        - local_db: An optional LocalDBRepository instance (default is
-          created).
+        - video_repository: A VideoRepository instance for marking downloads.
+        - file_repo: An optional FileRepository instance (default is created).
+        - config: Application configuration settings.
         - logger: Optional logger instance for consistent logging across the app.
     """
-    log = logger or local_db.logger
+    log = logger or getLogger(__name__)
     if not file_repo:
         file_repo = file_repository(config=config, logger=log)
 
@@ -75,7 +74,7 @@ def youtube_downloader(
 
     with YoutubeDL(ydl_settings) as ydl:
         ydl.add_post_processor(
-            MovePP(file_repo=file_repo, local_db=local_db, logger=log),
+            MovePP(file_repo=file_repo, video_repository=video_repository, logger=log),
             when="after_move",
         )
         try:
