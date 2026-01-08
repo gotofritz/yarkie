@@ -8,6 +8,8 @@
 
 **Start here:** tools/README.md for purpose, docs/project-plan.md for current state
 
+All commit and PR messages should be concise yet comprehensive.
+
 ## Code
 
 - Every important file has a docstring at the top explaining its purpose
