@@ -81,63 +81,21 @@ These should be done first as they are simple bug fixes with no architectural ch
 
 ### ✅ Step 0.0: Update tooling and README
 
-**Completed:** Modern tooling setup and documentation
-
-- Replaced mypy with ty for type checking
-- Migrated to modern src/ layout
-- Added GitHub Actions workflow for automated QA on push/PR
-- Updated README with status badges and current project state
+Complete [See](./dev-logs/2026-01-08-1518-cbb8d5e-update-tooling-and-readme.md)
 
 ### ✅ Step 0.1: Fix CLI Property Access Bug
 
-**Completed:** Fixed debug output property access
-
-- Changed `ctx.obj.dbpath` to `ctx.obj.config.db_path` in `src/tools/cli.py:31`
-- Fixes AttributeError from incomplete configuration refactoring
-- Verified with `tools --debug` - no errors, correct output
-
----
+Complete [See](./dev-logs/2026-01-08-1519-cbb8d5e-fix-cli-property-access-bug.md)
 
 ## 4. Incremental Refactoring Breakdown
 
-### ✅ Step 1: unify Configuration (COMPLETED)
+### ✅ Step 1: Unify Configuration
 
-- Removed legacy `settings.py`
-- All code uses `config/app_config.py` (Pydantic-based)
-- Configuration accessed via `AppContext.config`
+Complete [See](./dev-logs/2026-01-08-1520-cbb8d5e-unify-configuration.md)
 
-### ✅ Step 2: Decouple Services from AppContext (COMPLETED)
+### ✅ Step 2: Decouple Services from AppContext
 
-**Completed:** Factory functions added to service files, AppContext refactored to accept injected dependencies, CLI and commands updated to use factories.
-
-**What was done:**
-
-1. **Added Factory Functions to Service Files**
-   - `create_sql_client()` in `sql_client.py`
-   - `create_local_db_repository()` in `local_db_repository.py`
-   - `create_archiver_service()` in `archiver_service.py`
-   - Factory functions collocated with their services for better cohesion
-
-2. **Refactored AppContext to Accept Injected Dependencies**
-   - Removed internal service creation
-   - Constructor now requires `config`, `logger`, and `db` as parameters
-   - Follows Single Responsibility Principle
-
-3. **Updated CLI Entry Point** (`cli.py`)
-   - Uses factory functions to create services
-   - Passes fully-constructed dependencies to `AppContext`
-   - Explicit dependency construction at entry point
-
-4. **Updated Commands to Use Factory Functions**
-   - `playlist/refresh.py` uses `create_archiver_service()`
-   - `db/sync_local.py` uses `create_archiver_service()`
-   - Removed manual service instantiation
-
-**Testing:**
-- ✅ Added tests for all factory functions (6 tests)
-- ✅ Updated `mock_config` fixture to include `db_path`
-- ✅ All existing tests pass (36 passed, 15 xfailed)
-- ✅ QA checks pass (ruff, ty, coverage ≥ 20%)
+Complete [See](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcontext.md)
 
 ### Step 3: Extract Shared Command Logic to Services
 
