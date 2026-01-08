@@ -1,17 +1,17 @@
 # /implement [step]
 
-Read `docs/project-plan.md`, and pick either {step} or list the top level steps and ask the user which one to implement.
+Read `docs/project-plan.md`. If {step} provided, implement it. Otherwise list top-level steps and ask which to implement.
 
-Ask if user wants new branch
+**Branch creation:**
+Ask: "Create new branch? (no/yes/{issue-number} {title})"
 
-- if the answer is anything except "no", change to the main branch and pull
-- If the answer was {number} {string} assume "yes" and create branch from {number}-{slugified string}
-- else if the answer was "yes", ask user if they have a github issue number and title
-  - if yes
-    - create branch from {issue number}-{slugified title}
-  - if not
-    - create branch from {slugified step name}
+- "no" → stay on current branch
+- "{number} {title}" → checkout main, pull, create branch `{number}-{slugified-title}`
+- "yes" → ask for issue number/title, then checkout main, pull, create branch `{number}-{slugified-title}`
+- If no issue → create branch from `{slugified-step-name}`
 
-Create todos, follow CLAUDE.md standards, atomic commits.
+**Implementation:**
+Follow CLAUDE.md standards: create todos, type hints, tests, atomic commits.
 
-When work is completed, run ./tool-archive {step}
+**Completion:**
+Run `task qa`, then `/tool-archive {step}`
