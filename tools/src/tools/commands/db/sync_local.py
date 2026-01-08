@@ -1,11 +1,11 @@
-# tools/commands/playlist/refresh.py
+# tools/commands/db/sync_local.py
 
 """Sync the local repository with playlist data."""
 
 import click
 
 from tools.app_context import AppContext
-from tools.services.archiver_service import ArchiverService
+from tools.services.archiver_service import create_archiver_service
 
 
 @click.command()
@@ -23,7 +23,10 @@ def sync_local(ctx: click.Context, download: bool = False) -> None:
         - key: The identifier of the playlist to refresh.
     """
     app_context: AppContext = ctx.obj
-    config = app_context.config
-    archiver = ArchiverService(logger=app_context.logger, local_db=app_context.db, config=config)
+    archiver = create_archiver_service(
+        local_db=app_context.db,
+        config=app_context.config,
+        logger=app_context.logger,
+    )
     archiver.sync_local(download=download)
     click.echo("Finished")
