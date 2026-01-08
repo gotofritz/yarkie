@@ -21,7 +21,7 @@ The application is a command-line interface built with Click. While functional, 
 
 The refactoring is broken down into the following incremental steps.
 
-### Step 1: Unify Configuration
+### ✅ Step 1: Unify Configuration
 
 **Subtasks:**
 
