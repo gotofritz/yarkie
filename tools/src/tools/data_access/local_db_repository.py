@@ -780,3 +780,28 @@ class LocalDBRepository:
         except (SQLAlchemyError, TypeError) as e:
             self.logger.error(f"Error updating VideosTable: {e}")
             return 0
+
+
+def create_local_db_repository(
+    *,
+    sql_client: SQLClient,
+    logger: Optional[Logger] = None,
+    config: Optional[YarkieSettings] = None,
+) -> LocalDBRepository:
+    """Create a LocalDBRepository instance with the given dependencies.
+
+    Parameters
+    ----------
+    sql_client : SQLClient
+        The SQL client for database operations.
+    logger : Optional[Logger], optional
+        Logger instance, by default None.
+    config : Optional[YarkieSettings], optional
+        The application configuration, by default None.
+
+    Returns
+    -------
+    LocalDBRepository
+        A configured LocalDBRepository instance.
+    """
+    return LocalDBRepository(sql_client=sql_client, logger=logger, config=config)
