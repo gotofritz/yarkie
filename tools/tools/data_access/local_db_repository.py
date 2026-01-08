@@ -4,6 +4,7 @@ from typing import Any, Optional, TypeAlias
 
 from sqlalchemy import Boolean, and_, delete, desc, insert, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.engine import Result
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -123,7 +124,7 @@ class LocalDBRepository:
             elif isinstance(record, Playlist) and not record.enabled:
                 deleted_playlists.append({"id": record.id, "enabled": False})
             elif isinstance(record, Video) and record.deleted:
-                print(f"ADDING {record.id} to videos, because Video.deleted")
+                self.logger.debug(f"ADDING {record.id} to videos, because Video.deleted")
                 deleted_videos.append({"id": record.id, "deleted": True})
             else:
                 filtered.append(record)
@@ -184,9 +185,7 @@ class LocalDBRepository:
             else:
                 # we assume it's a new record, so dump everything but
                 # not playlist_id which is not part of the table schema.
-                to_append = record.model_dump(exclude={"playlist_id"}) | {
-                    "downloaded": 0
-                }
+                to_append = record.model_dump(exclude={"playlist_id"}) | {"downloaded": 0}
                 new_videos.append(to_append)
         if new_videos:
             self._update_video_table(records=new_videos)
@@ -196,12 +195,9 @@ class LocalDBRepository:
             self.logger.debug(f"Updated {len(updated_videos)} videos(s)")
 
         entries_records = [
-            PlaylistEntry(
-                video_id=record.id, playlist_id=record.playlist_id
-            ).model_dump()
+            PlaylistEntry(video_id=record.id, playlist_id=record.playlist_id).model_dump()
             for record in all_records
-            if isinstance(record, (Video, DeletedYoutubeObj))
-            and record.playlist_id is not None
+            if isinstance(record, (Video, DeletedYoutubeObj)) and record.playlist_id is not None
         ]
         if entries_records:
             self._upsert_all(
@@ -225,9 +221,7 @@ class LocalDBRepository:
         if not all_records:
             return []
 
-        playlists = [
-            playlist for playlist in all_records if isinstance(playlist, Playlist)
-        ]
+        playlists = [playlist for playlist in all_records if isinstance(playlist, Playlist)]
 
         if not playlists:
             self.logger.warning("No playlists to process")
@@ -270,15 +264,12 @@ class LocalDBRepository:
     def refresh_deleted_videos(self, all_videos: list[YoutubeObj]) -> None:
         """Determine which videos were deleted and update table accordingly."""
         # Get list of previously downloaded video IDs
-        downloaded_previously = set(
-            self._table_as_map(table_name="videos", field="id").keys()
-        )
+        downloaded_previously = set(self._table_as_map(table_name="videos", field="id").keys())
 
         deleted_videos: list[dict[str, Any]] = [
             {"id": video.id, "deleted": 1, "downloaded": 1}
             for video in all_videos
-            if isinstance(video, DeletedYoutubeObj)
-            and video.id in downloaded_previously
+            if isinstance(video, DeletedYoutubeObj) and video.id in downloaded_previously
         ]
         self._update_video_table(records=deleted_videos)
         self.logger.info(f"Updated {len(deleted_videos)} video(s)")
@@ -301,8 +292,7 @@ class LocalDBRepository:
                 continue
 
             updated_records.append(
-                {k: v for k, v in record.items() if not (k == "title" and v is None)}
-                | defaults
+                {k: v for k, v in record.items() if not (k == "title" and v is None)} | defaults
             )
 
         try:
@@ -526,9 +516,9 @@ class LocalDBRepository:
                     )
                     .values(downloaded=True, last_updated=last_updated_factory())
                 )
-                result = session.execute(stmt)
+                result: Result[Any] = session.execute(stmt)
                 session.commit()
-                self.logger.info(f"{result.rowcount} videos flagged as downloaded")
+                self.logger.info(f"{result.rowcount} videos flagged as downloaded")  # type: ignore[attr-defined]
         except SQLAlchemyError as e:
             self.logger.error(f"Error refreshing download field: {e}")
 
@@ -637,9 +627,7 @@ class LocalDBRepository:
                 ).scalar()
 
                 if exists_query:
-                    self.logger.warning(
-                        f"Artist {record.name} already linked to release"
-                    )
+                    self.logger.warning(f"Artist {record.name} already linked to release")
                     return record.id
 
                 exists_query = session.query(
@@ -696,8 +684,8 @@ class LocalDBRepository:
                         type_=record.type_,
                         release_id=record.release_id,
                     )
-                    insert_result = session.execute(insert_stmt)
-                    track_id = int(insert_result.inserted_primary_key[0])
+                    insert_result: Result[Any] = session.execute(insert_stmt)
+                    track_id = int(insert_result.inserted_primary_key[0])  # type: ignore[attr-defined]
                 else:
                     self.logger.warning(f"Track {record.title} already in DB")
                     track_id = int(existing_track[0])
@@ -721,22 +709,23 @@ class LocalDBRepository:
             return 0
 
     def get_videos_needing_download(
-        self, *, videos: Optional[Boolean] = None, thumbnails: Optional[Boolean] = None
+        self, *, videos: Optional[bool] = None, thumbnails: Optional[bool] = None
     ) -> list[Video]:
         """Retrieve videos that need downloading."""
+        need_videos: bool
+        need_thumbnails: bool
+
         if videos is None and thumbnails is None:
-            videos = True
-            thumbnails = True
+            need_videos = True
+            need_thumbnails = True
         else:
-            videos = videos or False
-            thumbnails = thumbnails or False
-        assert isinstance(videos, bool)
-        assert isinstance(thumbnails, bool)
+            need_videos = videos or False
+            need_thumbnails = thumbnails or False
 
         or_conditions = [VideosTable.downloaded.is_(False)]
-        if videos:
+        if need_videos:
             or_conditions.append(VideosTable.video_file.is_(None))
-        if thumbnails:
+        if need_thumbnails:
             or_conditions.append(VideosTable.thumbnail.is_(None))
         try:
             with Session(self.sql_client.engine) as session:
@@ -747,10 +736,8 @@ class LocalDBRepository:
                     )
                 )
                 result = session.execute(stmt)
-                videos = [
-                    Video.model_validate(row[0].__dict__) for row in result.fetchall()
-                ]
-                return videos
+                video_list = [Video.model_validate(row[0].__dict__) for row in result.fetchall()]
+                return video_list
         except SQLAlchemyError as e:
             self.logger.error(f"Error retrieving videos needing download: {e}")
             return []
@@ -789,5 +776,7 @@ class LocalDBRepository:
 
                     session.execute(stmt)
                 session.commit()
+                return len(video_data)
         except (SQLAlchemyError, TypeError) as e:
             self.logger.error(f"Error updating VideosTable: {e}")
+            return 0

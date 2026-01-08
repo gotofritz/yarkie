@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(git pull:*)",
+      "Bash(git checkout:*)",
+      "WebFetch(domain:docs.astral.sh)",
+      "Bash(uv sync:*)",
+      "Bash(source .venv/bin/activate:*)",
+      "Bash(.venv/bin/ty check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(task lint)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []

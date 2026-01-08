@@ -3,6 +3,7 @@
 """Provide a FileRepository for managing file operations."""
 
 import shutil
+from logging import Logger, getLogger
 from pathlib import Path
 
 import aiofiles
@@ -23,7 +24,9 @@ class FileRepository:
         - videos_root: The path for storing videos.
     """
 
-    def __init__(self, config: YarkieSettings, root: Path | None = None):
+    def __init__(
+        self, config: YarkieSettings, root: Path | None = None, logger: Logger | None = None
+    ):
         """
         Initialize the FileRepository instance.
 
@@ -31,8 +34,10 @@ class FileRepository:
             - config: The YarkieSettings object containing application configuration.
             - root: The root path for storing files. If not provided, the
               default root from config is used.
+            - logger: Optional logger instance for consistent logging across the app.
         """
         self.config = config
+        self.logger = logger or getLogger(__name__)
         self.root = root or self.config.DEFAULT_DATA_ROOT
         self.thumbnails_root = self.root / "thumbnails"
         self.videos_root = self.root / "videos"
@@ -82,7 +87,7 @@ class FileRepository:
         image_file = self.make_thumbnail_path(key)
         async with aiofiles.open(image_file, "wb+") as f:
             await f.write(image)
-        print(f"    Saved thumbnail in {image_file.as_posix()}")
+        self.logger.debug(f"Saved thumbnail in {image_file.as_posix()}")
         return image_file.as_posix()
 
     def move_video_after_download(self, src_path: Path) -> str:
@@ -114,11 +119,15 @@ class FileRepository:
         return thumbnail_path.exists()
 
 
-def file_repository(config: YarkieSettings) -> FileRepository:
+def file_repository(config: YarkieSettings, logger: Logger | None = None) -> FileRepository:
     """
     Return a FileRepository instance.
+
+    Args:
+        - config: The YarkieSettings object containing application configuration.
+        - logger: Optional logger instance for consistent logging across the app.
 
     Returns:
         An instance of the FileRepository class.
     """
-    return FileRepository(config=config)
+    return FileRepository(config=config, logger=logger)

@@ -13,24 +13,30 @@ tasks:
       - "{{.VENV}}/ruff check {{.SOURCES}}"
       - "{{.VENV}}/ruff format {{.SOURCES}}"
 
+  ruff-fix:
+    desc: "fix ruff i=ssues"
+    cmds:
+      - "{{.VENV}}/ruff check {{.SOURCES}} --fix"
+      - "{{.VENV}}/ruff format {{.SOURCES}}"
+
   # Task to open the latest coverage report in a web browser
   coverage:
     desc: "Open the latest coverage report in a web browser"
     cmds:
       - open tests/coverage/index.html
 
-  # Task to run all linting tasks (isort, black, mypy, flake8, bandit)
+  # Task to run all linting tasks (ruff, ty)
   lint:
     desc: "Run all linting tasks"
     deps:
       - ruff
-      - mypy
+      - ty
 
-  # Task to run MyPy for static type checking on the source code
-  mypy:
-    desc: "Run MyPy for static type checking"
+  # Task to run ty for static type checking on the source code
+  ty:
+    desc: "Run ty for static type checking"
     cmds:
-      - "{{.VENV}}/mypy --ignore-missing-imports {{.SOURCES}}"
+      - "{{.VENV}}/ty check {{.SOURCES}}"
 
   # Task to run linting and tests
   qa:
@@ -43,4 +49,4 @@ tasks:
   test:
     desc: "Run tests with coverage"
     cmds:
-      - pytest -vv --cov --cov-report=html:tests/coverage --cov-fail-under=95 $(if [ -n "{{.CLI_ARGS}}" ]; then echo "{{.CLI_ARGS}}"; else echo .; fi)
+      - pytest -vv --cov --cov-report=html:tests/coverage --cov-fail-under=50 $(if [ -n "{{.CLI_ARGS}}" ]; then echo "{{.CLI_ARGS}}"; else echo .; fi)

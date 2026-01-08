@@ -19,9 +19,7 @@ class PlaylistsTable(Base):
     last_updated: Mapped[datetime] = mapped_column(
         Text, nullable=False, server_default=func.datetime("now", "utc")
     )
-    enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("1")
-    )
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
 
     video: Mapped[list["VideosTable"]] = relationship(
         "VideosTable", secondary="playlist_entries", back_populates="playlist"
@@ -41,21 +39,15 @@ class VideosTable(Base):
     height: Mapped[Optional[int]] = mapped_column(Integer)
     video_file: Mapped[Optional[str]] = mapped_column(Text)
     thumbnail: Mapped[Optional[str]] = mapped_column(Text)
-    deleted: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("0")
-    )
+    deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"))
     discogs_track_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("discogs_track.id"), nullable=True
     )
     last_updated: Mapped[datetime] = mapped_column(
         Text, nullable=False, server_default=func.datetime("now", "utc")
     )
-    downloaded: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("0")
-    )
-    is_tune: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("1")
-    )
+    downloaded: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"))
+    is_tune: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
 
     playlist: Mapped[list["PlaylistsTable"]] = relationship(
         "PlaylistsTable", secondary="playlist_entries", back_populates="video"
@@ -142,6 +134,4 @@ class ReleaseArtistsTable(Base):
         Integer, ForeignKey("discogs_artist.id"), primary_key=True
     )
     role: Mapped[str] = mapped_column(Text, nullable=True)
-    is_main: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("0")
-    )
+    is_main: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"))

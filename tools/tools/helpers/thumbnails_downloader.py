@@ -3,6 +3,7 @@
 """Module providing a thumbnails downloader utility."""
 
 import asyncio
+from logging import Logger
 from typing import Optional
 
 from aiohttp import ClientResponse, ClientSession
@@ -17,6 +18,7 @@ def thumbnails_downloader(
     local_db: LocalDBRepository,
     config: YarkieSettings,
     file_repo: Optional[FileRepository] = None,
+    logger: Optional[Logger] = None,
 ) -> None:
     """Download thumbnails for the given key-url pairs.
 
@@ -27,16 +29,16 @@ def thumbnails_downloader(
           created).
         - local_db: An optional LocalDBRepository instance (default is
           created).
+        - logger: Optional logger instance for consistent logging across the app.
     """
+    log = logger or local_db.logger
     if not file_repo:
-        file_repo = file_repository(config=config)
+        file_repo = file_repository(config=config, logger=log)
 
     async def run_fetch_jobs() -> None:
         """Run asynchronous jobs to fetch thumbnails."""
         async with ClientSession() as session:
-            tasks = [
-                fetch_a_thumbnail(key, url, session) for (key, url) in key_url_pairs
-            ]
+            tasks = [fetch_a_thumbnail(key, url, session) for (key, url) in key_url_pairs]
             await asyncio.gather(*tasks)
 
     async def fetch_a_thumbnail(key: str, url: str, session: ClientSession) -> None:
