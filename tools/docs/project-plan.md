@@ -54,12 +54,9 @@ The refactoring will be done in small, incremental steps with full test coverage
 
    Complete [See](./dev-logs/2026-01-08-2331-c3dc23b-extract-business-logic-to-services.md)
 
-3. **Extract Common Infrastructure**
+3. ✅ **Extract Common Infrastructure**
 
-   - **Create `BaseRepository`** or **`UpsertHelper`** utility
-     - Single implementation of `_upsert_all()` (deduplicate lines 277-318 and 337-393)
-     - Single implementation of `_table_as_map()` (deduplicate lines 345-353 and 397-405)
-     - Consolidate table mapping dictionaries into single location
+   Complete [See](./dev-logs/2026-01-09-0014-9ebdaff-extract-common-infrastructure.md)
 
 4. **Update Existing Code**
 

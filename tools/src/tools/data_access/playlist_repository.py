@@ -6,7 +6,7 @@ playlist keys, updating playlist information, and managing playlist-video
 relationships.
 """
 
-from logging import Logger, getLogger
+from logging import Logger
 from typing import Optional
 
 from sqlalchemy import delete, desc, select
@@ -14,12 +14,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from tools.config.app_config import YarkieSettings
+from tools.data_access.base_repository import BaseRepository
 from tools.data_access.sql_client import SQLClient
 from tools.models.models import Playlist, last_updated_factory
 from tools.orm.schema import PlaylistEntriesTable, PlaylistsTable
 
 
-class PlaylistRepository:
+class PlaylistRepository(BaseRepository):
     """
     Manages playlist data in the local database.
 
@@ -45,9 +46,7 @@ class PlaylistRepository:
         config : Optional[YarkieSettings], optional
             Configuration object, by default None.
         """
-        self.sql_client = sql_client
-        self.logger = logger or getLogger(__name__)
-        self.config = config
+        super().__init__(sql_client=sql_client, logger=logger, config=config)
 
     def get_all_playlists_keys(self) -> tuple[str, ...]:
         """Return all enabled playlist keys.
@@ -95,31 +94,13 @@ class PlaylistRepository:
             self.logger.warning("No playlists to process")
             return []
 
-        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
         playlist_records = [
             playlist.model_dump() | {"last_updated": last_updated_factory()}
             for playlist in playlists
         ]
 
-        try:
-            with Session(self.sql_client.engine) as session:
-                stmt = sqlite_insert(PlaylistsTable).values(playlist_records)
-                updates = {
-                    col.name: stmt.excluded[col.name]
-                    for col in PlaylistsTable.__table__.columns
-                    if col.name != "id"
-                }
-
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=["id"],
-                    set_=updates,
-                )
-                session.execute(stmt)
-                session.commit()
-                self.logger.info(f"Updated {len(playlists)} playlist(s)")
-        except SQLAlchemyError as e:
-            self.logger.error(f"Error updating playlists: {e}")
+        self._simple_upsert(table_class=PlaylistsTable, records=playlist_records, pk="id")
+        self.logger.info(f"Updated {len(playlists)} playlist(s)")
 
         return playlists
 
