@@ -30,7 +30,7 @@ def cli(
     # Print debug information if the '--debug' option is provided.
     if debug:
         click.echo(ctx.obj.db)
-        click.echo(ctx.obj.dbpath)
+        click.echo(ctx.obj.config.db_path)
 
 
 # Add the 'playlist' command to the CLI.
