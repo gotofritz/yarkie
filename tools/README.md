@@ -1,6 +1,6 @@
 # Yarkie Tools
 
-![QA Status](https://github.com/gotofritz/yarkie/actions/workflows/qa.yml/badge.svg)
+![QA Status](https://github.com/gotofritz/yarkie/actions/workflows/tools-qa.yml/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-20%25-orange)
 
 Yarkie Tools is a collection of helper scripts and setup utilities designed to streamline tasks related to the Yarkie project.
@@ -10,6 +10,18 @@ Yarkie Tools is a collection of helper scripts and setup utilities designed to s
 The project is undergoing architectural cleanup to improve modularity and maintainability. See [docs/project-plan.md](docs/project-plan.md) for the detailed refactoring plan.
 
 **Recent improvements:**
+
+- ✅ Modernized project structure with `src/` layout
+- ✅ Replaced mypy with ty for type checking
+- ✅ Added GitHub Actions workflow for automated QA checks
+- ✅ Unified configuration using Pydantic-based settings
+
+## Current Status
+
+The project is undergoing architectural cleanup to improve modularity and maintainability. See [docs/project-plan.md](docs/project-plan.md) for the detailed refactoring plan.
+
+**Recent improvements:**
+
 - ✅ Modernized project structure with `src/` layout
 - ✅ Replaced mypy with ty for type checking
 - ✅ Added GitHub Actions workflow for automated QA checks
@@ -61,6 +73,7 @@ Yarkie Tools provides a command-line interface (CLI) for executing various tasks
   task qa
   ```
 
+- Run specific linting tasks (ruff and ty):
 - Run specific linting tasks (ruff and ty):
 
   ```bash
