@@ -16,56 +16,10 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 ### Completed Work
 
-✅ **Step 1: Unified Configuration** - The legacy `settings.py` has been removed and replaced with Pydantic-based `config/app_config.py`.
-
-### Architectural Issues from Abandoned Refactoring
-
-**1. Bug: Invalid Property Access in CLI** (tools/cli.py:33)
-
-- References `ctx.obj.dbpath` which doesn't exist
-- Should be `ctx.obj.config.db_path`
-- This is a remnant from incomplete refactoring of configuration access
-
-**2. Tight Coupling in AppContext** (tools/app_context.py:12-22)
-
-- `AppContext.__init__` creates `SQLClient` and `LocalDBRepository` internally
-- Violates Single Responsibility Principle (service locator + factory)
-- Makes unit testing difficult (can't easily inject mocks)
-- Example:
-  ```python
-  sql_client = SQLClient(db_url=self.config.db_path)
-  self.db = db or LocalDBRepository(
-      sql_client=sql_client, logger=self.logger, config=self.config
-  )
-  ```
-
-#### 3. Duplicate Service Instantiation Pattern
-
-Commands repeatedly create `ArchiverService` with identical parameters
-
-- Examples in `playlist/refresh.py:23-24` and `db/sync_local.py:27-28`:
-  ```python
-  archiver = ArchiverService(
-      logger=app_context.logger, local_db=app_context.db, config=config
-  )
-  ```
-- No centralized factory or dependency injection container
-
-#### 4. Scripts Directory Contains Duplicates and Obsolete Code
-
-- `scripts/missing_videos.py` - Duplicates functionality of `db sync-local` command
-- `scripts/sql/migrations/001_add_playlist_enabled.py` - May overlap with Alembic migrations
-- `scripts/sql/utils/` - Contains manual SQL scripts and shell scripts:
-  - `delete_playlist.sh`, `delete_video.sh`, `edit_video.sh`
-  - `disable_playlists.sh`
-  - Various SQL files (`delete_video.sql`, `update_video.sql`, etc.)
-- `scripts/randomiser*.py` (4 files) - Purpose unclear, possibly obsolete experiments
-
-#### 5. Long Command Functions with Inline Business Logic
-
-- `discogs/postprocess.py` is 200+ lines with inline Discogs API interaction
-- Business logic mixed with CLI interaction concerns
-- Should be extracted to a service layer
+- ✅ [Step 0.0](./dev-logs/2026-01-08-1518-cbb8d5e-update-tooling-and-readme.md): Updated tooling and README
+- ✅ [Step 0.1](./dev-logs/2026-01-08-1519-cbb8d5e-fix-cli-property-access-bug.md): Fixed CLI property access bug
+- ✅ [Step 1](./dev-logs/2026-01-08-1520-cbb8d5e-unify-configuration.md): Unified configuration (removed `settings.py`, using Pydantic `config/app_config.py`)
+- ✅ [Step 2](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcontext.md): Decoupled services from AppContext
 
 ### Current Architecture Strengths
 
@@ -75,29 +29,104 @@ Commands repeatedly create `ArchiverService` with identical parameters
 - ✅ Comprehensive test infrastructure with 95% coverage requirement
 - ✅ Clean file organization with distinct layers
 
-## 3. Quick Wins (Priority Fixes)
+## 3. Remaining Work
 
-These should be done first as they are simple bug fixes with no architectural changes required.
+### Step 3: Refactor LocalDBRepository (Split God Object)
 
-### ✅ Step 0.0: Update tooling and README
+**Goal:** Break down `LocalDBRepository` into focused, domain-specific repositories to improve maintainability, testability, and eliminate violations of the Repository pattern. Make sure all new code has high code coverage.
 
-Complete [See](./dev-logs/2026-01-08-1518-cbb8d5e-update-tooling-and-readme.md)
+**Current Issues:**
 
-### ✅ Step 0.1: Fix CLI Property Access Bug
+- 808 lines in a single class with 35+ methods
+- Handles three distinct domains: YouTube data, Discogs data, and download tracking
+- Contains business logic that belongs in service layer (lines 559-576)
+- Code duplication in upsert logic and table mapping
+- Stateful behavior (`_last_processed_offset`) makes it non-thread-safe
+- TODO comment on line 99: "needs transactions" indicates incomplete design
 
-Complete [See](./dev-logs/2026-01-08-1519-cbb8d5e-fix-cli-property-access-bug.md)
+**Subtasks:**
 
-## 4. Incremental Refactoring Breakdown
+1. ✅ **Split into Domain-Specific Repositories**
 
-### ✅ Step 1: Unify Configuration
+   - **Create `PlaylistRepository`** (`data_access/playlist_repository.py`)
 
-Complete [See](./dev-logs/2026-01-08-1520-cbb8d5e-unify-configuration.md)
+     - `get_all_playlists_keys()` (from line 67)
+     - `update_playlists()` (from lines 211-234)
+     - `clear_playlist_links()` (from lines 236-262)
 
-### ✅ Step 2: Decouple Services from AppContext
+   - **Create `VideoRepository`** (`data_access/video_repository.py`)
 
-Complete [See](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcontext.md)
+     - `update_videos()` (from lines 745-782)
+     - `get_videos_needing_download()` (from lines 711-743)
+     - `mark_video_downloaded()` / `mark_thumbnail_downloaded()` (from lines 458-476)
+     - `refresh_download_field()` (from lines 498-523)
+     - `refresh_deleted_videos()` (from lines 264-275)
+     - `pass_needs_download()` (from lines 425-456)
 
-### Step 3: Extract Shared Command Logic to Services
+   - **Create `DiscogsRepository`** (`data_access/discogs_repository.py`)
+     - `upsert_discogs_release()` (from lines 583-611)
+     - `upsert_discogs_artist()` (from lines 613-662)
+     - `upsert_discogs_track()` (from lines 664-709)
+     - `get_videos_without_discogs()` (query only, from lines 525-581)
+
+2. **Extract Business Logic to Services**
+
+   - **Create `DiscogsSearchService`** (`services/discogs_search_service.py`)
+
+     - `generate_search_strings()` - Extract string manipulation from lines 559-576
+     - `next_video_to_process()` - Orchestrates repository query + search string generation
+     - Remove stateful `_last_processed_offset` - pass as parameter instead
+
+   - **Create `VideoSyncService`** (`services/video_sync_service.py`)
+     - `sync_youtube_data()` - Orchestrates the update flow from lines 87-103
+     - Add proper transaction support (addresses TODO on line 99)
+     - `handle_deleted_videos()` - Coordinate deletion logic across repositories
+
+3. **Extract Common Infrastructure**
+
+   - **Create `BaseRepository`** or **`UpsertHelper`** utility
+     - Single implementation of `_upsert_all()` (deduplicate lines 277-318 and 337-393)
+     - Single implementation of `_table_as_map()` (deduplicate lines 345-353 and 397-405)
+     - Consolidate table mapping dictionaries into single location
+
+4. **Update Existing Code**
+
+   - Update `ArchiverService` and other services to use new repositories
+   - Update factory functions to create new repository instances
+   - Update tests to use new repository structure
+   - Deprecate `LocalDBRepository` or make it a facade (temporary compatibility)
+
+**Reasoning:**
+
+- **Single Responsibility Principle**: Each repository handles one domain
+- **Improved testability**: Smaller, focused classes are easier to mock and test
+- **Enable parallel development**: Teams can work on YouTube vs Discogs independently
+- **Thread-safe**: Remove stateful instance variables
+- **Proper transaction boundaries**: Services can coordinate transactions across repositories
+- **True Repository Pattern**: Repositories only handle data access, services handle business logic
+- **Reduced cognitive load**: Each class has a single, clear purpose
+
+**Dependencies:** Step 2 (factory pattern already in place for dependency injection)
+
+**Complexity:** High (large refactoring, but well-defined boundaries)
+
+**Testing:**
+
+- Unit tests for each new repository class
+- Unit tests for new service classes (with mocked repositories)
+- Integration tests verifying existing workflows unchanged
+- Update existing `LocalDBRepository` tests to cover new structure
+- Ensure transaction behavior works correctly in `VideoSyncService`
+- Verify thread-safety by removing stateful variables
+
+**Migration Strategy:**
+
+- Phase 1: Create new repositories alongside existing `LocalDBRepository`
+- Phase 2: Update services to use new repositories
+- Phase 3: Deprecate `LocalDBRepository` (or convert to facade)
+- Phase 4: Remove old implementation after verification
+
+### Step 4: Extract Shared Command Logic to Services
 
 **Goal:** Remove code duplication and separate business logic from CLI concerns. Make sure all new code has high code coverage.
 
@@ -119,27 +148,61 @@ Complete [See](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcont
    - Extract to helper functions or service methods
 
 3. **Create Command Helper Module** (if needed)
+
    - `commands/helpers.py` or similar
    - Functions for common command patterns (e.g., error formatting, success messages)
+
+4. **Refine ArchiverService** (`services/archiver_service.py`)
+
+   - **Refactor `sync_local()` method** (lines 148-198)
+
+     - Extract `_sync_video_with_filesystem()` to handle per-video logic
+     - Extract `_sync_video_file()`, `_sync_thumbnail_file()`, `_update_downloaded_flag()`
+     - Reduce complexity from 50 lines mixing multiple concerns
+     - Eliminate state mutation in loop (use immutable updates)
+
+   - **Convert module functions to injectable services**
+
+     - Create `VideoDownloaderService` wrapping `youtube_downloader()` (lines 122-126, 165-170)
+     - Create `ThumbnailDownloaderService` wrapping `thumbnails_downloader()` (lines 131-140)
+     - Inject as dependencies instead of importing as functions
+     - Improves testability and follows dependency injection principle
+
+   - **Extract filtering logic to methods**
+
+     - Create `_filter_videos_needing_files()` (from line 123)
+     - Create `_filter_videos_needing_thumbnails()` (from line 136)
+     - Make inline list comprehensions more readable and reusable
+
+   - **Optional: Create `VideoDownloadCoordinator` service**
+     - Coordinates video and thumbnail download logic
+     - Encapsulates download strategies
+     - Further simplifies `ArchiverService` orchestration
 
 **Reasoning:**
 
 - Reduces code duplication
-- Improves testability (test business logic separately from CLI)
+- Improves testability (test business logic separately from CLI and service logic separately from I/O)
 - Makes commands easier to understand (declarative intent)
 - Centralizes business rules
+- Eliminates direct coupling to module functions (enables proper dependency injection)
+- Reduces method complexity (`sync_local()` from 50 lines to ~15-20 lines)
+- Makes services more focused and easier to maintain
 
-**Dependencies:** Step 2 (having factory pattern makes service creation cleaner)
+**Dependencies:** Steps 2 and 3 (factory pattern + clean repositories make service extraction cleaner)
 
 **Complexity:** Medium
 
 **Testing:**
 
 - Unit tests for new `DiscogsService`
+- Unit tests for `VideoDownloaderService` and `ThumbnailDownloaderService` (mock file I/O)
+- Unit tests for refactored `ArchiverService.sync_local()` (with mocked downloaders)
 - Integration tests verifying command behavior unchanged
 - Refactor existing command tests to use mocked services
+- Test `_sync_video_with_filesystem()` and helper methods in isolation
 
-### Step 4: Clean Up Scripts Directory
+### Step 5: Clean Up Scripts Directory
 
 **Goal:** Eliminate obsolete code and integrate useful utilities into main application. Make sure all new code has high code coverage.
 
@@ -193,7 +256,7 @@ Complete [See](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcont
 - If integrating scripts as commands, add tests
 - If deleting, verify no critical workflow depends on them
 
-### Step 5: (Optional) Establish Testing Patterns for Commands
+### Step 6: (Optional) Establish Testing Patterns for Commands
 
 **Goal:** Ensure consistent testing approach after refactoring.
 
@@ -219,13 +282,13 @@ Complete [See](./dev-logs/2026-01-08-1521-cbb8d5e-decouple-services-from-appcont
 - Prevents regression of architectural improvements
 - Makes test suite more maintainable
 
-**Dependencies:** Steps 2 and 3
+**Dependencies:** Steps 2 and 4
 
 **Complexity:** Medium
 
 ---
 
-## 5. Integration and Verification
+## 4. Integration and Verification
 
 Each step should be implemented on a **separate feature branch** and merged individually after verification.
 
@@ -273,31 +336,25 @@ For each step, ensure:
 
 ---
 
-## 6. Execution Order and Dependencies
+## 5. Execution Order and Dependencies
 
 ```text
-Step 0.1 (Bug Fix)
+Step 3 (Refactor LocalDBRepository)
     ↓
-Step 2 (Decouple AppContext) ← Step 4 (Scripts Cleanup) can run in parallel
+Step 4 (Extract Command Logic) ← Step 5 (Scripts Cleanup) can run in parallel
     ↓
-Step 3 (Extract Command Logic)
-    ↓
-Step 5 (Testing Patterns) [Optional]
+Step 6 (Testing Patterns) [Optional]
 ```
 
-**Recommended Timeline:**
+**Execution Notes:**
 
-- Step 0.1: 30 minutes
-- Step 2: 3-4 hours
-- Step 3: 4-6 hours
-- Step 4: 2-4 hours (depending on script analysis)
-- Step 5: 2-3 hours
-
-**Total Estimated Effort:** 11-17 hours of development time
+- **Step 3** should be done first as it provides cleaner repository foundations for subsequent refactoring
+- **Steps 4 and 5** are independent and can be done in parallel or in any order after Step 3
+- **Step 6** should come after Step 4 if done (to establish testing patterns for the refactored command logic)
 
 ---
 
-## 7. Potential Blockers and Mitigation
+## 6. Potential Blockers and Mitigation
 
 ### Blocker: Hidden Dependencies in Scripts
 
@@ -307,18 +364,21 @@ Step 5 (Testing Patterns) [Optional]
 
 - Don't delete scripts until after thorough analysis
 - Check git history for usage patterns
-- Ask team members about script usage
 - Consider moving to `scripts/deprecated/` first as a trial period
 
-### Blocker: Test Failures After Service Injection
+### Blocker: Breaking Changes from Repository Split
 
-**Risk:** Existing tests may break when `AppContext` changes to accept injected services.
+**Risk:** Splitting `LocalDBRepository` into multiple repositories could break existing code that depends on the monolithic interface.
 
 **Mitigation:**
 
-- Update test fixtures incrementally
-- Use pytest parametrization to test both old and new patterns during transition
-- Maintain backward compatibility temporarily with deprecation warnings
+- Create new repositories alongside existing `LocalDBRepository` (don't modify it initially)
+- Use a phased migration approach: new code uses new repos, old code continues using old repo
+- Consider creating a facade/adapter pattern to maintain backward compatibility temporarily
+- Add comprehensive integration tests before splitting to ensure behavior parity
+- Update one service at a time to use new repositories
+- Keep `LocalDBRepository` as a deprecated facade during transition period
+- Use feature flags if gradual rollout needed in production
 
 ### Blocker: Incomplete Understanding of Discogs Command Logic
 
@@ -331,20 +391,22 @@ Step 5 (Testing Patterns) [Optional]
 - Use git bisect-friendly commits (one logical change per commit)
 - Keep original command as reference until new service is proven stable
 
-### Blocker: Configuration Changes Breaking Production
+### Blocker: Module Function Dependencies
 
-**Risk:** Changes to `AppContext` or factories might break production deployments.
+**Risk:** Converting module-level functions (`youtube_downloader`, `thumbnails_downloader`) to services might break code that imports them directly.
 
 **Mitigation:**
 
-- Step 1 already completed (configuration unified)
-- Add integration tests that verify full CLI workflows end-to-end
-- Test in staging environment before production deployment
-- Use feature flags if gradual rollout is needed
+- Keep module functions as wrappers during transition period
+- Have module functions delegate to new services internally
+- Gradually migrate callers to use injected services
+- Add deprecation warnings to module functions
+- Use grep to find all usages before starting refactoring
+- Consider keeping module functions as convenience wrappers permanently (calling services underneath)
 
 ---
 
-## 8. Success Criteria
+## 7. Success Criteria
 
 The refactoring is complete when:
 
@@ -352,29 +414,51 @@ The refactoring is complete when:
 2. ✅ `AppContext` only holds references, doesn't create services
 3. ✅ Factory functions centralize service creation
 4. ✅ Commands use factories instead of manual service instantiation
-5. ✅ Business logic extracted to service layer
-6. ✅ Scripts directory purpose is clear (or removed)
-7. ✅ Test coverage ≥ 95%
-8. ✅ All QA checks pass
-9. ✅ Documentation reflects new architecture
-10. ✅ No duplicate code between scripts and main application
+5. ⬜ `LocalDBRepository` split into domain-specific repositories (`PlaylistRepository`, `VideoRepository`, `DiscogsRepository`)
+6. ⬜ No business logic in repository classes (moved to services)
+7. ⬜ Repositories are stateless and thread-safe
+8. ⬜ Transaction support implemented in service layer
+9. ⬜ No code duplication in upsert/table mapping logic
+10. ⬜ Business logic extracted to service layer
+11. ⬜ Module functions (`youtube_downloader`, `thumbnails_downloader`) wrapped as injectable services
+12. ⬜ `ArchiverService.sync_local()` refactored into smaller, testable methods
+13. ⬜ No direct coupling to module functions (all dependencies injected)
+14. ⬜ Scripts directory purpose is clear (or removed)
+15. ⬜ Test coverage ≥ 95%
+16. ⬜ All QA checks pass
+17. ⬜ Documentation reflects new architecture
+18. ⬜ No duplicate code between scripts and main application
 
 ---
 
-## 9. Maintenance Notes
+## 8. Maintenance Notes
 
 **After this refactoring:**
 
 - New commands should use service factories from `factories.py`
-- Business logic should live in `services/`, not in command files
+- Business logic should live in `services/`, not in command files or repositories
+- Repositories should only handle data access, no business logic
+- Use domain-specific repositories (`VideoRepository`, `PlaylistRepository`, `DiscogsRepository`) instead of monolithic `LocalDBRepository`
+- Keep repositories stateless - no instance variables that change between method calls
+- Transaction coordination should happen in service layer, not repositories
 - Scripts should only exist for one-off operations, not core functionality
 - Configuration must always come from `YarkieSettings` (Pydantic)
 - Services should accept dependencies via constructor (dependency injection)
+- Avoid importing module-level functions directly - wrap them as injectable services
+- Service methods should be focused (single responsibility) - if a method exceeds ~30 lines, consider extracting
+- Avoid state mutation in loops - prefer immutable updates and building new collections
 
 **Code Review Checklist for Future PRs:**
 
 - [ ] Does command manually instantiate services? → Should use factory
 - [ ] Is business logic in command file? → Should move to service
+- [ ] Is business logic in repository class? → Should move to service
+- [ ] Does repository contain string manipulation or complex logic? → Should move to service
+- [ ] Is repository stateful (has mutable instance variables)? → Make stateless
 - [ ] Is configuration hardcoded? → Should use YarkieSettings
 - [ ] Are dependencies created inside class? → Should be injected
+- [ ] Does code import and call module functions directly? → Wrap as injectable service
+- [ ] Is a service method over 30 lines? → Consider extracting helper methods
+- [ ] Does code mutate state in loops? → Consider immutable updates
 - [ ] Are there new scripts? → Should be CLI commands instead
+- [ ] Does code duplicate existing repository methods? → Use existing methods or extract to base class
