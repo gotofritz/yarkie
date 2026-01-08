@@ -5,7 +5,7 @@ database operations related to YouTube videos, including updating video
 information, tracking downloads, and managing video metadata.
 """
 
-from logging import Logger, getLogger
+from logging import Logger
 from typing import Any, Optional
 
 from sqlalchemy import and_, or_, select, update
@@ -14,13 +14,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from tools.config.app_config import YarkieSettings
+from tools.data_access.base_repository import BaseRepository
 from tools.data_access.sql_client import SQLClient
 from tools.models.fakes import FakeVideoFactory
 from tools.models.models import DeletedYoutubeObj, Video, YoutubeObj, last_updated_factory
 from tools.orm.schema import VideosTable
 
 
-class VideoRepository:
+class VideoRepository(BaseRepository):
     """
     Manages video data in the local database.
 
@@ -46,9 +47,7 @@ class VideoRepository:
         config : Optional[YarkieSettings], optional
             Configuration object, by default None.
         """
-        self.sql_client = sql_client
-        self.logger = logger or getLogger(__name__)
-        self.config = config
+        super().__init__(sql_client=sql_client, logger=logger, config=config)
 
     def update_videos(self, video_data: list[dict[str, Any]]) -> int:
         """Update multiple video records in the database.
@@ -360,18 +359,7 @@ class VideoRepository:
         dict[str, Any]
             A dictionary mapping video IDs to field values.
         """
-        try:
-            with Session(self.sql_client.engine) as session:
-                id_col = VideosTable.id
-                field_col = getattr(VideosTable, field)
-
-                stmt = select(id_col, field_col)
-                result = session.execute(stmt)
-
-                return {row[0]: row[1] for row in result}
-        except (SQLAlchemyError, AttributeError) as e:
-            self.logger.error(f"Error creating video field map for {field}: {e}")
-            return {}
+        return self._get_table_field_map(table_name="videos", field=field)
 
 
 def create_video_repository(

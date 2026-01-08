@@ -27,6 +27,7 @@
 - CLI: click
 - Enforce named arguments for functions with >1 parameter
 - Testing: pytest with faker, polyfactory, pytest-data
+- Tests MUST be function based, not class based
 - Always create a conftest for mocks
 
 ## Enforcement
