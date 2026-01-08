@@ -15,9 +15,7 @@ from tools.commands.playlist.main import playlist
     invoke_without_command=True,
 )
 @click.version_option()
-@click.option(
-    "--debug/--no-debug", default=False, is_flag=True, help="Print debug information."
-)
+@click.option("--debug/--no-debug", default=False, is_flag=True, help="Print debug information.")
 @click.pass_context
 def cli(
     ctx: click.Context,

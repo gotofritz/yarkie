@@ -24,8 +24,6 @@ def sync_local(ctx: click.Context, download: bool = False) -> None:
     """
     app_context: AppContext = ctx.obj
     config = app_context.config
-    archiver = ArchiverService(
-        logger=app_context.logger, local_db=app_context.db, config=config
-    )
+    archiver = ArchiverService(logger=app_context.logger, local_db=app_context.db, config=config)
     archiver.sync_local(download=download)
     click.echo("Finished")

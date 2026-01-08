@@ -24,9 +24,7 @@ def postprocess(ctx: click.Context) -> None:
     logger.debug("Starting postprocess command")
 
     db = app_context.db
-    d = discogs_client.Client(
-        "ExampleApplication/0.1", user_token=app_context.config.discogs_token
-    )
+    d = discogs_client.Client("ExampleApplication/0.1", user_token=app_context.config.discogs_token)
     while to_search := db.next_without_discogs():
         (video_id, search_strings) = to_search
         click.echo("\n---------------------------------\nPossible search strings:")
@@ -57,7 +55,7 @@ def postprocess(ctx: click.Context) -> None:
             if search_string:
                 try:
                     results = [d.release(int(search_string))]
-                    print(f"Found {len(results)} results")
+                    logger.info(f"Found {len(results)} results")
                 except HTTPError as e:
                     if e.status_code == 404:
                         click.echo("No results found")

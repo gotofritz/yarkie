@@ -1,5 +1,7 @@
 """Module providing a YouTube downloader utility."""
 
+from functools import partial
+from logging import Logger
 from pathlib import Path
 from typing import Any, Optional
 
@@ -21,6 +23,7 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
         self,
         file_repo: FileRepository,
         local_db: LocalDBRepository,
+        logger: Logger,
         *args: tuple[Any],
         **kwargs: dict[str, Any],
     ):
@@ -28,12 +31,13 @@ class MovePP(postprocessor.PostProcessor):  # type: ignore
         super().__init__(*args, **kwargs)
         self.file_repo = file_repo
         self.local_db = local_db
+        self.logger = logger
 
     def run(self, info):  # type: ignore[override]
         """Run the post-processing steps after a video is downloaded."""
         moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
         self.local_db.downloaded_video(info.get("id"), moved_to)
-        print(f"    Moved from {Path(info['_filename'])} to {moved_to}")
+        self.logger.debug(f"Moved from {Path(info['_filename'])} to {moved_to}")
         return [], info
 
 
@@ -43,6 +47,7 @@ def youtube_downloader(
     local_db: LocalDBRepository,
     file_repo: Optional[FileRepository] = None,
     config: YarkieSettings,
+    logger: Optional[Logger] = None,
 ) -> None:
     """Download videos from YouTube using provided keys.
 
@@ -52,13 +57,15 @@ def youtube_downloader(
           created).
         - local_db: An optional LocalDBRepository instance (default is
           created).
+        - logger: Optional logger instance for consistent logging across the app.
     """
+    log = logger or local_db.logger
     if not file_repo:
-        file_repo = file_repository(config=config)
+        file_repo = file_repository(config=config, logger=log)
 
     ydl_settings = {
         "logger": SilentVideoLogger(),
-        "progress_hooks": [downloading_hook],
+        "progress_hooks": [partial(downloading_hook, logger=log)],
         "format": config.video_ext,
         "concurrent_fragment_downloads": 8,
         "ignore_no_formats_error": True,
@@ -68,10 +75,10 @@ def youtube_downloader(
 
     with YoutubeDL(ydl_settings) as ydl:
         ydl.add_post_processor(
-            MovePP(file_repo=file_repo, local_db=local_db),
+            MovePP(file_repo=file_repo, local_db=local_db, logger=log),
             when="after_move",
         )
         try:
             ydl.download(keys)
         except Exception as e:
-            print(f"        Downloading failed {e}")
+            log.error(f"Downloading failed {e}")

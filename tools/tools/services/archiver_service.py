@@ -136,6 +136,7 @@ class ArchiverService:
                 if video.thumbnail is not None and video.thumbnail.startswith("http")
             ],
             config=self.config,
+            logger=self.logger,
         )
 
     def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
@@ -153,9 +154,7 @@ class ArchiverService:
             Number of records updated.
         """
         potentials = self.local_db.get_videos_needing_download()
-        self.logger.info(
-            f"Syncing local DB with files on disk for {len(potentials)} videos..."
-        )
+        self.logger.info(f"Syncing local DB with files on disk for {len(potentials)} videos...")
         records = []
         for video in potentials:
             dirty = False
@@ -167,6 +166,7 @@ class ArchiverService:
                         keys=[video.id],
                         local_db=self.local_db,
                         config=self.config,
+                        logger=self.logger,
                     )
 
                 if self.file_repo.video_file_exists(video.id):
@@ -190,9 +190,7 @@ class ArchiverService:
             if dirty:
                 self.logger.debug(f"Updating video {video.id} {video.title}...")
                 records.append(
-                    video.model_dump(
-                        include={"id", "thumbnail", "video_file", "downloaded"}
-                    )
+                    video.model_dump(include={"id", "thumbnail", "video_file", "downloaded"})
                 )
 
         self.local_db.update_videos(records)

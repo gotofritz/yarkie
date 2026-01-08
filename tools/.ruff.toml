@@ -60,7 +60,10 @@ select = [
   "UP006",
   "UP007",
 ]
-ignore = []
+ignore = [
+  # discourages assigning lambda expressions to variables
+  "E731",
+]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []

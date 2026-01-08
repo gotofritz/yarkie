@@ -20,8 +20,6 @@ def refresh(ctx: click.Context, keys: tuple[str, ...] | None) -> None:
     """
     app_context: AppContext = ctx.obj
     config = app_context.config
-    archiver = ArchiverService(
-        logger=app_context.logger, local_db=app_context.db, config=config
-    )
+    archiver = ArchiverService(logger=app_context.logger, local_db=app_context.db, config=config)
     archiver.refresh_playlist(keys=keys)
     click.echo("Finished")

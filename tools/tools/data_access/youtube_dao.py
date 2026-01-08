@@ -43,16 +43,13 @@ class YoutubeDAO:
                 with YoutubeDL(self.ydl_settings) as ydl:
                     extracted = ydl.extract_info(key, download=False)
 
-                    print(extracted["title"])
-                    print()
+                    self.l.debug(f"Extracted: {extracted['title']}")
 
                 if "entries" in extracted:
                     # it's a playlist
                     info.extend(
                         [
-                            self._extract_video_info(
-                                video_info=video_info, playlist_id=key
-                            )
+                            self._extract_video_info(video_info=video_info, playlist_id=key)
                             for video_info in extracted["entries"]
                         ]
                     )
