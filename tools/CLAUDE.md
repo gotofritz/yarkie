@@ -1,86 +1,59 @@
-# CLI Script Rearchitecture Project
+# Yarkie Tools
 
-## Project Context
+When you need to refer to the current plan or architecture, refer to [`claude/project-plan.md`](claude/project-plan.md).
 
-- **Type**: Local utility CLI application (no performance/security constraints)
-- **Status**: Partially rearchitected, still functional but architecturally inconsistent
-- **Priority**: Stabilize architecture while maintaining active development capability
+## Code Conventions
 
-## Current Phase
+### Python
 
-**Phase 0: Initial code analysis with Claude Code**
+- Ruff formatting (line length 88, double quotes, 4-space indentation)
+- Type hints throughout (modern Python 3.13+ syntax like `str | None`)
+- Pydantic models
+- Prefer async if possible
 
-- Understand current structure, pain points, inconsistencies
-- Map out what exists and how it flows
-- Identify quick wins and structural problems
-- Document findings to guide Phase 1
+### Development tasks
 
-**Phase 1: Bring to consistent baseline state** (elegance can come later)
+- Task is set up to l
 
-## Key Principles
+### Architecture Patterns
 
-1. **Pragmatic over perfect** - aim for consistent "mediocrity" first, elegant later
-2. **Incremental improvement** - small changes tied to new features/fixes, not big rewrites
-3. **Always functional** - maintain working state; no breaking changes without clear value
-4. **Test as safety net** - tests verify behavior during refactoring, document expected functionality
+- Click for CLI with command groups and dependency injection via `@click.pass_context`
+- Repository pattern for data access with explicit dependency injection
+- Service layer for business logic (`ArchiverService`)
+- SQLAlchemy Core (not ORM) with explicit sessions
 
-## Working Agreement
+### Data storage
 
-When helping with this project, Claude should:
+- sqlite is used to store data
+- alembic is used to manage migrations
+- the local file system is used to store files, the location is in app_config.DEFAULT_DATA_ROOT
 
-### Phase 0: Code Analysis (Claude Code)
+### File Organization
 
-Before suggesting any changes, analyze the codebase to:
+- `__init__.py` files are mostly empty (11 instances)
+- `main.py` for command group collectors
+- Clear module separation: `data_access/`, `models/`, `services/`, `helpers/`
+- Configuration in `config/app_config.py` using Pydantic Settings
 
-- Map the overall structure and entry points
-- Identify inconsistencies (naming, error handling, code style, patterns)
-- Flag pain points (duplicated logic, unclear flow, hard-to-extend areas)
-- Note quick wins (easy cleanups that improve readability without logic changes)
-- Understand the feature set and data flow
-- Create a structural summary with recommendations for Phase 1
+### Error Handling
 
-**Deliverable**: A clear summary of findings that explains what exists, what's inconsistent, and where to focus initial cleanup efforts.
+- Custom exceptions in `exceptions.py` (currently minimal, to be preferred)
+- Avoid `except Exception` unless unavoidable
+- Logging with structured messages
 
-### When analyzing code
+### Testing
 
-- Ask clarifying questions about current pain points before suggesting changes
-- Point out inconsistencies in style, error handling, structure without requiring immediate fixes
-- Identify which parts are causing friction in development (hard to add features, hard to debug)
+- 95% coverage requirement
+- Pytest function-based tests with async support
+- Faker, polyfactory and pytest-data for test data generation
 
-### When suggesting refactors
+### Commands
 
-- Propose small, discrete changes that can be validated independently
-- Explain the "why" in terms of making future development easier
-- Avoid suggesting rewrites unless the code is genuinely unmaintainable
-- Suggest what tests would validate the change
+- Dev tas
 
-### When adding features
+## Important file locations
 
-- Use it as an opportunity to incrementally improve surrounding code
-- Refactor only what's necessary to cleanly add the feature
-- Leave everything else unchanged unless it directly impedes the new work
-
-### When creating/updating code
-
-- Maintain existing style and patterns unless explicitly changing them
-- Add inline comments for non-obvious logic or recent refactors
-- Include docstrings/help text for user-facing commands
-- Suggest simple tests that verify the change works
-
-## Project Structure Notes
-
-[Add here after initial review: main entry point, key modules/functions, where new features typically go, known problem areas]
-
-## Success Metrics for Phase 1
-
-- Code style consistent throughout
-- Error handling standardized
-- Basic test coverage for main commands exists
-- New features can be added without understanding the entire codebase
-- No functionality lost or degraded
-
-## Future Phases
-
-- **Phase 2**: Modularize by concerns (command handling, utilities, config, output)
-- **Phase 3**: Extract reusable patterns and establish plugin/extension points
-- **Phase 4**: Optimize and refine based on actual pain points encountered
+- The main python package is in tools/
+- Config lives in tools/config/
+- migrations are in alembic/versions/
+- scripts/ contains generic one off files, which can normally be ignored

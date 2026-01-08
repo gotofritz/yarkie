@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.2.3",
     "pydantic>=2.10.2",
     "pydantic-settings>=2.8.1",
+    "pytest-data>=0.4",
     "python3-discogs-client>=2.8",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
@@ -27,6 +28,7 @@ dev = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
+    "pytest-data>=0.4",
     "ruff>=0.11.6",
     "types-aiofiles>=24.1.0.20240626",
 ]
