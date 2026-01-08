@@ -25,12 +25,9 @@ The refactoring is broken down into the following incremental steps.
 
 **Subtasks:**
 
-- Identify all modules that import from `tools.settings`.
-- Replace those imports with configuration `app_config`, which is made available to functions by click commands, which get from `AppContext` (e.g., `ctx.obj.config`).
-- Delete the `tools/settings.py` file.
-- **Reasoning:** This will create a single source of truth for all configuration, eliminating redundancy and making the application easier to configure and understand.
-- **Dependencies:** None.
-- **Complexity:** Small.
+✅ Identify all modules that import from `tools.settings`.
+✅ Replace those imports with configuration `app_config`, which is made available to functions by click commands, which get from `AppContext` (e.g., `ctx.obj.config`).
+✅ Delete the `tools/settings.py` file.
 
 ### Step 2: Decouple Services from `AppContext`
 
