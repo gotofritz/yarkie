@@ -27,51 +27,9 @@ The refactoring will be done in small, incremental steps with full test coverage
   - ✅ [Subtask 1](./dev-logs/2026-01-09-0135-1dc6e0c-extract-discogs-logic-to-service.md): Extract Discogs Logic to Service
   - ✅ [Subtask 2](./dev-logs/2026-01-09-1534-78508f0-create-command-helper-module.md): Analyze Common Patterns & Create Command Helper Module
   - ✅ [Subtask 3](./dev-logs/2026-01-09-1654-85520da-refine-archiver-service.md): Refine ArchiverService
+- ✅ [**Step 5: Clean Up Scripts Directory**](./dev-logs/2026-01-09-1738-69df232-clean-up-scripts-directory.md) - Migrated shell scripts to CLI commands, removed obsolete scripts directory, added repository methods for delete/disable operations, created video command group with search and delete commands, achieved 76.22% test coverage
 
 ## Remaining Work
-
-### Step 5: Clean Up Scripts Directory
-
-**Goal:** Eliminate obsolete code and integrate useful utilities into main application. Make sure all new code has high code coverage.
-
-**Subtasks:**
-
-1. **Analyze Scripts** (`scripts/sql/utils/`)
-
-   Use questionary when needed
-
-   - `add_video.sql` - Should be CLI command `video add` (questionary)
-   - `delete_playlist.sh` - Should be CLI command `playlist delete`
-   - `delete_video.sh` - Should be CLI command `video delete`.
-   - `disable_playlists.sh` - Should be CLI command `playlist disable`
-   - `download_missing_videos.sh` - Should be CLI command `video search --downloaded 0`
-   - `update_videos.sql` - Should be CLI command `video edit` (extend to all fields and use questionary)
-
-2. **Handle Migration Scripts** (`scripts/sql/migrations/`)
-
-   - Compare with Alembic migrations
-   - If duplicate: delete
-   - If unique: Either integrate into Alembic or document as pre-Alembic legacy
-
-3. **Update Documentation**
-   - If keeping any scripts, add README.md in `scripts/` explaining each one
-   - Document how to run them and when they're needed
-
-**Reasoning:**
-
-- Reduces codebase clutter and confusion
-- Ensures all functionality is discoverable via CLI
-- Prevents duplicate maintenance burden
-- Clarifies project boundaries
-
-**Dependencies:** None (can be done in parallel with other steps)
-
-**Complexity:** Small to Medium (depends on script analysis)
-
-**Testing:**
-
-- If integrating scripts as commands, add tests
-- If deleting, verify no critical workflow depends on them
 
 ### Step 6: (Optional) Establish Testing Patterns for Commands
 
