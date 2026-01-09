@@ -1,7 +1,7 @@
 # yarkie
 
 ![Tools QA Status](https://github.com/gotofritz/yarkie/actions/workflows/tools-qa.yml/badge.svg)
-![Tools Coverage](https://img.shields.io/badge/coverage-20%25-orange)
+![Tools Coverage](https://img.shields.io/badge/coverage-71%25-orange)
 
 Tool to manage YT videos locally. Inspired by yark
 
