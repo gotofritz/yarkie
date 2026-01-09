@@ -2,14 +2,14 @@
 
 This module provides the PlaylistRepository class, which handles all
 database operations related to YouTube playlists, including retrieving
-playlist keys, updating playlist information, and managing playlist-video
-relationships.
+playlist keys, updating playlist information, managing playlist-video
+relationships, and deleting playlists.
 """
 
 from logging import Logger
 from typing import Optional
 
-from sqlalchemy import delete, desc, select
+from sqlalchemy import delete, desc, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -25,7 +25,8 @@ class PlaylistRepository(BaseRepository):
     Manages playlist data in the local database.
 
     This repository provides methods for retrieving playlist keys,
-    updating playlist information, and clearing playlist-video links.
+    updating playlist information, clearing playlist-video links,
+    deleting playlists, and disabling playlists.
     """
 
     def __init__(
@@ -130,6 +131,79 @@ class PlaylistRepository(BaseRepository):
                 self.logger.info(f"Removed links to videos (if any) for {len(playlists)} playlists")
         except SQLAlchemyError as e:
             self.logger.error(f"Error clearing playlist links: {e}")
+
+    def delete_playlists(self, playlist_ids: list[str]) -> int:
+        """Delete playlists and their associated entries from the database.
+
+        This method deletes both the playlist records and their associated
+        video entries in a single transaction.
+
+        Parameters
+        ----------
+        playlist_ids : list[str]
+            A list of playlist IDs to delete.
+
+        Returns
+        -------
+        int
+            The number of playlists successfully deleted.
+        """
+        if not playlist_ids:
+            self.logger.warning("No playlist IDs provided for deletion")
+            return 0
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                # First delete playlist entries
+                entries_stmt = delete(PlaylistEntriesTable).where(
+                    PlaylistEntriesTable.playlist_id.in_(playlist_ids)
+                )
+                session.execute(entries_stmt)
+
+                # Then delete playlists
+                playlists_stmt = delete(PlaylistsTable).where(PlaylistsTable.id.in_(playlist_ids))
+                result = session.execute(playlists_stmt)
+
+                session.commit()
+                deleted_count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+                self.logger.info(f"Deleted {deleted_count} playlist(s) and their entries")
+                return deleted_count
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error deleting playlists: {e}")
+            return 0
+
+    def disable_playlists(self, playlist_ids: list[str]) -> int:
+        """Disable playlists by setting their enabled flag to False.
+
+        Parameters
+        ----------
+        playlist_ids : list[str]
+            A list of playlist IDs to disable.
+
+        Returns
+        -------
+        int
+            The number of playlists successfully disabled.
+        """
+        if not playlist_ids:
+            self.logger.warning("No playlist IDs provided for disabling")
+            return 0
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = (
+                    update(PlaylistsTable)
+                    .where(PlaylistsTable.id.in_(playlist_ids))
+                    .values(enabled=False, last_updated=last_updated_factory())
+                )
+                result = session.execute(stmt)
+                session.commit()
+                disabled_count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+                self.logger.info(f"Disabled {disabled_count} playlist(s)")
+                return disabled_count
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error disabling playlists: {e}")
+            return 0
 
 
 def create_playlist_repository(
