@@ -141,6 +141,20 @@ def test_get_next_video_without_discogs_skips_non_tunes(
     assert video2.id != "video3"
 
 
+def test_get_next_video_without_discogs_returns_none_on_error(
+    discogs_repository: DiscogsRepository,
+    test_sql_client: SQLClient,
+):
+    """Test that SQLAlchemyError is caught and None is returned."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        result = discogs_repository.get_next_video_without_discogs()
+
+    assert result is None
+
+
 # Test upsert_release
 
 
@@ -579,6 +593,80 @@ def test_upsert_track_does_not_update_video_with_existing_track(
         video = session.query(VideosTable).filter(VideosTable.id == "video1").first()
 
     assert video.discogs_track_id == 999  # Should not be updated
+
+
+def test_upsert_release_returns_id_on_error(
+    discogs_repository: DiscogsRepository,
+    test_sql_client: SQLClient,
+):
+    """Test that SQLAlchemyError in upsert_release is caught and release ID returned."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    release = DiscogsRelease(
+        id=12345,
+        title="Test Album",
+        country="US",
+        released=2020,
+        genres=["Rock"],
+        styles=["Indie"],
+        uri="https://test.com/release",
+    )
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        result = discogs_repository.upsert_release(record=release)
+
+    assert result == 12345  # Should return release ID despite error
+
+
+def test_upsert_artist_returns_id_on_error(
+    discogs_repository: DiscogsRepository,
+    test_sql_client: SQLClient,
+):
+    """Test that SQLAlchemyError in upsert_artist is caught and artist ID returned."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    artist = DiscogsArtist(
+        id=54321,
+        name="Test Artist",
+        profile="Test profile",
+        uri="https://test.com/artist",
+    )
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        result = discogs_repository.upsert_artist(
+            record=artist,
+            release_id=12345,
+            role="Main",
+        )
+
+    assert result == 54321  # Should return artist ID despite error
+
+
+def test_upsert_track_returns_zero_on_error(
+    discogs_repository: DiscogsRepository,
+    test_sql_client: SQLClient,
+):
+    """Test that SQLAlchemyError in upsert_track is caught and 0 returned."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    track = DiscogsTrack(
+        release_id=12345,
+        title="Test Track",
+        duration="3:45",
+        position="A1",
+        type_="track",
+    )
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        result = discogs_repository.upsert_track(
+            record=track,
+            video_id="video123",
+        )
+
+    assert result == 0  # Should return 0 despite error
 
 
 # Test factory function

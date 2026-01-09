@@ -2,7 +2,8 @@
 source = src/tools
 omit =
   tests/*,
-  fakes.py
+  fakes.py,
+  postprocess.py
 
 [report]
 # Exclude Python standard library and site-packages from coverage
