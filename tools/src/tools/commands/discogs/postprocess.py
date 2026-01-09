@@ -8,6 +8,7 @@ import click
 from discogs_client.exceptions import HTTPError
 
 from tools.app_context import AppContext
+from tools.commands.helpers import prompt_numbered_choice
 from tools.services.discogs_search_service import DiscogsSearchService
 from tools.services.discogs_service import create_discogs_service
 
@@ -42,16 +43,11 @@ def postprocess(ctx: click.Context) -> None:
 
         # Prompt user to select or enter search string
         click.echo("\n---------------------------------\nPossible search strings:")
-        for idx, search_string in enumerate(search_strings, 1):
-            click.echo(f"{idx}. {search_string}")
-
-        search_string = click.prompt(
-            f"Select search string (1-{len(search_strings)}) or enter your own",
-            type=str,
-            default="",
+        search_string = prompt_numbered_choice(
+            search_strings,
+            prompt_text="Select search string or enter your own",
+            allow_custom=True,
         )
-        if search_string.isdigit() and int(search_string) <= len(search_strings):
-            search_string = search_strings[int(search_string) - 1]
 
         if not search_string:
             click.echo(f"Skipping {video_id}")
@@ -89,20 +85,19 @@ def postprocess(ctx: click.Context) -> None:
             # Filter and prioritize results
             prioritised = discogs_service.filter_and_prioritize_releases(results=results)
 
-            for idx, result in enumerate(prioritised, 1):
-                click.echo(f"{idx}. {result.title}")
-
-            selected = click.prompt(
-                f"Which release? (1-{len(prioritised)})",
-                type=str,
-                default="",
+            selected = prompt_numbered_choice(
+                prioritised,
+                formatter=lambda idx, result: f"{idx}. {result.title}",
+                prompt_text="Which release?",
+                allow_custom=True,
+                allow_quit=True,
             )
-            if selected == "q":
+
+            if selected is None:
+                # User quit
                 break
 
-            if selected.isdigit() and int(selected) <= len(prioritised):
-                master = prioritised[int(selected) - 1]
-            else:
+            if isinstance(selected, str):
                 # User entered custom search - retry
                 results = discogs_service.search_releases(search_string=selected)
                 if len(results) == 0:
@@ -111,29 +106,33 @@ def postprocess(ctx: click.Context) -> None:
 
                 if len(results) > 1:
                     click.echo(f"Found {len(results)} results")
-                    for idx, result in enumerate(results, 1):
-                        click.echo(f"{idx}. {result.title}")
-
-                    selected = click.prompt(
-                        f"Which release? (1-{len(results)})",
-                        type=str,
-                        default="",
+                    nested_selected = prompt_numbered_choice(
+                        results,
+                        formatter=lambda idx, result: f"{idx}. {result.title}",
+                        prompt_text="Which release?",
+                        allow_quit=True,
+                        allow_custom=False,
                     )
-                    if selected == "q":
+
+                    if nested_selected is None:
+                        # User quit or invalid selection
                         break
 
-                    if selected.isdigit() and int(selected) <= len(results):
-                        master = results[int(selected) - 1]
-                    else:
-                        continue
+                    master = nested_selected
                 else:
                     master = results[0]
+            else:
+                master = selected
         else:
             master = results[0]
 
         if master is None:
             click.echo("No release selected, skipping")
             continue
+
+        # Type narrowing: master should be a Release object, not a string
+        # The isinstance(selected, str) branch above handles custom searches
+        assert not isinstance(master, str), "master should be a Release object"
 
         # Save release to database
         # Access title to force lazy loading of release data
@@ -235,21 +234,21 @@ def postprocess(ctx: click.Context) -> None:
         # Process tracks
         click.echo(f"This release has {len(master.tracklist)} tracks")
 
-        for idx, track in enumerate(master.tracklist, 1):
-            click.echo(f"{idx}. {track.title}")
-
-        selected = click.prompt(
-            f"Which track? (1-{len(master.tracklist)})",
-            type=str,
-            default="",
+        selected_track = prompt_numbered_choice(
+            list(master.tracklist),
+            formatter=lambda idx, track: f"{idx}. {track.title}",
+            prompt_text="Which track?",
+            allow_quit=True,
         )
-        if selected == "q":
+
+        if selected_track is None:
+            # User quit or invalid selection
             break
 
-        if not selected.isdigit() or int(selected) > len(master.tracklist):
-            continue
+        # Type narrowing: selected_track should be a Track object
+        assert not isinstance(selected_track, str), "selected_track should be a Track object"
 
-        track = master.tracklist[int(selected) - 1].data
+        track = selected_track.data
         discogs_service.save_track(
             track_data={
                 "release_id": master.id,

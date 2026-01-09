@@ -1,11 +1,12 @@
-name: Tools QA
+name: Tools Main QA
 
 on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - synchronize
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/**"
+      - ".github/workflows/tools-main.yml"
 
 jobs:
   qa:
@@ -37,22 +38,22 @@ jobs:
           uv run task qa
 
       - name: Generate coverage badge
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        shell: bash -el {0}
         run: |
           pip install coverage-badge
           coverage-badge -o coverage.svg -f
-          # Create a temporary directory with just the badge
-          mkdir -p /tmp/badge
-          cp coverage.svg /tmp/badge/
+
+      - name: Prepare badge for deployment
+        run: |
+          mkdir -p /tmp/badges/tools
+          cp coverage.svg /tmp/badges/tools/
 
       - name: Deploy coverage badge
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: /tmp/badge
+          publish_dir: /tmp/badges
           publish_branch: badges
-          keep_files: false
+          keep_files: true
+          destination_dir: .
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
