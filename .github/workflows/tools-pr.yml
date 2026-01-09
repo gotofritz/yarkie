@@ -1,13 +1,21 @@
-name: QA
+name: Tools PR Checks
 
 on:
   pull_request:
-    branches:
-      - main
+    paths:
+      - "tools/**"
+      - ".github/workflows/tools-pr.yml"
+    types:
+      - opened
+      - edited
+      - synchronize
 
 jobs:
   qa:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools
 
     steps:
       - name: Checkout code

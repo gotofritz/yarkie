@@ -1,7 +1,8 @@
 # Yarkie Tools
 
-![Tools QA Status](https://github.com/gotofritz/yarkie/actions/workflows/tools-qa.yml/badge.svg)
-![Tools:Coverage](https://raw.githubusercontent.com/gotofritz/yarkie/badges/coverage.svg)
+![Tools PR Checks](https://github.com/gotofritz/yarkie/actions/workflows/tools-pr.yml/badge.svg)
+![Tools Main QA](https://github.com/gotofritz/yarkie/actions/workflows/tools-main.yml/badge.svg)
+![Tools Coverage](https://raw.githubusercontent.com/gotofritz/yarkie/badges/tools/coverage.svg)
 
 Yarkie Tools is a collection of helper scripts and setup utilities designed to streamline tasks related to the Yarkie project.
 

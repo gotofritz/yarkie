@@ -34,20 +34,9 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 1. ✅ **Extract Discogs Logic to Service** - Complete [See](./dev-logs/2026-01-09-0135-1dc6e0c-extract-discogs-logic-to-service.md)
 
-2. **Analyze Common Patterns Across Commands**
+2. ✅ **Analyze Common Patterns & Create Command Helper Module** - Complete [See](./dev-logs/2026-01-09-1534-78508f0-create-command-helper-module.md)
 
-   - Review `playlist/refresh.py`, `db/sync_local.py`, `discogs/postprocess.py`
-   - Identify shared error handling, logging, or data validation
-   - Extract to helper functions or service methods
-   - Small fix: make the coverage badge in README dynamic
-
-3. **Create Command Helper Module** (if needed)
-
-   - `commands/helpers.py` or similar
-   - Functions for common command patterns (e.g., error formatting, success messages)
-   - Decorator for common cli arguments (e.g. video_id)
-
-4. **Refine ArchiverService** (`services/archiver_service.py`)
+3. **Refine ArchiverService** (`services/archiver_service.py`)
 
    - **Refactor `sync_local()` method** (lines 148-198)
 
@@ -62,6 +51,7 @@ The refactoring will be done in small, incremental steps with full test coverage
      - Create `ThumbnailDownloaderService` wrapping `thumbnails_downloader()` (lines 131-140)
      - Inject as dependencies instead of importing as functions
      - Improves testability and follows dependency injection principle
+     - Would using a DI library such as diksha help?
 
    - **Extract filtering logic to methods**
 
