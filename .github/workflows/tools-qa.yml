@@ -1,18 +1,11 @@
 name: Tools QA
 
 on:
-  push:
-    branches:
-      - "**"
-    paths:
-      - "tools/**"
-      - ".github/workflows/tools-qa.yml"
   pull_request:
-    branches:
-      - main
-    paths:
-      - "tools/**"
-      - ".github/workflows/tools-qa.yml"
+    types:
+      - opened
+      - edited
+      - synchronize
 
 jobs:
   qa:
