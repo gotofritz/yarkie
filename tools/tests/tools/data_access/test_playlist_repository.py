@@ -320,6 +320,118 @@ def test_clear_playlist_links_logs_error_on_database_failure(
     assert "Error clearing playlist links" in str(mock_logger.error.call_args[0][0])
 
 
+# Tests for delete_playlists method
+
+
+def test_delete_playlists_deletes_playlists_and_entries(
+    db_with_playlists: SQLClient,
+) -> None:
+    """Should delete playlists and their entries."""
+    mock_logger = Mock()
+    repository = PlaylistRepository(sql_client=db_with_playlists, logger=mock_logger)
+
+    # Verify playlists exist before deletion
+    with Session(db_with_playlists.engine) as session:
+        stmt = select(PlaylistsTable).where(PlaylistsTable.id == "playlist1")
+        result = session.execute(stmt).fetchone()
+        assert result is not None
+
+    deleted_count = repository.delete_playlists(playlist_ids=["playlist1"])
+
+    assert deleted_count == 1
+
+    # Verify playlist was deleted
+    with Session(db_with_playlists.engine) as session:
+        stmt = select(PlaylistsTable).where(PlaylistsTable.id == "playlist1")
+        result = session.execute(stmt).fetchone()
+        assert result is None
+
+
+def test_delete_playlists_returns_zero_for_empty_list(
+    test_sql_client: SQLClient,
+) -> None:
+    """Should return 0 when given empty list."""
+    mock_logger = Mock()
+    repository = PlaylistRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    deleted_count = repository.delete_playlists(playlist_ids=[])
+
+    assert deleted_count == 0
+    mock_logger.warning.assert_called_once()
+
+
+def test_delete_playlists_logs_error_on_database_failure(
+    test_sql_client: SQLClient,
+) -> None:
+    """Should log error and return 0 on database failure."""
+    mock_logger = Mock()
+    repository = PlaylistRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Close the engine to simulate database failure
+    test_sql_client.engine.dispose()
+
+    deleted_count = repository.delete_playlists(playlist_ids=["test"])
+
+    assert deleted_count == 0
+    mock_logger.error.assert_called_once()
+
+
+# Tests for disable_playlists method
+
+
+def test_disable_playlists_disables_playlists(
+    db_with_playlists: SQLClient,
+) -> None:
+    """Should disable playlists by setting enabled=False."""
+    mock_logger = Mock()
+    repository = PlaylistRepository(sql_client=db_with_playlists, logger=mock_logger)
+
+    # Verify playlist is enabled before
+    with Session(db_with_playlists.engine) as session:
+        stmt = select(PlaylistsTable.enabled).where(PlaylistsTable.id == "playlist1")
+        result = session.execute(stmt).scalar()
+        assert result is True
+
+    disabled_count = repository.disable_playlists(playlist_ids=["playlist1"])
+
+    assert disabled_count == 1
+
+    # Verify playlist is disabled after
+    with Session(db_with_playlists.engine) as session:
+        stmt = select(PlaylistsTable.enabled).where(PlaylistsTable.id == "playlist1")
+        result = session.execute(stmt).scalar()
+        assert result is False
+
+
+def test_disable_playlists_returns_zero_for_empty_list(
+    test_sql_client: SQLClient,
+) -> None:
+    """Should return 0 when given empty list."""
+    mock_logger = Mock()
+    repository = PlaylistRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    disabled_count = repository.disable_playlists(playlist_ids=[])
+
+    assert disabled_count == 0
+    mock_logger.warning.assert_called_once()
+
+
+def test_disable_playlists_logs_error_on_database_failure(
+    test_sql_client: SQLClient,
+) -> None:
+    """Should log error and return 0 on database failure."""
+    mock_logger = Mock()
+    repository = PlaylistRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Close the engine to simulate database failure
+    test_sql_client.engine.dispose()
+
+    disabled_count = repository.disable_playlists(playlist_ids=["test"])
+
+    assert disabled_count == 0
+    mock_logger.error.assert_called_once()
+
+
 # Tests for create_playlist_repository factory function
 
 
