@@ -291,9 +291,9 @@ class VideoRepository(BaseRepository):
         if delete_files and self.config:
             try:
                 with Session(self.sql_client.engine) as session:
-                    stmt = select(VideosTable.id, VideosTable.video_file, VideosTable.thumbnail).where(
-                        VideosTable.id.in_(video_ids)
-                    )
+                    stmt = select(
+                        VideosTable.id, VideosTable.video_file, VideosTable.thumbnail
+                    ).where(VideosTable.id.in_(video_ids))
                     result = session.execute(stmt)
                     video_paths = {
                         row.id: (row.video_file, row.thumbnail) for row in result.fetchall()
