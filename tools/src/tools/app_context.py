@@ -1,7 +1,7 @@
 import logging
 
 from tools.config.app_config import YarkieSettings
-from tools.data_access.local_db_repository import LocalDBRepository
+from tools.data_access.discogs_repository import DiscogsRepository
 from tools.data_access.playlist_repository import PlaylistRepository
 from tools.data_access.sql_client import SQLClient
 from tools.data_access.video_repository import VideoRepository
@@ -19,8 +19,8 @@ class AppContext:
         sql_client: SQLClient,
         playlist_repository: PlaylistRepository,
         video_repository: VideoRepository,
+        discogs_repository: DiscogsRepository,
         sync_service: VideoSyncService,
-        db: LocalDBRepository,
     ) -> None:
         """Initialize AppContext with injected dependencies.
 
@@ -36,19 +36,18 @@ class AppContext:
             Repository for playlist operations.
         video_repository : VideoRepository
             Repository for video operations.
+        discogs_repository : DiscogsRepository
+            Repository for Discogs operations.
         sync_service : VideoSyncService
             Service for synchronizing YouTube data.
-        db : LocalDBRepository
-            DEPRECATED: Legacy database repository for backwards compatibility.
-            Only used by discogs commands until Step 4 is completed.
         """
         self.config = config
         self.logger = logger
         self.sql_client = sql_client
         self.playlist_repository = playlist_repository
         self.video_repository = video_repository
+        self.discogs_repository = discogs_repository
         self.sync_service = sync_service
-        self.db = db  # DEPRECATED: For discogs commands only
 
         logging.getLogger("urllib3").setLevel(logging.WARNING)
         logging.basicConfig(

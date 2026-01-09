@@ -11,7 +11,7 @@ from tools.commands.db.main import db
 from tools.commands.discogs.main import discogs
 from tools.commands.playlist.main import playlist
 from tools.config.app_config import YarkieSettings
-from tools.data_access.local_db_repository import create_local_db_repository
+from tools.data_access.discogs_repository import create_discogs_repository
 from tools.data_access.playlist_repository import create_playlist_repository
 from tools.data_access.sql_client import create_sql_client
 from tools.data_access.video_repository import create_video_repository
@@ -35,9 +35,10 @@ def cli(
     logger = logging.getLogger(__name__)
     sql_client = create_sql_client(config=config, logger=logger)
 
-    # Create new domain-specific repositories
+    # Create domain-specific repositories
     playlist_repo = create_playlist_repository(sql_client=sql_client, logger=logger, config=config)
     video_repo = create_video_repository(sql_client=sql_client, logger=logger, config=config)
+    discogs_repo = create_discogs_repository(sql_client=sql_client, logger=logger, config=config)
 
     # Create sync service
     sync_service = VideoSyncService(
@@ -47,10 +48,6 @@ def cli(
         logger=logger,
     )
 
-    # DEPRECATED: Create LocalDBRepository for backwards compatibility with discogs commands
-    # TODO: Remove this in Step 4 when discogs functionality is extracted
-    legacy_db_repo = create_local_db_repository(sql_client=sql_client, logger=logger, config=config)
-
     # Create AppContext with injected dependencies
     ctx.obj = AppContext(
         config=config,
@@ -58,8 +55,8 @@ def cli(
         sql_client=sql_client,
         playlist_repository=playlist_repo,
         video_repository=video_repo,
+        discogs_repository=discogs_repo,
         sync_service=sync_service,
-        db=legacy_db_repo,
     )
 
     # Print debug information if the '--debug' option is provided.

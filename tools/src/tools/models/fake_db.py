@@ -6,18 +6,17 @@ import json
 
 from faker import Faker
 
-from tools.data_access.local_db_repository import LocalDBRepository
 from tools.models.models import Playlist, Video
 
 faker_instance = Faker()
 
 
-class FakeDBFactory(LocalDBRepository):
+class FakeDBFactory:
     """
     Utility class for generating JSON data to pass to --mock-data.
 
-    This class extends DataRepository and provides methods for building a JSON
-    string with mock data for the database.
+    This class provides methods for building a JSON string with mock data
+    for the database.
 
     Methods:
     --------
