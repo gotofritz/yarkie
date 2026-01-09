@@ -17,11 +17,9 @@ from tools.data_access.sql_client import create_sql_client
 from tools.data_access.video_repository import create_video_repository
 from tools.services.video_sync_service import VideoSyncService
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], default_map={"obj": {}})
-
 
 @click.group(
-    context_settings=CONTEXT_SETTINGS,
+    context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
 )
 @click.version_option()
