@@ -10,6 +10,7 @@ from tools.app_context import AppContext
 from tools.commands.db.main import db
 from tools.commands.discogs.main import discogs
 from tools.commands.playlist.main import playlist
+from tools.commands.video.main import video
 from tools.config.app_config import YarkieSettings
 from tools.data_access.discogs_repository import create_discogs_repository
 from tools.data_access.playlist_repository import create_playlist_repository
@@ -66,7 +67,8 @@ def cli(
         click.echo(ctx.obj.config.db_path)
 
 
-# Add the 'playlist' command to the CLI.
+# Add command groups to the CLI.
 cli.add_command(playlist)
 cli.add_command(discogs)
 cli.add_command(db)
+cli.add_command(video)

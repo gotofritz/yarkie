@@ -75,7 +75,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 ### Step 6: (Optional) Establish Testing Patterns for Commands
 
-**Goal:** Ensure consistent testing approach after refactoring.
+**Goal:** Ensure consistent testing approach after refactoring. Bring text coverage to ~95%
 
 **Subtasks:**
 
