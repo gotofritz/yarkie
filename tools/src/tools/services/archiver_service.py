@@ -10,9 +10,9 @@ from tools.data_access.file_repository import FileRepository
 from tools.data_access.playlist_repository import PlaylistRepository
 from tools.data_access.video_repository import VideoRepository
 from tools.data_access.youtube_dao import YoutubeDAO, youtube_dao
-from tools.helpers.thumbnails_downloader import thumbnails_downloader
-from tools.helpers.youtube_downloader import youtube_downloader
 from tools.models.models import Video, YoutubeObj
+from tools.services.thumbnail_downloader_service import ThumbnailDownloaderService
+from tools.services.video_downloader_service import VideoDownloaderService
 from tools.services.video_sync_service import VideoSyncService
 
 
@@ -26,6 +26,8 @@ class ArchiverService:
         video_repository: VideoRepository,
         sync_service: VideoSyncService,
         config: YarkieSettings,
+        video_downloader: Optional[VideoDownloaderService] = None,
+        thumbnail_downloader: Optional[ThumbnailDownloaderService] = None,
         youtube: Optional[YoutubeDAO] = None,
         logger: Optional[Logger] = None,
         file_repo: Optional[FileRepository] = None,
@@ -42,6 +44,10 @@ class ArchiverService:
             Service for synchronizing YouTube data.
         config : YarkieSettings
             Application configuration.
+        video_downloader : Optional[VideoDownloaderService], optional
+            Service for downloading videos, by default None.
+        thumbnail_downloader : Optional[ThumbnailDownloaderService], optional
+            Service for downloading thumbnails, by default None.
         youtube : Optional[YoutubeDAO], optional
             An optional instance of the YoutubeDAO, by default None.
         logger : Optional[Logger], optional
@@ -56,6 +62,18 @@ class ArchiverService:
         self.sync_service = sync_service
         self.config = config
         self.file_repo = file_repo or FileRepository(config=self.config)
+        self.video_downloader = video_downloader or VideoDownloaderService(
+            video_repository=video_repository,
+            config=config,
+            file_repo=self.file_repo,
+            logger=self.logger,
+        )
+        self.thumbnail_downloader = thumbnail_downloader or ThumbnailDownloaderService(
+            video_repository=video_repository,
+            config=config,
+            file_repo=self.file_repo,
+            logger=self.logger,
+        )
 
     def refresh_playlist(self, keys: tuple[str, ...] | None = None) -> None:
         """Refresh the specified playlist.
@@ -133,25 +151,18 @@ class ArchiverService:
     def _download_videos(self, videos_to_download: list[Video]) -> None:
         """Download videos."""
         self.logger.info("Downloading videos...")
-        youtube_downloader(
-            keys=[video.id for video in videos_to_download if not video.video_file],
-            video_repository=self.video_repository,
-            config=self.config,
-        )
+        keys = [video.id for video in videos_to_download if not video.video_file]
+        self.video_downloader.download_videos(keys=keys)
 
     def _download_thumbnails(self, videos_to_download: list[Video]) -> None:
         """Download thumbnails."""
         self.logger.info("Downloading thumbnails...")
-        thumbnails_downloader(
-            video_repository=self.video_repository,
-            key_url_pairs=[
-                (video.id, video.thumbnail)
-                for video in videos_to_download
-                if video.thumbnail is not None and video.thumbnail.startswith("http")
-            ],
-            config=self.config,
-            logger=self.logger,
-        )
+        key_url_pairs = [
+            (video.id, video.thumbnail)
+            for video in videos_to_download
+            if video.thumbnail is not None and video.thumbnail.startswith("http")
+        ]
+        self.thumbnail_downloader.download_thumbnails(key_url_pairs=key_url_pairs)
 
     def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
         """Refresh the database."""
@@ -159,8 +170,116 @@ class ArchiverService:
         self.video_repository.refresh_deleted_videos(all_videos=fresh_info)
         self.video_repository.refresh_download_field()
 
+    def _sync_video_file(self, *, video: Video, download: bool) -> bool:
+        """Sync video file with filesystem.
+
+        Parameters
+        ----------
+        video : Video
+            The video to sync.
+        download : bool
+            Whether to download missing files.
+
+        Returns
+        -------
+        bool
+            True if the video was updated, False otherwise.
+        """
+        if video.video_file:
+            return False
+
+        self.logger.debug(f"Needs video {video.id} {video.title}...")
+
+        if download and not self.file_repo.video_file_exists(video.id):
+            self.logger.info(f"Downloading file for video {video.id}.")
+            self.video_downloader.download_videos(keys=[video.id])
+
+        if self.file_repo.video_file_exists(video.id):
+            self.logger.debug("...file found for video, updating record.")
+            video.video_file = str(self.file_repo.make_video_path(video.id))
+            return True
+
+        return False
+
+    def _sync_thumbnail_file(self, video: Video) -> bool:
+        """Sync thumbnail file with filesystem.
+
+        Parameters
+        ----------
+        video : Video
+            The video to sync.
+
+        Returns
+        -------
+        bool
+            True if the thumbnail was updated, False otherwise.
+        """
+        if video.thumbnail:
+            return False
+
+        self.logger.debug(f"Needs thumbnail {video.id} {video.title}...")
+
+        if self.file_repo.thumbnail_file_exists(video.id):
+            self.logger.debug("...file found for thumbnail, updating record.")
+            video.thumbnail = str(self.file_repo.make_thumbnail_path(video.id))
+            return True
+
+        return False
+
+    def _update_downloaded_flag(self, video: Video) -> bool:
+        """Update downloaded flag if both video and thumbnail exist.
+
+        Parameters
+        ----------
+        video : Video
+            The video to update.
+
+        Returns
+        -------
+        bool
+            True if the flag was updated, False otherwise.
+        """
+        if video.thumbnail and video.video_file and not video.downloaded:
+            self.logger.debug(f"Flipping downloaded flag for {video.id}")
+            video.downloaded = True
+            return True
+
+        return False
+
+    def _sync_video_with_filesystem(
+        self, *, video: Video, download: bool
+    ) -> dict[str, str | bool] | None:
+        """Sync a single video with filesystem.
+
+        Parameters
+        ----------
+        video : Video
+            The video to sync.
+        download : bool
+            Whether to download missing files.
+
+        Returns
+        -------
+        dict[str, str | bool] | None
+            Video data if updated, None otherwise.
+        """
+        video_updated = self._sync_video_file(video=video, download=download)
+        thumbnail_updated = self._sync_thumbnail_file(video=video)
+        downloaded_updated = self._update_downloaded_flag(video=video)
+
+        if video_updated or thumbnail_updated or downloaded_updated:
+            self.logger.debug(f"Updating video {video.id} {video.title}...")
+            return video.model_dump(include={"id", "thumbnail", "video_file", "downloaded"})
+
+        return None
+
     def sync_local(self, *, download: bool = False) -> int:
         """Sync local DB with actual files on disk.
+
+        Parameters
+        ----------
+        download : bool, optional
+            Whether to download missing files, by default False.
 
         Returns
         -------
@@ -169,43 +288,13 @@ class ArchiverService:
         """
         potentials = self.video_repository.get_videos_needing_download()
         self.logger.info(f"Syncing local DB with files on disk for {len(potentials)} videos...")
-        records = []
-        for video in potentials:
-            dirty = False
-            if not video.video_file:
-                self.logger.debug(f"Needs video {video.id} {video.title}...")
-                if download and not self.file_repo.video_file_exists(video.id):
-                    self.logger.info(f"Downloading file for video {video.id}.")
-                    youtube_downloader(
-                        keys=[video.id],
-                        video_repository=self.video_repository,
-                        config=self.config,
-                        logger=self.logger,
-                    )
 
-                if self.file_repo.video_file_exists(video.id):
-                    self.logger.debug("...file found for video, updating record.")
-                    video.video_file = str(self.file_repo.make_video_path(video.id))
-                    dirty = True
-
-            if not video.thumbnail:
-                self.logger.debug(f"Needs thumbnail {video.id} {video.title}...")
-                # Check if thumbnail file exists locally (may have been downloaded separately)
-                if self.file_repo.thumbnail_file_exists(video.id):
-                    self.logger.debug("...file found for thumbnail, updating record.")
-                    video.thumbnail = str(self.file_repo.make_thumbnail_path(video.id))
-                    dirty = True
-
-            if video.thumbnail and video.video_file:
-                self.logger.debug(f"Flipping downloaded flag for {video.id}")
-                video.downloaded = True
-                dirty = True
-
-            if dirty:
-                self.logger.debug(f"Updating video {video.id} {video.title}...")
-                records.append(
-                    video.model_dump(include={"id", "thumbnail", "video_file", "downloaded"})
-                )
+        records = [
+            update
+            for video in potentials
+            if (update := self._sync_video_with_filesystem(video=video, download=download))
+            is not None
+        ]
 
         self.video_repository.update_videos(records)
         self.logger.info(f"Synced {len(records)} records.")
