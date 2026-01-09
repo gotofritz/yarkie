@@ -18,10 +18,6 @@ def patch_archive_service():
         yield do_nothing
 
 
-@pytest.mark.xfail(
-    reason="Click doesn't support -h shortcut by default, only --help",
-    strict=False
-)
 def test_help(runner):
     """Verify that help can be called with both --help and -h options."""
     with runner.isolated_filesystem():
@@ -38,7 +34,7 @@ def test_help(runner):
 
 @pytest.mark.xfail(
     reason="Uses old --mock-data flag with sqlite_utils API from commit 104b55f. Needs rewrite.",
-    strict=False
+    strict=False,
 )
 @pytest.mark.usefixtures("patch_archive_service")
 def test_happy_path(runner, faker):
@@ -47,8 +43,6 @@ def test_happy_path(runner, faker):
         key = faker.word()
         playlist = FakePlaylistFactory.build(id=key)
         mock_data = FakeDBFactory.build_json(playlists=playlist)
-        result = runner.invoke(
-            cli, ["--mock-data", mock_data, "playlist", "refresh", faker.word()]
-        )
+        result = runner.invoke(cli, ["--mock-data", mock_data, "playlist", "refresh", faker.word()])
         assert result.exit_code == 0
         assert "Finished" in result.output

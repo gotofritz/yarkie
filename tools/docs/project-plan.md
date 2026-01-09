@@ -316,7 +316,7 @@ The refactoring is complete when:
 2. ✅ `AppContext` only holds references, doesn't create services
 3. ✅ Factory functions centralize service creation
 4. ✅ Commands use factories instead of manual service instantiation
-5. ✅ `LocalDBRepository` split into domain-specific repositories (`PlaylistRepository`, `VideoRepository`) - `DiscogsRepository` pending Step 4
+5. ✅ `LocalDBRepository` split into domain-specific repositories (`PlaylistRepository`, `VideoRepository`, `DiscogsRepository`) and completely removed
 6. ✅ No business logic in repository classes (moved to services)
 7. ✅ Repositories are stateless and thread-safe
 8. ✅ Transaction support implemented in service layer (VideoSyncService)
@@ -340,7 +340,7 @@ The refactoring is complete when:
 - New commands should use service factories from `factories.py`
 - Business logic should live in `services/`, not in command files or repositories
 - Repositories should only handle data access, no business logic
-- Use domain-specific repositories (`VideoRepository`, `PlaylistRepository`, `DiscogsRepository`) instead of monolithic `LocalDBRepository`
+- Use domain-specific repositories (`VideoRepository`, `PlaylistRepository`, `DiscogsRepository`)
 - Keep repositories stateless - no instance variables that change between method calls
 - Transaction coordination should happen in service layer, not repositories
 - Scripts should only exist for one-off operations, not core functionality
