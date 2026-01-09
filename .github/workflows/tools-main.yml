@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "tools/**"
-      - ".github/workflows/tools-main.yml"
+      - ".github/workflows/tools-*.yml"
 
 jobs:
   qa-merge:
