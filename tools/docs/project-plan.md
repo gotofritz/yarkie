@@ -12,9 +12,7 @@ This document outlines a comprehensive plan for cleaning up the Yarkie Tools Pyt
 
 The refactoring will be done in small, incremental steps with full test coverage to minimize risk and ensure stability.
 
-## 2. Current State Analysis
-
-### Completed Work
+## Completed Work
 
 - ✅ [**Step 0.0**](./dev-logs/2026-01-08-1518-cbb8d5e-update-tooling-and-readme.md): Updated tooling and README
 - ✅ [**Step 0.1**](./dev-logs/2026-01-08-1519-cbb8d5e-fix-cli-property-access-bug.md): Fixed CLI property access bug
@@ -26,7 +24,7 @@ The refactoring will be done in small, incremental steps with full test coverage
   - ✅ [Subtask 3](./dev-logs/2026-01-09-0014-9ebdaff-extract-common-infrastructure.md): Extract Common Infrastructure
   - ✅ Subtask 4: Update Existing Code (ArchiverService, helper functions, CLI, commands, tests)
 
-## 3. Remaining Work
+## Remaining Work
 
 ### Step 4: Extract Shared Command Logic to Services
 
@@ -41,6 +39,7 @@ The refactoring will be done in small, incremental steps with full test coverage
    - Review `playlist/refresh.py`, `db/sync_local.py`, `discogs/postprocess.py`
    - Identify shared error handling, logging, or data validation
    - Extract to helper functions or service methods
+   - Small fix: make the coverage badge in README dynamic
 
 3. **Create Command Helper Module** (if needed)
 
@@ -184,7 +183,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 ---
 
-## 4. Integration and Verification
+## Integration and Verification
 
 Each step should be implemented on a **separate feature branch** and merged individually after verification.
 
@@ -232,7 +231,7 @@ For each step, ensure:
 
 ---
 
-## 5. Execution Order and Dependencies
+## Execution Order and Dependencies
 
 ```text
 ✅ Step 3 (Refactor LocalDBRepository) - COMPLETED
@@ -250,7 +249,7 @@ Step 6 (Testing Patterns) [Optional]
 
 ---
 
-## 6. Potential Blockers and Mitigation
+## Potential Blockers and Mitigation
 
 ### Blocker: Hidden Dependencies in Scripts
 
@@ -300,7 +299,7 @@ Step 6 (Testing Patterns) [Optional]
 
 ---
 
-## 7. Success Criteria
+## Success Criteria
 
 The refactoring is complete when:
 
