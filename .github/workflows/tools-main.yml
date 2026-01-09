@@ -9,7 +9,7 @@ on:
       - ".github/workflows/tools-main.yml"
 
 jobs:
-  qa:
+  qa-merge:
     runs-on: ubuntu-latest
     defaults:
       run:
