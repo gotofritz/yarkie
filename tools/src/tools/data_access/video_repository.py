@@ -2,13 +2,15 @@
 
 This module provides the VideoRepository class, which handles all
 database operations related to YouTube videos, including updating video
-information, tracking downloads, and managing video metadata.
+information, tracking downloads, managing video metadata, and deleting
+videos.
 """
 
 from logging import Logger
+from pathlib import Path
 from typing import Any, Optional
 
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -18,7 +20,7 @@ from tools.data_access.base_repository import BaseRepository
 from tools.data_access.sql_client import SQLClient
 from tools.models.fakes import FakeVideoFactory
 from tools.models.models import DeletedYoutubeObj, Video, YoutubeObj, last_updated_factory
-from tools.orm.schema import VideosTable
+from tools.orm.schema import PlaylistEntriesTable, VideosTable
 
 
 class VideoRepository(BaseRepository):
@@ -26,7 +28,8 @@ class VideoRepository(BaseRepository):
     Manages video data in the local database.
 
     This repository provides methods for updating video information,
-    tracking downloads, and querying video data.
+    tracking downloads, querying video data, adding videos, and
+    deleting videos.
     """
 
     def __init__(
@@ -259,6 +262,155 @@ class VideoRepository(BaseRepository):
 
         self.logger.info(f"Found {len(needs_download)} video(s) needing download")
         return needs_download
+
+    def delete_videos(self, video_ids: list[str], *, delete_files: bool = True) -> int:
+        """Delete videos and optionally their associated files from disk.
+
+        This method deletes video records from the database, removes their
+        playlist entries, and optionally deletes the video and thumbnail
+        files from disk.
+
+        Parameters
+        ----------
+        video_ids : list[str]
+            A list of video IDs to delete.
+        delete_files : bool, optional
+            If True, delete video and thumbnail files from disk, by default True.
+
+        Returns
+        -------
+        int
+            The number of videos successfully deleted.
+        """
+        if not video_ids:
+            self.logger.warning("No video IDs provided for deletion")
+            return 0
+
+        # Get video file paths before deletion if we need to delete files
+        video_paths: dict[str, tuple[str | None, str | None]] = {}
+        if delete_files and self.config:
+            try:
+                with Session(self.sql_client.engine) as session:
+                    stmt = select(
+                        VideosTable.id, VideosTable.video_file, VideosTable.thumbnail
+                    ).where(VideosTable.id.in_(video_ids))
+                    result = session.execute(stmt)
+                    video_paths = {
+                        row.id: (row.video_file, row.thumbnail) for row in result.fetchall()
+                    }
+            except SQLAlchemyError as e:
+                self.logger.error(f"Error retrieving video paths: {e}")
+
+        try:
+            with Session(self.sql_client.engine) as session:
+                # First delete playlist entries
+                entries_stmt = delete(PlaylistEntriesTable).where(
+                    PlaylistEntriesTable.video_id.in_(video_ids)
+                )
+                session.execute(entries_stmt)
+
+                # Then delete videos
+                videos_stmt = delete(VideosTable).where(VideosTable.id.in_(video_ids))
+                result = session.execute(videos_stmt)
+
+                session.commit()
+                deleted_count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+
+                # Delete files if requested
+                if delete_files and video_paths:
+                    for video_id in video_ids:
+                        if video_id in video_paths:
+                            video_file, thumbnail = video_paths[video_id]
+                            if video_file:
+                                video_path = Path(video_file)
+                                if video_path.exists():
+                                    video_path.unlink()
+                                    self.logger.debug(f"Deleted video file: {video_file}")
+                            if thumbnail:
+                                thumbnail_path = Path(thumbnail)
+                                if thumbnail_path.exists():
+                                    thumbnail_path.unlink()
+                                    self.logger.debug(f"Deleted thumbnail file: {thumbnail}")
+
+                self.logger.info(f"Deleted {deleted_count} video(s) and their entries")
+                return deleted_count
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error deleting videos: {e}")
+            return 0
+
+    def add_video(self, video: Video) -> bool:
+        """Add a new video to the database.
+
+        Parameters
+        ----------
+        video : Video
+            The Video instance to add.
+
+        Returns
+        -------
+        bool
+            True if the video was successfully added, False otherwise.
+        """
+        try:
+            video_dict = video.model_dump()
+            video_dict["last_updated"] = last_updated_factory()
+            self._update_video_table(records=[video_dict])
+            self.logger.info(f"Added video {video.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error adding video: {e}")
+            return False
+
+    def get_videos(
+        self,
+        *,
+        downloaded: Optional[bool] = None,
+        deleted: Optional[bool] = None,
+        limit: Optional[int] = None,
+    ) -> list[Video]:
+        """Get videos from the database with optional filters.
+
+        Parameters
+        ----------
+        downloaded : Optional[bool], optional
+            Filter by downloaded status, by default None.
+        deleted : Optional[bool], optional
+            Filter by deleted status, by default None.
+        limit : Optional[int], optional
+            Maximum number of videos to return, by default None.
+
+        Returns
+        -------
+        list[Video]
+            A list of Video objects matching the filters.
+        """
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = select(VideosTable)
+
+                # Apply filters
+                conditions = []
+                if downloaded is not None:
+                    conditions.append(VideosTable.downloaded.is_(downloaded))
+                if deleted is not None:
+                    conditions.append(VideosTable.deleted.is_(deleted))
+
+                if conditions:
+                    stmt = stmt.where(and_(*conditions))
+
+                if limit:
+                    stmt = stmt.limit(limit)
+
+                result = session.execute(stmt)
+                video_list = [Video.model_validate(row[0].__dict__) for row in result.fetchall()]
+                self.logger.info(
+                    f"Found {len(video_list)} video(s) with filters: "
+                    f"downloaded={downloaded}, deleted={deleted}"
+                )
+                return video_list
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error retrieving videos: {e}")
+            return []
 
     # Private helper methods
 
