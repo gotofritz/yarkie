@@ -42,6 +42,7 @@ The refactoring will be done in small, incremental steps with full test coverage
      - `prompt_for_artist_selection(results) -> DiscogsArtist`
      - `prompt_for_track_selection(tracks) -> DiscogsTrack`
    - Command becomes thin orchestrator calling service methods
+   - Should local_db_repository be removed at this stage?
 
 2. **Analyze Common Patterns Across Commands**
 

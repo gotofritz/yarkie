@@ -1,32 +1,46 @@
-# tools/commands/playlist/refresh.py
+# tools/commands/discogs/postprocess.py
 
-"""Command to refresh new or existing playlists."""
+"""Command to update database with Discogs information interactively."""
 
 import json
-import re
 
 import click
-import discogs_client
 from discogs_client.exceptions import HTTPError
 
 from tools.app_context import AppContext
-from tools.models.models import DiscogsArtist, DiscogsRelease, DiscogsTrack
+from tools.services.discogs_search_service import DiscogsSearchService
+from tools.services.discogs_service import create_discogs_service
 
 
 @click.command()
 @click.pass_context
 def postprocess(ctx: click.Context) -> None:
     """
-    Interactive command to Update DB with discogs information
+    Interactive command to update DB with Discogs information.
+
+    This command iterates through videos without Discogs metadata,
+    searches for matching releases, and prompts the user to select
+    the correct release, artists, and tracks.
     """
     app_context: AppContext = ctx.obj
     logger = app_context.logger
     logger.debug("Starting postprocess command")
 
-    db = app_context.db
-    d = discogs_client.Client("ExampleApplication/0.1", user_token=app_context.config.discogs_token)
-    while to_search := db.next_without_discogs():
+    # Create services
+    search_service = DiscogsSearchService(logger=logger)
+    discogs_service = create_discogs_service(
+        discogs_repository=app_context.discogs_repository,
+        search_service=search_service,
+        config=app_context.config,
+        logger=logger,
+    )
+
+    offset = 0
+    while to_search := discogs_service.get_next_video_to_process(offset=offset):
         (video_id, search_strings) = to_search
+        offset += 1
+
+        # Prompt user to select or enter search string
         click.echo("\n---------------------------------\nPossible search strings:")
         for idx, search_string in enumerate(search_strings, 1):
             click.echo(f"{idx}. {search_string}")
@@ -36,15 +50,17 @@ def postprocess(ctx: click.Context) -> None:
             type=str,
             default="",
         )
-        if search_string.isdigit():
+        if search_string.isdigit() and int(search_string) <= len(search_strings):
             search_string = search_strings[int(search_string) - 1]
 
         if not search_string:
             click.echo(f"Skipping {video_id}")
             continue
 
-        results = d.search(search_string, type="master")
+        # Search for releases
+        results = discogs_service.search_releases(search_string=search_string)
 
+        # Handle no results - prompt for ID
         if len(results) == 0:
             search_string = click.prompt(
                 "No results found. Do you have an ID?",
@@ -54,7 +70,7 @@ def postprocess(ctx: click.Context) -> None:
             )
             if search_string:
                 try:
-                    results = [d.release(int(search_string))]
+                    results = [discogs_service.get_release_by_id(release_id=int(search_string))]
                     logger.info(f"Found {len(results)} results")
                 except HTTPError as e:
                     if e.status_code == 404:
@@ -65,51 +81,13 @@ def postprocess(ctx: click.Context) -> None:
             else:
                 continue
 
+        # Handle multiple results - let user select
+        master = None
         if len(results) > 1:
             click.echo(f"Found {len(results)} results")
 
-            albums = []
-            singles = []
-            rest = []
-
-            for idx, result in enumerate(results, 1):
-                format_ = result.data["format"]
-                if "Compilation" in format_:
-                    rest.append(result)
-                elif (
-                    "Album" in format_
-                    or "LP" in format_
-                    or "EP" in format_
-                    or "33 \u2153 RPM" in format_
-                ):
-                    albums.append(result)
-                elif (
-                    "Single" in format_
-                    or "45 RPM" in format_
-                    or "Flexi-disc" in format_
-                    or '12"' in format_
-                ):
-                    singles.append(result)
-                elif (
-                    "VHS" in format_
-                    or "DVD" in format_
-                    or "Blu-ray" in format_
-                    or "PAL" in format_
-                    or "DVDr" in format_
-                    or "CDr" in format_
-                ):
-                    continue
-                elif "CD" in format_:
-                    rest.append(result)
-                else:
-                    click.echo(json.dumps(result.data["format"], indent=2))
-                    rest.append(result)
-                    click.echo("Other")
-                if idx > 48:
-                    click.echo("Too many results, skipping")
-                    break
-
-            prioritised = albums + singles + rest
+            # Filter and prioritize results
+            prioritised = discogs_service.filter_and_prioritize_releases(results=results)
 
             for idx, result in enumerate(prioritised, 1):
                 click.echo(f"{idx}. {result.title}")
@@ -122,10 +100,11 @@ def postprocess(ctx: click.Context) -> None:
             if selected == "q":
                 break
 
-            if not selected.isdigit():
-                results = d.search(search_string, type="master")
-
-                # this is a copy of the above code, TODO refactor
+            if selected.isdigit() and int(selected) <= len(prioritised):
+                master = prioritised[int(selected) - 1]
+            else:
+                # User entered custom search - retry
+                results = discogs_service.search_releases(search_string=selected)
                 if len(results) == 0:
                     click.echo("No results found")
                     continue
@@ -143,47 +122,52 @@ def postprocess(ctx: click.Context) -> None:
                     if selected == "q":
                         break
 
-                    if not selected.isdigit():
+                    if selected.isdigit() and int(selected) <= len(results):
+                        master = results[int(selected) - 1]
+                    else:
                         continue
-
-            master = prioritised[int(selected) - 1]
-
+                else:
+                    master = results[0]
         else:
             master = results[0]
 
-        # the discogs library is very weird. It loads some unknown data,
-        # then it lazy loads the real data when you first access it. So
-        # accessing the title will load the data, and then we can access
-        # the rest of the data
-        title = master.data["title"]
-        release_id = db.upsert_discogs_release(
-            DiscogsRelease(
-                id=master.id,
-                title=title,
-                country=master.data["country"],
-                genres=sorted(master.genres),
-                styles=sorted(master.styles),
-                released=master.year,
-                uri=master.url,
-            )
+        if master is None:
+            click.echo("No release selected, skipping")
+            continue
+
+        # Save release to database
+        # Access title to force lazy loading of release data
+        _ = master.data["title"]
+        release_id = discogs_service.save_release(
+            release_data={
+                "id": master.id,
+                "title": master.data["title"],
+                "country": master.data["country"],
+                "genres": master.genres,
+                "styles": master.styles,
+                "year": master.year,
+                "url": master.url,
+            }
         )
         logger.debug(f"Created release {release_id}")
 
+        # Process artists
         artists_to_add = []
         potential_artists = [artist for artist in master.data["artists"]]
+
+        # Prompt user to select artists from release
         for artist in potential_artists:
             click.echo(json.dumps(artist, indent=2))
             yes_or_no = click.confirm("Use artist?", default=True, show_default=True)
             if not yes_or_no:
                 continue
 
-            artist_obj = d.artist(artist["id"])
-
             try:
+                artist_obj = discogs_service.get_artist_by_id(artist_id=artist["id"])
                 artists_to_add.append(
                     {
                         "id": artist_obj.id,
-                        "name": re.sub(r" \(.*?\)", "", artist_obj.name).strip(),
+                        "name": discogs_service.clean_artist_name(name=artist_obj.name),
                         "profile": artist_obj.profile,
                         "uri": artist_obj.url,
                         "role": artist_obj.role,
@@ -191,9 +175,10 @@ def postprocess(ctx: click.Context) -> None:
                 )
             except HTTPError as e:
                 if e.status_code == 404:
-                    click.echo(f"Weird discog error: {artist['id']} not found")
+                    click.echo(f"Weird Discogs error: {artist['id']} not found")
                     continue
 
+        # If no artists selected, allow manual search
         if not artists_to_add:
             artist_search = click.prompt(
                 "Could not find artist, do you want to search manually?",
@@ -204,8 +189,8 @@ def postprocess(ctx: click.Context) -> None:
                 click.echo("Not searching")
                 continue
 
-            potential_artists = d.search(artist_search, type="artist")
-            for artist_obj in potential_artists:
+            potential_artists_search = discogs_service.search_artists(search_string=artist_search)
+            for artist_obj in potential_artists_search:
                 click.echo(json.dumps(artist_obj.data, indent=2))
                 choice = click.prompt(
                     "Use artist?",
@@ -231,26 +216,23 @@ def postprocess(ctx: click.Context) -> None:
                     )
                 except HTTPError as e:
                     if e.status_code == 404:
-                        click.echo("Weird discog error: artist not found")
+                        click.echo("Weird Discogs error: artist not found")
                         continue
 
         if not artists_to_add:
             click.echo("No artists found, skipping to next release")
             continue
 
+        # Save all selected artists
         for artist_obj in artists_to_add:
-            db.upsert_discogs_artist(
-                record=DiscogsArtist(
-                    id=artist_obj["id"],
-                    name=artist_obj["name"],
-                    profile=artist_obj["profile"],
-                    uri=artist_obj["uri"],
-                ),
+            discogs_service.save_artist(
+                artist_data=artist_obj,
                 release_id=release_id,
                 role=artist_obj["role"],
             )
             logger.debug(f"Created artist {artist_obj['name']}")
 
+        # Process tracks
         click.echo(f"This release has {len(master.tracklist)} tracks")
 
         for idx, track in enumerate(master.tracklist, 1):
@@ -264,19 +246,19 @@ def postprocess(ctx: click.Context) -> None:
         if selected == "q":
             break
 
-        if not selected.isdigit():
+        if not selected.isdigit() or int(selected) > len(master.tracklist):
             continue
 
         track = master.tracklist[int(selected) - 1].data
-        db.upsert_discogs_track(
-            record=DiscogsTrack(
-                release_id=master.id,
-                title=track["title"],
-                duration=track["duration"],
-                position=track["position"],
-                type_=track["type_"],
-            ),
+        discogs_service.save_track(
+            track_data={
+                "release_id": master.id,
+                "title": track["title"],
+                "duration": track["duration"],
+                "position": track["position"],
+                "type_": track["type_"],
+            },
             video_id=video_id,
         )
 
-    click.echo(f"Finished {app_context.config}")
+    click.echo("Finished")
