@@ -520,6 +520,59 @@ def test_get_videos_returns_empty_list_on_error(test_sql_client: SQLClient) -> N
     mock_logger.error.assert_called_once()
 
 
+# Error path tests
+
+
+def test_refresh_download_field_handles_database_error(test_sql_client: SQLClient) -> None:
+    """Should handle SQLAlchemyError gracefully."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        repository.refresh_download_field()
+
+    mock_logger.error.assert_called_once()
+    assert "Error refreshing download field" in str(mock_logger.error.call_args)
+
+
+
+
+def test_get_video_ids_handles_database_error(test_sql_client: SQLClient) -> None:
+    """Should return empty list on SQLAlchemyError."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        result = repository._get_video_ids()
+
+    assert result == []
+    mock_logger.error.assert_called_once()
+    assert "Error retrieving video IDs" in str(mock_logger.error.call_args)
+
+
+def test_update_video_table_handles_database_error(test_sql_client: SQLClient) -> None:
+    """Should handle SQLAlchemyError/TypeError gracefully."""
+    from unittest.mock import patch
+    from sqlalchemy.exc import SQLAlchemyError
+
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    records = [{"id": "video1", "title": "Test"}]
+
+    with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
+        repository._update_video_table(records=records)
+
+    mock_logger.error.assert_called_once()
+    assert "Error inserting/updating VideosTable" in str(mock_logger.error.call_args)
+
+
 # Tests for create_video_repository
 
 
