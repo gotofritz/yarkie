@@ -34,15 +34,7 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 **Subtasks:**
 
-1. **Extract Discogs Logic to Service** (`services/discogs_service.py`)
-
-   - Move interactive search logic from `discogs/postprocess.py`
-   - Methods:
-     - `search_discogs_for_video(video_id) -> DiscogsRelease | None`
-     - `prompt_for_artist_selection(results) -> DiscogsArtist`
-     - `prompt_for_track_selection(tracks) -> DiscogsTrack`
-   - Command becomes thin orchestrator calling service methods
-   - Should local_db_repository be removed at this stage?
+1. ✅ **Extract Discogs Logic to Service** - Complete [See](./dev-logs/2026-01-09-0135-1dc6e0c-extract-discogs-logic-to-service.md)
 
 2. **Analyze Common Patterns Across Commands**
 
