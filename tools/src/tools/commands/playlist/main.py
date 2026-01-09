@@ -4,6 +4,8 @@
 
 import click
 
+from tools.commands.playlist.delete import delete
+from tools.commands.playlist.disable import disable
 from tools.commands.playlist.refresh import refresh
 
 
@@ -22,5 +24,7 @@ def playlist(ctx: click.Context) -> None:
     pass
 
 
-# Add the 'refresh' command to the 'playlist' command group.
+# Add commands to the 'playlist' command group.
 playlist.add_command(refresh)
+playlist.add_command(delete)
+playlist.add_command(disable)
