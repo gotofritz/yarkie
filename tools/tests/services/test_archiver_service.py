@@ -524,3 +524,137 @@ def test_sync_local_with_updates(logger, video_repository, sync_service, mock_co
     # Verify that the update was called with 3 records
     call_args = video_repository.update_videos.call_args
     assert len(call_args[0][0]) == 3
+
+
+def test_filter_videos_needing_files_with_no_video_files(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
+    """Test _filter_videos_needing_files returns videos without video files."""
+    videos = FakeVideoFactory.batch(size=3, video_file="")
+
+    archiver_service = ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=mock_config,
+        logger=logger,
+    )
+
+    result = archiver_service._filter_videos_needing_files(videos)
+
+    assert len(result) == 3
+    assert all(video_id == video.id for video_id, video in zip(result, videos))
+
+
+def test_filter_videos_needing_files_with_some_video_files(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
+    """Test _filter_videos_needing_files filters out videos with files."""
+    videos = [
+        FakeVideoFactory.build(video_file=""),
+        FakeVideoFactory.build(video_file="/path/to/video.mp4"),
+        FakeVideoFactory.build(video_file=""),
+    ]
+
+    archiver_service = ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=mock_config,
+        logger=logger,
+    )
+
+    result = archiver_service._filter_videos_needing_files(videos)
+
+    assert len(result) == 2
+    assert result[0] == videos[0].id
+    assert result[1] == videos[2].id
+
+
+def test_filter_videos_needing_files_with_all_files(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
+    """Test _filter_videos_needing_files returns empty list when all have files."""
+    videos = FakeVideoFactory.batch(size=3, video_file="/path/to/video.mp4")
+
+    archiver_service = ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=mock_config,
+        logger=logger,
+    )
+
+    result = archiver_service._filter_videos_needing_files(videos)
+
+    assert len(result) == 0
+
+
+def test_filter_videos_needing_thumbnails_with_http_urls(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
+    """Test _filter_videos_needing_thumbnails returns videos with http thumbnail URLs."""
+    videos = FakeVideoFactory.batch(size=3, thumbnail="https://example.com/thumb.jpg")
+
+    archiver_service = ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=mock_config,
+        logger=logger,
+    )
+
+    result = archiver_service._filter_videos_needing_thumbnails(videos)
+
+    assert len(result) == 3
+    assert all(video_id == video.id and url == video.thumbnail for (video_id, url), video in zip(result, videos))
+
+
+def test_filter_videos_needing_thumbnails_mixed_types(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
+    """Test _filter_videos_needing_thumbnails filters correctly with mixed thumbnail types."""
+    videos = [
+        FakeVideoFactory.build(thumbnail="https://example.com/thumb1.jpg"),
+        FakeVideoFactory.build(thumbnail="/local/path/thumb.jpg"),
+        FakeVideoFactory.build(thumbnail="http://example.com/thumb2.jpg"),
+        FakeVideoFactory.build(thumbnail=""),
+        FakeVideoFactory.build(thumbnail=None),
+    ]
+
+    archiver_service = ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=mock_config,
+        logger=logger,
+    )
+
+    result = archiver_service._filter_videos_needing_thumbnails(videos)
+
+    assert len(result) == 2
+    assert result[0] == (videos[0].id, videos[0].thumbnail)
+    assert result[1] == (videos[2].id, videos[2].thumbnail)
+
+
+def test_filter_videos_needing_thumbnails_with_no_http_urls(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
+    """Test _filter_videos_needing_thumbnails returns empty list when no http URLs."""
+    videos = [
+        FakeVideoFactory.build(thumbnail="/local/path/thumb.jpg"),
+        FakeVideoFactory.build(thumbnail=""),
+        FakeVideoFactory.build(thumbnail=None),
+    ]
+
+    archiver_service = ArchiverService(
+        playlist_repository=playlist_repository,
+        video_repository=video_repository,
+        sync_service=sync_service,
+        config=mock_config,
+        logger=logger,
+    )
+
+    result = archiver_service._filter_videos_needing_thumbnails(videos)
+
+    assert len(result) == 0

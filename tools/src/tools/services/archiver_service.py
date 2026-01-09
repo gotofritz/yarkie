@@ -148,20 +148,50 @@ class ArchiverService:
             self.logger.debug(f"{len(videos_to_download)} need downloading")
         return videos_to_download
 
+    def _filter_videos_needing_files(self, videos: list[Video]) -> list[str]:
+        """Filter videos that need video files downloaded.
+
+        Parameters
+        ----------
+        videos : list[Video]
+            List of videos to filter.
+
+        Returns
+        -------
+        list[str]
+            List of video IDs that need video files.
+        """
+        return [video.id for video in videos if not video.video_file]
+
+    def _filter_videos_needing_thumbnails(self, videos: list[Video]) -> list[tuple[str, str]]:
+        """Filter videos that need thumbnails downloaded.
+
+        Parameters
+        ----------
+        videos : list[Video]
+            List of videos to filter.
+
+        Returns
+        -------
+        list[tuple[str, str]]
+            List of (video_id, thumbnail_url) pairs for videos needing thumbnails.
+        """
+        return [
+            (video.id, video.thumbnail)
+            for video in videos
+            if video.thumbnail is not None and video.thumbnail.startswith("http")
+        ]
+
     def _download_videos(self, videos_to_download: list[Video]) -> None:
         """Download videos."""
         self.logger.info("Downloading videos...")
-        keys = [video.id for video in videos_to_download if not video.video_file]
+        keys = self._filter_videos_needing_files(videos_to_download)
         self.video_downloader.download_videos(keys=keys)
 
     def _download_thumbnails(self, videos_to_download: list[Video]) -> None:
         """Download thumbnails."""
         self.logger.info("Downloading thumbnails...")
-        key_url_pairs = [
-            (video.id, video.thumbnail)
-            for video in videos_to_download
-            if video.thumbnail is not None and video.thumbnail.startswith("http")
-        ]
+        key_url_pairs = self._filter_videos_needing_thumbnails(videos_to_download)
         self.thumbnail_downloader.download_thumbnails(key_url_pairs=key_url_pairs)
 
     def _refresh_database(self, fresh_info: list[YoutubeObj]) -> None:
