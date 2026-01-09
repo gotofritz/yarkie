@@ -6,8 +6,6 @@
 ![Tools Main QA](https://github.com/gotofritz/yarkie/actions/workflows/tools-main.yml/badge.svg)
 ![Tools Coverage](https://raw.githubusercontent.com/gotofritz/yarkie/badges/tools/coverage.svg)
 
-<!-- trivial -->
-
 Tool to manage YT videos locally. Inspired by yark
 
 ## Code organisation
