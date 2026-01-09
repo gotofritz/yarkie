@@ -36,35 +36,24 @@ The refactoring will be done in small, incremental steps with full test coverage
 
 **Subtasks:**
 
-1. **Audit Each Script**
+1. **Analyze Scripts** (`scripts/sql/utils/`)
 
-   - Document purpose and last usage of each script
-   - Classify as: Integrate, Keep as utility, or Delete
+   Use questionary when needed
 
-2. **Delete Obsolete Scripts**
+   - `add_video.sql` - Should be CLI command `video add` (questionary)
+   - `delete_playlist.sh` - Should be CLI command `playlist delete`
+   - `delete_video.sh` - Should be CLI command `video delete`.
+   - `disable_playlists.sh` - Should be CLI command `playlist disable`
+   - `download_missing_videos.sh` - Should be CLI command `video search --downloaded 0`
+   - `update_videos.sql` - Should be CLI command `video edit` (extend to all fields and use questionary)
 
-   - `scripts/missing_videos.py` - DUPLICATE of `db sync-local`
-   - `scripts/randomiser*.py` (all 4) - IF no longer needed
-   - Reasoning: Duplicates existing functionality
-
-3. **Analyze SQL Scripts** (`scripts/sql/utils/`)
-
-   - Determine if shell scripts provide functionality not in CLI:
-     - `delete_playlist.sh` - Should be CLI command?
-     - `delete_video.sh` - Should be CLI command?
-     - `disable_playlists.sh` - Should be CLI command?
-   - Options:
-     - **Keep:** If needed for emergency manual operations
-     - **Integrate:** Convert to proper CLI commands
-     - **Delete:** If obsolete or redundant
-
-4. **Handle Migration Scripts** (`scripts/sql/migrations/`)
+2. **Handle Migration Scripts** (`scripts/sql/migrations/`)
 
    - Compare with Alembic migrations
    - If duplicate: delete
    - If unique: Either integrate into Alembic or document as pre-Alembic legacy
 
-5. **Update Documentation**
+3. **Update Documentation**
    - If keeping any scripts, add README.md in `scripts/` explaining each one
    - Document how to run them and when they're needed
 
