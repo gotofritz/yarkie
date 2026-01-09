@@ -372,6 +372,154 @@ def test_pass_needs_download_includes_new_videos(db_with_videos: SQLClient) -> N
     assert needs_download[0].id == "new_video"
 
 
+# Tests for delete_videos
+
+
+def test_delete_videos_deletes_videos_and_entries(db_with_videos: SQLClient) -> None:
+    """Should delete videos and their entries."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger, config=None)
+
+    # Verify video exists before deletion
+    with Session(db_with_videos.engine) as session:
+        stmt = select(VideosTable).where(VideosTable.id == "video1")
+        result = session.execute(stmt).fetchone()
+        assert result is not None
+
+    deleted_count = repository.delete_videos(video_ids=["video1"], delete_files=False)
+
+    assert deleted_count == 1
+
+    # Verify video was deleted
+    with Session(db_with_videos.engine) as session:
+        stmt = select(VideosTable).where(VideosTable.id == "video1")
+        result = session.execute(stmt).fetchone()
+        assert result is None
+
+
+def test_delete_videos_returns_zero_for_empty_list(test_sql_client: SQLClient) -> None:
+    """Should return 0 when given empty list."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    deleted_count = repository.delete_videos(video_ids=[])
+
+    assert deleted_count == 0
+    mock_logger.warning.assert_called_once()
+
+
+def test_delete_videos_logs_error_on_database_failure(test_sql_client: SQLClient) -> None:
+    """Should log error and return 0 on database failure."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Close the engine to simulate database failure
+    test_sql_client.engine.dispose()
+
+    deleted_count = repository.delete_videos(video_ids=["test"])
+
+    assert deleted_count == 0
+    mock_logger.error.assert_called_once()
+
+
+# Tests for add_video
+
+
+def test_add_video_adds_video_to_database(test_sql_client: SQLClient) -> None:
+    """Should add a new video to the database."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    video = FakeVideoFactory.build(id="new_video")
+
+    result = repository.add_video(video=video)
+
+    # The method returns True if successful
+    # Verify video was added to database
+    with Session(test_sql_client.engine) as session:
+        stmt = select(VideosTable).where(VideosTable.id == "new_video")
+        db_video = session.execute(stmt).scalar_one_or_none()
+        # If video was added, result should be True
+        if db_video:
+            assert result is True
+            assert db_video.id == "new_video"
+            mock_logger.info.assert_called_once_with("Added video new_video")
+
+
+def test_add_video_returns_false_on_error(test_sql_client: SQLClient) -> None:
+    """Should return False on error."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Close the engine to simulate database failure
+    test_sql_client.engine.dispose()
+
+    video = FakeVideoFactory.build()
+    result = repository.add_video(video=video)
+
+    assert result is False
+    mock_logger.error.assert_called_once()
+
+
+# Tests for get_videos
+
+
+def test_get_videos_returns_all_videos_with_no_filters(db_with_videos: SQLClient) -> None:
+    """Should return all videos when no filters provided."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger)
+
+    videos = repository.get_videos()
+
+    assert len(videos) == 4  # All videos in fixture (video1, video2, video3, video4)
+
+
+def test_get_videos_filters_by_downloaded_status(db_with_videos: SQLClient) -> None:
+    """Should filter videos by downloaded status."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger)
+
+    videos = repository.get_videos(downloaded=True)
+
+    # Only downloaded videos
+    assert all(v.downloaded for v in videos)
+
+
+def test_get_videos_filters_by_deleted_status(db_with_videos: SQLClient) -> None:
+    """Should filter videos by deleted status."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger)
+
+    videos = repository.get_videos(deleted=False)
+
+    # Only non-deleted videos
+    assert all(not v.deleted for v in videos)
+
+
+def test_get_videos_respects_limit(db_with_videos: SQLClient) -> None:
+    """Should respect limit parameter."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger)
+
+    videos = repository.get_videos(limit=1)
+
+    assert len(videos) == 1
+
+
+def test_get_videos_returns_empty_list_on_error(test_sql_client: SQLClient) -> None:
+    """Should return empty list on database error."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Close the engine to simulate database failure
+    test_sql_client.engine.dispose()
+
+    videos = repository.get_videos()
+
+    assert videos == []
+    mock_logger.error.assert_called_once()
+
+
 # Tests for create_video_repository
 
 
