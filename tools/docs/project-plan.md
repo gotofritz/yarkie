@@ -23,69 +23,12 @@ The refactoring will be done in small, incremental steps with full test coverage
   - ✅ [Subtask 2](./dev-logs/2026-01-08-2331-c3dc23b-extract-business-logic-to-services.md): Extract Business Logic to Services
   - ✅ [Subtask 3](./dev-logs/2026-01-09-0014-9ebdaff-extract-common-infrastructure.md): Extract Common Infrastructure
   - ✅ Subtask 4: Update Existing Code (ArchiverService, helper functions, CLI, commands, tests)
+- ✅ **Step 4: Extract Shared Command Logic to Services** - Removed code duplication and separated business logic from CLI concerns, created DiscogsSearchService for discogs command logic, added command helper module with `prompt_numbered_choice`, refined ArchiverService with filtering methods and comprehensive tests, increased coverage from 72.49% to 76.30%
+  - ✅ [Subtask 1](./dev-logs/2026-01-09-0135-1dc6e0c-extract-discogs-logic-to-service.md): Extract Discogs Logic to Service
+  - ✅ [Subtask 2](./dev-logs/2026-01-09-1534-78508f0-create-command-helper-module.md): Analyze Common Patterns & Create Command Helper Module
+  - ✅ [Subtask 3](./dev-logs/2026-01-09-1654-85520da-refine-archiver-service.md): Refine ArchiverService
 
 ## Remaining Work
-
-### Step 4: Extract Shared Command Logic to Services
-
-**Goal:** Remove code duplication and separate business logic from CLI concerns. Make sure all new code has high code coverage.
-
-**Subtasks:**
-
-1. ✅ **Extract Discogs Logic to Service** - Complete [See](./dev-logs/2026-01-09-0135-1dc6e0c-extract-discogs-logic-to-service.md)
-
-2. ✅ **Analyze Common Patterns & Create Command Helper Module** - Complete [See](./dev-logs/2026-01-09-1534-78508f0-create-command-helper-module.md)
-
-3. **Refine ArchiverService** (`services/archiver_service.py`)
-
-   - **Refactor `sync_local()` method** (lines 148-198)
-
-     - Extract `_sync_video_with_filesystem()` to handle per-video logic
-     - Extract `_sync_video_file()`, `_sync_thumbnail_file()`, `_update_downloaded_flag()`
-     - Reduce complexity from 50 lines mixing multiple concerns
-     - Eliminate state mutation in loop (use immutable updates)
-
-   - **Convert module functions to injectable services**
-
-     - Create `VideoDownloaderService` wrapping `youtube_downloader()` (lines 122-126, 165-170)
-     - Create `ThumbnailDownloaderService` wrapping `thumbnails_downloader()` (lines 131-140)
-     - Inject as dependencies instead of importing as functions
-     - Improves testability and follows dependency injection principle
-     - Would using a DI library such as diksha help?
-
-   - **Extract filtering logic to methods**
-
-     - Create `_filter_videos_needing_files()` (from line 123)
-     - Create `_filter_videos_needing_thumbnails()` (from line 136)
-     - Make inline list comprehensions more readable and reusable
-
-   - **Optional: Create `VideoDownloadCoordinator` service**
-     - Coordinates video and thumbnail download logic
-     - Encapsulates download strategies
-     - Further simplifies `ArchiverService` orchestration
-
-**Reasoning:**
-
-- Reduces code duplication
-- Improves testability (test business logic separately from CLI and service logic separately from I/O)
-- Makes commands easier to understand (declarative intent)
-- Centralizes business rules
-- Eliminates direct coupling to module functions (enables proper dependency injection)
-- Reduces method complexity (`sync_local()` from 50 lines to ~15-20 lines)
-- Makes services more focused and easier to maintain
-
-**Dependencies:** Steps 2 and 3 (factory pattern + clean repositories make service extraction cleaner)
-
-**Complexity:** Medium
-
-**Testing:**
-
-- Unit tests for new `DiscogsService`
-- Unit tests for `VideoDownloaderService` and `ThumbnailDownloaderService` (mock file I/O)
-- Unit tests for refactored `ArchiverService.sync_local()` (with mocked downloaders)
-- Integration tests verifying command behavior unchanged
-- Refactor existing command tests to use mocked services
-- Test `_sync_video_with_filesystem()` and helper methods in isolation
 
 ### Step 5: Clean Up Scripts Directory
 
