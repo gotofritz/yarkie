@@ -8,9 +8,7 @@ from sqlalchemy.orm import Session
 from tools.data_access.sql_client import SQLClient
 from tools.data_access.video_repository import VideoRepository, create_video_repository
 from tools.models.fakes import FakeDeletedVideoFactory, FakeVideoFactory
-from tools.models.models import Video
 from tools.orm.schema import VideosTable
-
 
 # Tests for update_videos
 
@@ -567,6 +565,7 @@ def test_get_videos_returns_empty_list_on_error(test_sql_client: SQLClient) -> N
 def test_refresh_download_field_handles_database_error(test_sql_client: SQLClient) -> None:
     """Should handle SQLAlchemyError gracefully."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     mock_logger = Mock()
@@ -584,6 +583,7 @@ def test_refresh_download_field_handles_database_error(test_sql_client: SQLClien
 def test_get_video_ids_handles_database_error(test_sql_client: SQLClient) -> None:
     """Should return empty list on SQLAlchemyError."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     mock_logger = Mock()
@@ -600,6 +600,7 @@ def test_get_video_ids_handles_database_error(test_sql_client: SQLClient) -> Non
 def test_update_video_table_handles_database_error(test_sql_client: SQLClient) -> None:
     """Should handle SQLAlchemyError/TypeError gracefully."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     mock_logger = Mock()

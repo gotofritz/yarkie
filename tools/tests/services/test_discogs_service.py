@@ -6,12 +6,12 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from tools.config.app_config import YarkieSettings
 from tools.data_access.discogs_repository import DiscogsRepository
+from tools.models.models import Video
 from tools.services.discogs_search_service import DiscogsSearchService
 from tools.services.discogs_service import DiscogsService, create_discogs_service
-
-from tools.models.models import Video
 
 
 @pytest.fixture

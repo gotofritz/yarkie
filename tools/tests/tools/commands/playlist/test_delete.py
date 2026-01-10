@@ -31,7 +31,7 @@ def test_delete_single_playlist_successfully(runner, faker):
             result = runner.invoke(cli, ["playlist", "delete", playlist_id])
 
             assert result.exit_code == 0
-            assert f"Deleting 1 playlist(s)" in result.output
+            assert "Deleting 1 playlist(s)" in result.output
             assert "Successfully deleted 1 playlist(s)" in result.output
             mock_repository.delete_playlists.assert_called_once_with(
                 playlist_ids=[playlist_id]

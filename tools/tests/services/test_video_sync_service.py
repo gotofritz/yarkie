@@ -1,6 +1,6 @@
 """Tests for VideoSyncService."""
 
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 

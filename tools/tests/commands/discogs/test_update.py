@@ -77,7 +77,7 @@ def test_update_with_valid_video_id_success(mock_app_context, mock_video):
         ctx = click.Context(click.Command("update"), obj=mock_app_context)
 
         # Run the command
-        result = ctx.invoke(update, video_id="test_video_123")
+        ctx.invoke(update, video_id="test_video_123")
 
         # Verify video was fetched
         mock_app_context.video_repository.get_video_by_id.assert_called_once_with(

@@ -31,7 +31,7 @@ def test_disable_single_playlist_successfully(runner, faker):
             result = runner.invoke(cli, ["playlist", "disable", playlist_id])
 
             assert result.exit_code == 0
-            assert f"Disabling 1 playlist(s)" in result.output
+            assert "Disabling 1 playlist(s)" in result.output
             assert "Successfully disabled 1 playlist(s)" in result.output
             mock_repository.disable_playlists.assert_called_once_with(
                 playlist_ids=[playlist_id]

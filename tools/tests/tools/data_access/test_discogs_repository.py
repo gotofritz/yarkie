@@ -147,6 +147,7 @@ def test_get_next_video_without_discogs_returns_none_on_error(
 ):
     """Test that SQLAlchemyError is caught and None is returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
@@ -601,6 +602,7 @@ def test_upsert_release_returns_id_on_error(
 ):
     """Test that SQLAlchemyError in upsert_release is caught and release ID returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     release = DiscogsRelease(
@@ -625,6 +627,7 @@ def test_upsert_artist_returns_id_on_error(
 ):
     """Test that SQLAlchemyError in upsert_artist is caught and artist ID returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     artist = DiscogsArtist(
@@ -650,6 +653,7 @@ def test_upsert_track_returns_zero_on_error(
 ):
     """Test that SQLAlchemyError in upsert_track is caught and 0 returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     track = DiscogsTrack(
