@@ -56,21 +56,28 @@ class DiscogsService:
             "ExampleApplication/0.1", user_token=config.discogs_token
         )
 
-    def get_next_video_to_process(self, *, offset: int = 0) -> tuple[str, list[str]] | None:
+    def get_next_video_to_process(
+        self, *, offset: int = 0, deterministic: bool = True
+    ) -> tuple[str, list[str]] | None:
         """
         Get the next video that needs Discogs processing.
 
         Parameters
         ----------
         offset : int, optional
-            Pagination offset, by default 0.
+            Pagination offset (only used when deterministic=True), by default 0.
+        deterministic : bool, optional
+            If True, returns videos sequentially. If False, returns random videos.
+            Default True.
 
         Returns
         -------
         tuple[str, list[str]] | None
             A tuple of (video_id, search_strings) or None if no videos found.
         """
-        video = self.discogs_repository.get_next_video_without_discogs(offset=offset)
+        video = self.discogs_repository.get_next_video_without_discogs(
+            offset=offset, deterministic=deterministic
+        )
         if video is None:
             return None
 

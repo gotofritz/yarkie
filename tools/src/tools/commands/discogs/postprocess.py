@@ -14,18 +14,29 @@ from tools.services.discogs_service import create_discogs_service
 
 
 @click.command()
+@click.option(
+    "--deterministic/--random",
+    default=True,
+    help="Process videos sequentially (deterministic) or randomly (random). Default is deterministic.",
+)
 @click.pass_context
-def postprocess(ctx: click.Context) -> None:
+def postprocess(ctx: click.Context, deterministic: bool) -> None:
     """
     Interactive command to update DB with Discogs information.
 
     This command iterates through videos without Discogs metadata,
     searches for matching releases, and prompts the user to select
     the correct release, artists, and tracks.
+
+    Use --random to get a random video each time instead of sequential processing.
+    This is useful when testing to avoid repeatedly encountering videos that
+    cannot be found in Discogs.
     """
     app_context: AppContext = ctx.obj
     logger = app_context.logger
-    logger.debug("Starting postprocess command")
+    logger.debug(
+        f"Starting postprocess command (mode: {'deterministic' if deterministic else 'random'})"
+    )
 
     # Create services
     search_service = DiscogsSearchService(logger=logger)
@@ -37,9 +48,13 @@ def postprocess(ctx: click.Context) -> None:
     )
 
     offset = 0
-    while to_search := discogs_service.get_next_video_to_process(offset=offset):
+    while to_search := discogs_service.get_next_video_to_process(
+        offset=offset, deterministic=deterministic
+    ):
         (video_id, search_strings) = to_search
-        offset += 1
+        # Only increment offset in deterministic mode
+        if deterministic:
+            offset += 1
 
         # Prompt user to select or enter search string
         click.echo("\n---------------------------------\nPossible search strings:")
