@@ -3,6 +3,7 @@
 """Command to update database with Discogs information interactively."""
 
 import click
+
 from tools.app_context import AppContext
 from tools.services.discogs_interaction_strategy import CliInteractionStrategy
 from tools.services.discogs_processor import DiscogsProcessor
@@ -13,7 +14,7 @@ from tools.services.discogs_service import create_discogs_service
 @click.command()
 @click.option(
     "--deterministic/--random",
-    default=True,
+    default=False,
     help="Process videos sequentially (deterministic) or randomly (random). Default is deterministic.",
 )
 @click.pass_context

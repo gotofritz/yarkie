@@ -3,6 +3,7 @@
 """Command to update Discogs metadata for a specific video."""
 
 import click
+
 from tools.app_context import AppContext
 from tools.services.discogs_interaction_strategy import CliInteractionStrategy
 from tools.services.discogs_processor import DiscogsProcessor
