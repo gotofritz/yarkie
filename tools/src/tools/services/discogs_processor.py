@@ -383,6 +383,9 @@ class DiscogsProcessor:
                 track_id=track_id,
             )
 
+        except KeyboardInterrupt:
+            # Re-raise KeyboardInterrupt to allow CTRL-C to work
+            raise
         except Exception as e:
             self.logger.error(f"Error processing video {video_id}: {e}")
             return ProcessingResult(
