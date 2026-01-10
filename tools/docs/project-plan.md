@@ -336,14 +336,14 @@ def update(ctx: click.Context, video_id: str) -> None:
    - Define all required methods as protocol methods
    - Add comprehensive docstrings
 
-3. **Create CliInteractionStrategy** 🚧 IN PROGRESS
+3. **Create CliInteractionStrategy** ✅ COMPLETED
 
    - Implement `CliInteractionStrategy` in same file
    - Extract all Click interaction code from current postprocess command
    - Methods: `select_search_string`, `select_release`, `confirm_artist`, `search_artist_manually`, `select_track`, `should_continue_after_error`
    - Use existing `prompt_numbered_choice` helper
 
-4. **Create AutoInteractionStrategy**
+4. **Create AutoInteractionStrategy** ⏭️ SKIPPED (will do when needed for DiscogsProcessor tests)
    - Implement `AutoInteractionStrategy` for testing
    - Accept predetermined choices in `__init__`
    - Return configured choices in each method

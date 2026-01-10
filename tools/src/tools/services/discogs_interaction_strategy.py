@@ -10,6 +10,10 @@ implementations can provide CLI, API, or automated interaction behaviors.
 
 from typing import Any, Protocol
 
+import click
+
+from tools.commands.helpers import prompt_numbered_choice
+
 
 class InteractionStrategy(Protocol):
     """
@@ -153,3 +157,177 @@ class InteractionStrategy(Protocol):
         False
         """
         ...
+
+
+class CliInteractionStrategy:
+    """
+    CLI-based interaction strategy using Click prompts.
+
+    This strategy implements the InteractionStrategy protocol using Click's
+    interactive prompts and the prompt_numbered_choice helper for user input.
+    It provides the same interaction pattern as the original postprocess command.
+    """
+
+    def select_search_string(self, *, options: list[str]) -> str | None:
+        """
+        Prompt user to select or enter a search string.
+
+        Displays numbered search string options and allows the user to
+        select one or enter a custom search string.
+
+        Parameters
+        ----------
+        options : list[str]
+            List of pre-generated search string options.
+
+        Returns
+        -------
+        str | None
+            The selected or custom search string, or None if skipped.
+        """
+        click.echo("\n---------------------------------\nPossible search strings:")
+        search_string = prompt_numbered_choice(
+            options,
+            prompt_text="Select search string or enter your own",
+            allow_custom=True,
+        )
+        return search_string
+
+    def select_release(self, *, releases: list[Any]) -> Any | str | None:
+        """
+        Prompt user to select a release from search results.
+
+        Displays numbered release options and allows the user to select one,
+        enter a custom search string, or quit.
+
+        Parameters
+        ----------
+        releases : list[Any]
+            List of Discogs release objects from search results.
+
+        Returns
+        -------
+        Any | str | None
+            - Release object if user selects from list
+            - Custom search string if user wants to search again
+            - None if user quits
+        """
+        if len(releases) == 0:
+            return None
+
+        if len(releases) == 1:
+            # Single result - return immediately
+            return releases[0]
+
+        # Multiple results - let user select
+        click.echo(f"Found {len(releases)} results")
+
+        selected = prompt_numbered_choice(
+            releases,
+            formatter=lambda idx, result: f"{idx}. {result.title}",
+            prompt_text="Which release?",
+            allow_custom=True,
+            allow_quit=True,
+        )
+
+        return selected
+
+    def confirm_artist(self, *, artist: dict[str, Any]) -> bool:
+        """
+        Prompt user to confirm artist selection.
+
+        Displays artist information and asks for confirmation.
+
+        Parameters
+        ----------
+        artist : dict[str, Any]
+            Artist information dictionary.
+
+        Returns
+        -------
+        bool
+            True if user confirms, False otherwise.
+        """
+        import json
+
+        click.echo(json.dumps(artist, indent=2))
+        return click.confirm("Use artist?", default=True, show_default=True)
+
+    def search_artist_manually(self) -> str | None:
+        """
+        Prompt user for manual artist search.
+
+        Asks the user if they want to search for an artist manually
+        and returns their search query.
+
+        Returns
+        -------
+        str | None
+            Artist search query, or None if user declines.
+        """
+        artist_search = click.prompt(
+            "Could not find artist, do you want to search manually?",
+            type=str,
+            default="",
+        )
+
+        if not artist_search:
+            click.echo("Not searching")
+            return None
+
+        return artist_search
+
+    def select_track(self, *, tracks: list[Any]) -> Any | None:
+        """
+        Prompt user to select a track from a release's tracklist.
+
+        Displays numbered track options and allows the user to select one
+        or quit.
+
+        Parameters
+        ----------
+        tracks : list[Any]
+            List of track objects from a Discogs release.
+
+        Returns
+        -------
+        Any | None
+            Selected track object, or None if user quits.
+        """
+        if not tracks:
+            return None
+
+        click.echo(f"This release has {len(tracks)} tracks")
+
+        selected_track = prompt_numbered_choice(
+            tracks,
+            formatter=lambda idx, track: f"{idx}. {track.title}",
+            prompt_text="Which track?",
+            allow_quit=True,
+        )
+
+        return selected_track
+
+    def should_continue_after_error(self, *, error: str) -> bool:
+        """
+        Ask user if processing should continue after an error.
+
+        Displays the error and prompts the user whether to continue
+        processing additional items.
+
+        Parameters
+        ----------
+        error : str
+            Description of the error that occurred.
+
+        Returns
+        -------
+        bool
+            True if processing should continue, False to stop.
+        """
+        click.echo(f"Error: {error}")
+        return click.confirm(
+            "Continue processing?",
+            default=True,
+            show_default=True,
+        )
