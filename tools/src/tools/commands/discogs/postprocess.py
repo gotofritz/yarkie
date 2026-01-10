@@ -136,9 +136,21 @@ def postprocess(ctx: click.Context) -> None:
 
         # Save release to database
         # Handle both Master objects (from search) and Release objects (from ID lookup)
-        # Masters have data in .data dict, Releases have direct attributes
-        if hasattr(master, "data") and isinstance(master.data, dict):
-            # Master object from search results
+        # Release objects have direct .title attribute, Masters have .data dict
+        if hasattr(master, "title") and not callable(master.title):
+            # Release object from get_release_by_id - has direct attributes
+            release_data = {
+                "id": master.id,
+                "title": master.title,
+                "country": master.country,
+                "genres": master.genres,
+                "styles": master.styles,
+                "year": master.year,
+                "url": master.url,
+            }
+            potential_artists = [artist for artist in master.artists]
+        else:
+            # Master object from search results - has .data dict
             _ = master.data["title"]  # Force lazy loading
             release_data = {
                 "id": master.id,
@@ -150,18 +162,6 @@ def postprocess(ctx: click.Context) -> None:
                 "url": master.url,
             }
             potential_artists = [artist for artist in master.data["artists"]]
-        else:
-            # Release object from get_release_by_id
-            release_data = {
-                "id": master.id,
-                "title": master.title,
-                "country": master.country,
-                "genres": master.genres,
-                "styles": master.styles,
-                "year": master.year,
-                "url": master.url,
-            }
-            potential_artists = [artist for artist in master.artists]
 
         release_id = discogs_service.save_release(release_data=release_data)
         logger.debug(f"Created release {release_id}")
