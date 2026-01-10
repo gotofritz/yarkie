@@ -6,7 +6,6 @@ import json
 
 import click
 from discogs_client.exceptions import HTTPError
-
 from tools.app_context import AppContext
 from tools.commands.helpers import prompt_numbered_choice
 from tools.services.discogs_search_service import DiscogsSearchService
@@ -16,7 +15,7 @@ from tools.services.discogs_service import create_discogs_service
 @click.command()
 @click.option(
     "--deterministic/--random",
-    default=True,
+    default=False,
     help="Process videos sequentially (deterministic) or randomly (random). Default is deterministic.",
 )
 @click.pass_context
