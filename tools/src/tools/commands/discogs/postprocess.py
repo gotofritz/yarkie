@@ -136,8 +136,8 @@ def postprocess(ctx: click.Context) -> None:
 
         # Save release to database
         # Handle both Master objects (from search) and Release objects (from ID lookup)
-        # Release objects have direct .title attribute, Masters have .data dict
-        if hasattr(master, "title") and not callable(master.title):
+        # Master objects have .data dict with "title" key, Release objects have direct .country attribute
+        if hasattr(master, "country") and not callable(master.country):
             # Release object from get_release_by_id - has direct attributes
             release_data = {
                 "id": master.id,
