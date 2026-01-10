@@ -72,6 +72,10 @@ class AutoInteractionStrategy:
             return None
         return releases[min(self.release_index, len(releases) - 1)]
 
+    def prompt_manual_release_id(self) -> str | None:
+        """Return None in automated mode (no manual ID entry)."""
+        return None
+
     def confirm_artist(self, *, artist: dict[str, Any]) -> bool:
         """Confirm artist based on predetermined list."""
         if self._artist_confirmation_index < len(self.artist_confirmations):

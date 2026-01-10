@@ -83,6 +83,20 @@ class DiscogsProcessor:
         # Handle no results - allow manual ID entry
         if len(results) == 0:
             self.logger.info("No results found for search string")
+            release_id_str = self.interaction_strategy.prompt_manual_release_id()
+            if release_id_str:
+                try:
+                    release_id = int(release_id_str)
+                    return self.discogs_service.get_release_by_id(release_id=release_id)
+                except ValueError:
+                    self.logger.error(f"Invalid release ID: {release_id_str}")
+                    return None
+                except HTTPError as e:
+                    if e.status_code == 404:
+                        self.logger.info("Release not found")
+                        return None
+                    else:
+                        raise
             return None
 
         # Let interaction strategy handle selection

@@ -76,6 +76,25 @@ class InteractionStrategy(Protocol):
         """
         ...
 
+    def prompt_manual_release_id(self) -> str | None:
+        """
+        Prompt user to enter a manual Discogs release ID.
+
+        This is called when no search results are found and the user
+        might have a specific Discogs release ID they want to use.
+
+        Returns
+        -------
+        str | None
+            The release ID entered by the user, or None if cancelled.
+
+        Examples
+        --------
+        >>> strategy.prompt_manual_release_id()
+        "12345"
+        """
+        ...
+
     def confirm_artist(self, *, artist: dict[str, Any]) -> bool:
         """
         Prompt user to confirm artist selection.
@@ -236,6 +255,23 @@ class CliInteractionStrategy:
         )
 
         return selected
+
+    def prompt_manual_release_id(self) -> str | None:
+        """
+        Prompt user to enter a manual Discogs release ID.
+
+        Returns
+        -------
+        str | None
+            The release ID as a string, or None if user skips.
+        """
+        release_id = click.prompt(
+            "No results found. Do you have an ID?",
+            type=str,
+            default="",
+            show_default=False,
+        )
+        return release_id if release_id else None
 
     def confirm_artist(self, *, artist: dict[str, Any]) -> bool:
         """
