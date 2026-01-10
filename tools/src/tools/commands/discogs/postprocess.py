@@ -148,7 +148,8 @@ def postprocess(ctx: click.Context) -> None:
                 "year": master.year,
                 "url": master.url,
             }
-            potential_artists = [artist for artist in master.artists]
+            # Convert Artist objects to dicts for consistency
+            potential_artists = [artist.data for artist in master.artists]
         else:
             # Master object from search results - has .data dict
             _ = master.data["title"]  # Force lazy loading
