@@ -6,12 +6,12 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from tools.config.app_config import YarkieSettings
 from tools.data_access.discogs_repository import DiscogsRepository
-from tools.models.models import Video
 from tools.services.discogs_search_service import DiscogsSearchService
 from tools.services.discogs_service import DiscogsService, create_discogs_service
+
+from tools.models.models import Video
 
 
 @pytest.fixture
@@ -80,10 +80,7 @@ def test_init_creates_service_with_all_dependencies(
         assert service.search_service == mock_search_service
         assert service.config == mock_config
         assert service.logger == mock_logger
-        mock_client.assert_called_once_with(
-            "ExampleApplication/0.1",
-            user_token="test_token_12345"
-        )
+        mock_client.assert_called_once_with("ExampleApplication/0.1", user_token="test_token_12345")
 
 
 def test_init_creates_default_logger_when_none_provided(
@@ -126,7 +123,9 @@ def test_get_next_video_to_process_returns_video_and_search_strings(
     assert result is not None
     assert result[0] == video.id
     assert result[1] == ["search1", "search2"]
-    mock_discogs_repository.get_next_video_without_discogs.assert_called_once_with(offset=0)
+    mock_discogs_repository.get_next_video_without_discogs.assert_called_once_with(
+        offset=0, deterministic=True
+    )
     mock_search_service.generate_search_strings.assert_called_once_with(
         title=video.title,
         uploader=video.uploader,
@@ -145,7 +144,9 @@ def test_get_next_video_to_process_with_offset(
 
     discogs_service.get_next_video_to_process(offset=5)
 
-    mock_discogs_repository.get_next_video_without_discogs.assert_called_once_with(offset=5)
+    mock_discogs_repository.get_next_video_without_discogs.assert_called_once_with(
+        offset=5, deterministic=True
+    )
 
 
 def test_get_next_video_to_process_returns_none_when_no_videos(
@@ -176,10 +177,7 @@ def test_search_releases_calls_discogs_client(discogs_service):
     assert len(results) == 2
     assert results[0] == mock_result1
     assert results[1] == mock_result2
-    discogs_service.discogs_client.search.assert_called_once_with(
-        "Test Artist",
-        type="master"
-    )
+    discogs_service.discogs_client.search.assert_called_once_with("Test Artist", type="master")
 
 
 def test_search_releases_with_custom_type(discogs_service):
@@ -188,10 +186,7 @@ def test_search_releases_with_custom_type(discogs_service):
 
     discogs_service.search_releases(search_string="Test", search_type="release")
 
-    discogs_service.discogs_client.search.assert_called_once_with(
-        "Test",
-        type="release"
-    )
+    discogs_service.discogs_client.search.assert_called_once_with("Test", type="release")
 
 
 # Test get_release_by_id
@@ -217,14 +212,12 @@ def test_filter_and_prioritize_releases_prioritizes_albums_first(discogs_service
     album.data = {"format": ["Vinyl", "LP", "Album"]}
 
     single = MagicMock()
-    single.data = {"format": ["Vinyl", "7\"", "Single"]}
+    single.data = {"format": ["Vinyl", '7"', "Single"]}
 
     compilation = MagicMock()
     compilation.data = {"format": ["CD", "Compilation"]}
 
-    results = discogs_service.filter_and_prioritize_releases(
-        results=[single, compilation, album]
-    )
+    results = discogs_service.filter_and_prioritize_releases(results=[single, compilation, album])
 
     assert len(results) == 3
     assert results[0] == album
@@ -243,9 +236,7 @@ def test_filter_and_prioritize_releases_filters_video_formats(discogs_service):
     dvd = MagicMock()
     dvd.data = {"format": ["DVD", "Video"]}
 
-    results = discogs_service.filter_and_prioritize_releases(
-        results=[vinyl, vhs, dvd]
-    )
+    results = discogs_service.filter_and_prioritize_releases(results=[vinyl, vhs, dvd])
 
     assert len(results) == 1
     assert results[0] == vinyl
@@ -266,17 +257,15 @@ def test_filter_and_prioritize_releases_limits_to_48_results(discogs_service):
 def test_filter_and_prioritize_releases_categorizes_singles(discogs_service):
     """Test that singles are properly categorized."""
     single_45 = MagicMock()
-    single_45.data = {"format": ["Vinyl", "7\"", "45 RPM", "Single"]}
+    single_45.data = {"format": ["Vinyl", '7"', "45 RPM", "Single"]}
 
     single_12 = MagicMock()
-    single_12.data = {"format": ["Vinyl", "12\""]}
+    single_12.data = {"format": ["Vinyl", '12"']}
 
     flexi = MagicMock()
     flexi.data = {"format": ["Flexi-disc"]}
 
-    results = discogs_service.filter_and_prioritize_releases(
-        results=[single_45, single_12, flexi]
-    )
+    results = discogs_service.filter_and_prioritize_releases(results=[single_45, single_12, flexi])
 
     assert len(results) == 3
     # All should be in singles category (after albums)
@@ -310,10 +299,7 @@ def test_search_artists_calls_discogs_client(discogs_service):
     results = discogs_service.search_artists(search_string="The Beatles")
 
     assert len(results) == 2
-    discogs_service.discogs_client.search.assert_called_once_with(
-        "The Beatles",
-        type="artist"
-    )
+    discogs_service.discogs_client.search.assert_called_once_with("The Beatles", type="artist")
 
 
 # Test get_artist_by_id
@@ -433,11 +419,7 @@ def test_save_artist_creates_and_saves_artist(
         "uri": "https://www.discogs.com/artist/54321",
     }
 
-    result = discogs_service.save_artist(
-        artist_data=artist_data,
-        release_id=12345,
-        role="Main"
-    )
+    result = discogs_service.save_artist(artist_data=artist_data, release_id=12345, role="Main")
 
     assert result == 54321
     mock_discogs_repository.upsert_artist.assert_called_once()
