@@ -23,7 +23,7 @@ def test_select_search_string_with_valid_selection(cli_strategy):
         mock_prompt.return_value = "Artist - Title"
 
         result = cli_strategy.select_search_string(
-            options=["Artist - Title", "Title Only"]
+            video_id="test_video_123", options=["Artist - Title", "Title Only"]
         )
 
         assert result == "Artist - Title"
@@ -38,7 +38,7 @@ def test_select_search_string_with_custom_input(cli_strategy):
         mock_prompt.return_value = "Custom Search"
 
         result = cli_strategy.select_search_string(
-            options=["Option 1", "Option 2"]
+            video_id="test_video_456", options=["Option 1", "Option 2"]
         )
 
         assert result == "Custom Search"
@@ -51,7 +51,9 @@ def test_select_search_string_with_none(cli_strategy):
     ) as mock_prompt:
         mock_prompt.return_value = None
 
-        result = cli_strategy.select_search_string(options=["Option 1"])
+        result = cli_strategy.select_search_string(
+            video_id="test_video_789", options=["Option 1"]
+        )
 
         assert result is None
 

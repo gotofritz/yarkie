@@ -54,8 +54,8 @@ class AutoInteractionStrategy:
         self.quit_at_step = quit_at_step
         self._artist_confirmation_index = 0
 
-    def select_search_string(self, *, options: list[str]) -> str | None:
-        """Select search string by index."""
+    def select_search_string(self, *, video_id: str, options: list[str]) -> str | None:
+        """Select search string by index (video_id is ignored for automation)."""
         if self.quit_at_step == "search":
             return None
         if not options:

@@ -29,12 +29,14 @@ class InteractionStrategy(Protocol):
     logic for each step of the processing workflow.
     """
 
-    def select_search_string(self, *, options: list[str]) -> str | None:
+    def select_search_string(self, *, video_id: str, options: list[str]) -> str | None:
         """
         Prompt user to select or enter a search string.
 
         Parameters
         ----------
+        video_id : str
+            The ID of the video being processed (for display/debugging).
         options : list[str]
             List of pre-generated search string options to choose from.
 
@@ -45,7 +47,7 @@ class InteractionStrategy(Protocol):
 
         Examples
         --------
-        >>> strategy.select_search_string(options=["Artist - Title", "Title"])
+        >>> strategy.select_search_string(video_id="abc123", options=["Artist - Title", "Title"])
         "Artist - Title"
         """
         ...
@@ -168,7 +170,7 @@ class CliInteractionStrategy:
     It provides the same interaction pattern as the original postprocess command.
     """
 
-    def select_search_string(self, *, options: list[str]) -> str | None:
+    def select_search_string(self, *, video_id: str, options: list[str]) -> str | None:
         """
         Prompt user to select or enter a search string.
 
@@ -177,6 +179,8 @@ class CliInteractionStrategy:
 
         Parameters
         ----------
+        video_id : str
+            The ID of the video being processed (for display/debugging).
         options : list[str]
             List of pre-generated search string options.
 
@@ -185,7 +189,8 @@ class CliInteractionStrategy:
         str | None
             The selected or custom search string, or None if skipped.
         """
-        click.echo("\n---------------------------------\nPossible search strings:")
+        click.echo(f"\n---------------------------------\nVideo ID: {video_id}")
+        click.echo("Possible search strings:")
         search_string = prompt_numbered_choice(
             options,
             prompt_text="Select search string or enter your own",

@@ -329,7 +329,9 @@ class DiscogsProcessor:
         """
         try:
             # Step 1: Select search string
-            search_string = self.interaction_strategy.select_search_string(options=search_strings)
+            search_string = self.interaction_strategy.select_search_string(
+                video_id=video_id, options=search_strings
+            )
             if not search_string:
                 return ProcessingResult(
                     success=False,

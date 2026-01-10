@@ -55,34 +55,37 @@ def postprocess(ctx: click.Context, deterministic: bool) -> None:
 
     # Process videos in loop
     offset = 0
-    while to_search := discogs_service.get_next_video_to_process(
-        offset=offset, deterministic=deterministic
-    ):
-        (video_id, search_strings) = to_search
+    try:
+        while to_search := discogs_service.get_next_video_to_process(
+            offset=offset, deterministic=deterministic
+        ):
+            (video_id, search_strings) = to_search
 
-        # Only increment offset in deterministic mode
-        if deterministic:
-            offset += 1
+            # Only increment offset in deterministic mode
+            if deterministic:
+                offset += 1
 
-        # Process the video using DiscogsProcessor
-        result = processor.process_video(
-            video_id=video_id,
-            search_strings=search_strings,
-        )
+            # Process the video using DiscogsProcessor
+            result = processor.process_video(
+                video_id=video_id,
+                search_strings=search_strings,
+            )
 
-        # Handle result
-        if result.success:
-            click.echo(f"\n✓ Successfully processed {video_id}")
-            click.echo(f"  Release: {result.release_id}")
-            click.echo(f"  Artists: {len(result.artist_ids)}")
-            click.echo(f"  Track: {result.track_id}")
-        else:
-            click.echo(f"\n⊘ {result.message}")
-            # If there was an error, check if user wants to continue
-            if result.error and not interaction_strategy.should_continue_after_error(
-                error=result.error
-            ):
-                click.echo("User quit processing")
-                break
+            # Handle result
+            if result.success:
+                click.echo(f"\n✓ Successfully processed {video_id}")
+                click.echo(f"  Release: {result.release_id}")
+                click.echo(f"  Artists: {len(result.artist_ids)}")
+                click.echo(f"  Track: {result.track_id}")
+            else:
+                click.echo(f"\n⊘ {result.message}")
+                # If there was an error, check if user wants to continue
+                if result.error and not interaction_strategy.should_continue_after_error(
+                    error=result.error
+                ):
+                    click.echo("User quit processing")
+                    break
+    except KeyboardInterrupt:
+        click.echo("\n\nInterrupted by user (CTRL-C)")
 
     click.echo("\nFinished")
