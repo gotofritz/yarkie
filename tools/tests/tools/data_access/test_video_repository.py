@@ -461,6 +461,47 @@ def test_add_video_returns_false_on_error(test_sql_client: SQLClient) -> None:
     mock_logger.error.assert_called_once()
 
 
+# Tests for get_video_by_id
+
+
+def test_get_video_by_id_returns_video_when_found(db_with_videos: SQLClient) -> None:
+    """Should return video when ID exists."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger)
+
+    video = repository.get_video_by_id(video_id="video1")
+
+    assert video is not None
+    assert video.id == "video1"
+    assert video.title == "Downloaded Video"
+    mock_logger.debug.assert_called_once_with("Retrieved video video1")
+
+
+def test_get_video_by_id_returns_none_when_not_found(db_with_videos: SQLClient) -> None:
+    """Should return None when video ID doesn't exist."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=db_with_videos, logger=mock_logger)
+
+    video = repository.get_video_by_id(video_id="nonexistent")
+
+    assert video is None
+    mock_logger.info.assert_called_once_with("Video nonexistent not found")
+
+
+def test_get_video_by_id_handles_database_error(test_sql_client: SQLClient) -> None:
+    """Should return None on database error."""
+    mock_logger = Mock()
+    repository = VideoRepository(sql_client=test_sql_client, logger=mock_logger)
+
+    # Close the engine to simulate database failure
+    test_sql_client.engine.dispose()
+
+    video = repository.get_video_by_id(video_id="video1")
+
+    assert video is None
+    mock_logger.error.assert_called_once()
+
+
 # Tests for get_videos
 
 
