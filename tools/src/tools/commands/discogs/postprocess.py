@@ -85,7 +85,7 @@ def postprocess(ctx: click.Context, deterministic: bool) -> None:
                 ):
                     click.echo("User quit processing")
                     break
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, click.Abort):
         click.echo("\n\nInterrupted by user (CTRL-C)")
 
     click.echo("\nFinished")

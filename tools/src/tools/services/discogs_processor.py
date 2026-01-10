@@ -11,6 +11,7 @@ business logic from user interaction by accepting an InteractionStrategy.
 from logging import Logger, getLogger
 from typing import Any
 
+import click
 from discogs_client.exceptions import HTTPError
 
 from tools.models.processing_models import ProcessingResult
@@ -383,8 +384,9 @@ class DiscogsProcessor:
                 track_id=track_id,
             )
 
-        except KeyboardInterrupt:
-            # Re-raise KeyboardInterrupt to allow CTRL-C to work
+        except (KeyboardInterrupt, click.Abort):
+            # Re-raise KeyboardInterrupt and click.Abort to allow CTRL-C to work
+            # Click converts KeyboardInterrupt to click.Abort in prompts
             raise
         except Exception as e:
             self.logger.error(f"Error processing video {video_id}: {e}")
