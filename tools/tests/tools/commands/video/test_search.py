@@ -1,5 +1,3 @@
-# tests/tools/commands/video/test_search.py
-
 """Tests for video search command."""
 
 from unittest.mock import MagicMock, patch

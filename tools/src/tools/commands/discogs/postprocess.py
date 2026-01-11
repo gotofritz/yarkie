@@ -1,5 +1,3 @@
-# tools/commands/discogs/postprocess.py
-
 """Command to update database with Discogs information interactively."""
 
 import click

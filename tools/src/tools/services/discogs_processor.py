@@ -1,5 +1,3 @@
-# tools/services/discogs_processor.py
-
 """
 Discogs processing orchestration service.
 

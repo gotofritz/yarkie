@@ -1,5 +1,3 @@
-# tools/services/auto_interaction_strategy.py
-
 """Automated interaction strategy for testing DiscogsProcessor."""
 
 from typing import Any

@@ -1,5 +1,3 @@
-# tools/commands/playlist/delete.py
-
 """Delete playlists from the database."""
 
 import click

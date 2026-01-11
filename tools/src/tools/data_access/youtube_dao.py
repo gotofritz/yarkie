@@ -1,5 +1,3 @@
-# tools/data_access/youtube_dao.py
-
 """Module providing YouTube Data Access Object (DAO)."""
 
 from logging import Logger, getLogger

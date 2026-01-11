@@ -1,5 +1,3 @@
-# tests/services/test_auto_interaction_strategy.py
-
 """Tests for AutoInteractionStrategy."""
 
 from tools.services.auto_interaction_strategy import AutoInteractionStrategy

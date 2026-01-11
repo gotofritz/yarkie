@@ -1,5 +1,3 @@
-# tests/services/test_discogs_interaction_strategy.py
-
 """Tests for Discogs interaction strategies."""
 
 from unittest.mock import Mock, patch

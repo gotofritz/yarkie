@@ -1,5 +1,3 @@
-# tools/commands/discogs/main.py
-
 """Collect all discogs commands."""
 
 import click

@@ -1,5 +1,3 @@
-# tools/models/processing_models.py
-
 """Pydantic models for processing results and workflows."""
 
 from pydantic import BaseModel, Field

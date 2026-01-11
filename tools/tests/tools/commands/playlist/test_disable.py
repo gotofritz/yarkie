@@ -1,5 +1,3 @@
-# tests/tools/commands/playlist/test_disable.py
-
 """Tests for playlist disable command."""
 
 from unittest.mock import MagicMock, patch

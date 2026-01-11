@@ -1,5 +1,3 @@
-# tests/tools/models/test_processing_models.py
-
 """Tests for processing result models."""
 
 from tools.models.processing_models import ProcessingResult

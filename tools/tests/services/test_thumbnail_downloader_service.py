@@ -1,5 +1,3 @@
-# tests/services/test_thumbnail_downloader_service.py
-
 """Tests for ThumbnailDownloaderService."""
 
 from unittest.mock import MagicMock, Mock, patch

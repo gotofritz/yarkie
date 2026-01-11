@@ -1,5 +1,3 @@
-# tests/services/test_video_downloader_service.py
-
 """Tests for VideoDownloaderService."""
 
 from unittest.mock import MagicMock, Mock, patch

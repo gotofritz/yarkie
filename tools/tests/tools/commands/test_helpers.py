@@ -1,5 +1,3 @@
-# tests/tools/commands/test_helpers.py
-
 """Tests for command helper functions."""
 
 from unittest.mock import patch

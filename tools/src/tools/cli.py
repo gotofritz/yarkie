@@ -1,5 +1,3 @@
-# tools/cli.py
-
 """Define the main entry point of the program."""
 
 import logging

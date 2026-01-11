@@ -1,5 +1,3 @@
-# tests/tools/commands/video/test_delete.py
-
 """Tests for video delete command."""
 
 from unittest.mock import MagicMock, patch

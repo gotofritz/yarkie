@@ -1,5 +1,3 @@
-# tools/models/fakes.py
-
 """Provide factories for fake versions of models."""
 
 from datetime import datetime

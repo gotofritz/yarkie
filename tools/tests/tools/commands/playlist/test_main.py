@@ -1,5 +1,3 @@
-# tests/tools/commands/playlist/test_main.py
-
 from click.testing import CliRunner
 
 from tools.cli import cli

@@ -1,5 +1,3 @@
-# tests/tools/data_access/test_discogs_repository.py
-
 """Tests for DiscogsRepository."""
 
 import logging

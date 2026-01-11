@@ -1,5 +1,3 @@
-# tools/services/archiver_service.py
-
 """Service for archiving YouTube data."""
 
 from logging import Logger, getLogger

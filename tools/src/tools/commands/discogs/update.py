@@ -1,5 +1,3 @@
-# tools/commands/discogs/update.py
-
 """Command to update Discogs metadata for a specific video."""
 
 import click

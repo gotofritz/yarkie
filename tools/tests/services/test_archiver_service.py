@@ -1,5 +1,3 @@
-# tests/test_archiver_service.py
-
 from unittest.mock import MagicMock, Mock
 
 import pytest

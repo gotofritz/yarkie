@@ -1,5 +1,3 @@
-# tests/test_factories.py
-
 """Tests for factory functions that create service instances."""
 
 from logging import Logger

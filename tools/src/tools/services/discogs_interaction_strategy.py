@@ -1,5 +1,3 @@
-# tools/services/discogs_interaction_strategy.py
-
 """
 Interaction strategy protocols for Discogs processing workflows.
 

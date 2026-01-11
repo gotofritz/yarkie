@@ -1,5 +1,3 @@
-# tools/models/models.py
-
 """Provide Pydantic models for DB table structure."""
 
 from datetime import datetime

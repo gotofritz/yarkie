@@ -1,5 +1,3 @@
-# tests/commands/discogs/test_update.py
-
 """Tests for the discogs update command."""
 
 from unittest.mock import Mock, patch

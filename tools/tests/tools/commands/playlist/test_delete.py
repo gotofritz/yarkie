@@ -1,5 +1,3 @@
-# tests/tools/commands/playlist/test_delete.py
-
 """Tests for playlist delete command."""
 
 from unittest.mock import MagicMock, patch

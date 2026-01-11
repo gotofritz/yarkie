@@ -1,5 +1,3 @@
-# tests/services/test_discogs_service.py
-
 """Tests for DiscogsService."""
 
 import logging

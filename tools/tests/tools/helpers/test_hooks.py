@@ -1,5 +1,3 @@
-# tests/tools/helpers/test_hooks.py
-
 import logging
 
 from tools.helpers.hooks import downloading_hook

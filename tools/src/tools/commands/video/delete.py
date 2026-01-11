@@ -1,5 +1,3 @@
-# tools/commands/video/delete.py
-
 """Delete videos from the database and optionally from disk."""
 
 import click

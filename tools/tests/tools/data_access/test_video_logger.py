@@ -1,6 +1,3 @@
-# tests/tools/data_access/test_video_logger.py
-
-
 import pytest
 
 from tools.data_access.video_logger import SilentVideoLogger

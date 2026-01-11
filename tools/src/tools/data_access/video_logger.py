@@ -1,5 +1,3 @@
-# tools/data_access/video_logger.py
-
 """VideoLogger module for handling YoutubeDL logging."""
 
 

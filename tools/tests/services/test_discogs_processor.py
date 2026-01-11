@@ -1,5 +1,3 @@
-# tests/services/test_discogs_processor.py
-
 """Tests for DiscogsProcessor service."""
 
 from unittest.mock import Mock
