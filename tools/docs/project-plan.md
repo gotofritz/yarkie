@@ -123,7 +123,7 @@ erDiagram
     }
 
     YoutubeMetadata {
-        int asset_id FK PK
+        int asset_id PK "Also FK to Asset"
         string youtube_id
         string uploader
         string channel_id
