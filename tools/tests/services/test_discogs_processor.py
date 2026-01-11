@@ -285,3 +285,180 @@ def test_process_video_handles_exceptions(processor, mock_discogs_service):
     assert result.video_id == "test_video_123"
     assert "Processing failed" in result.message
     assert "API Error" in result.error
+
+
+def test_select_release_with_manual_id_valid(processor, mock_discogs_service):
+    """Test manual release ID entry with valid ID."""
+
+    # Configure mocks
+    mock_discogs_service.search_releases.return_value = []
+    release = Mock()
+    release.id = 999
+    mock_discogs_service.get_release_by_id.return_value = release
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.prompt_manual_release_id.return_value = "999"
+
+    result = processor._select_release(search_string="No Results Query")
+
+    assert result == release
+    mock_discogs_service.get_release_by_id.assert_called_once_with(release_id=999)
+
+
+def test_select_release_with_manual_id_invalid(processor, mock_discogs_service):
+    """Test manual release ID entry with invalid (non-numeric) ID."""
+    mock_discogs_service.search_releases.return_value = []
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.prompt_manual_release_id.return_value = "not-a-number"
+
+    result = processor._select_release(search_string="No Results Query")
+
+    assert result is None
+
+
+def test_select_release_with_manual_id_404(processor, mock_discogs_service):
+    """Test manual release ID entry when release not found (404)."""
+    from discogs_client.exceptions import HTTPError
+
+    mock_discogs_service.search_releases.return_value = []
+    mock_discogs_service.get_release_by_id.side_effect = HTTPError("Not Found", 404)
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.prompt_manual_release_id.return_value = "999"
+
+    result = processor._select_release(search_string="No Results Query")
+
+    assert result is None
+
+
+def test_select_release_with_manual_id_other_http_error(processor, mock_discogs_service):
+    """Test manual release ID entry with non-404 HTTP error (should raise)."""
+    from discogs_client.exceptions import HTTPError
+
+    mock_discogs_service.search_releases.return_value = []
+    mock_discogs_service.get_release_by_id.side_effect = HTTPError("Server Error", 500)
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.prompt_manual_release_id.return_value = "999"
+
+    with pytest.raises(HTTPError):
+        processor._select_release(search_string="No Results Query")
+
+
+def test_select_release_with_custom_search_no_results(processor, mock_discogs_service):
+    """Test custom search when no results found."""
+    # First search returns results, user selects custom search which returns nothing
+    mock_discogs_service.search_releases.side_effect = [
+        [Mock(title="First Result")],  # Initial search
+        [],  # Custom search with no results
+    ]
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.select_release.return_value = "custom search query"
+
+    result = processor._select_release(search_string="Test Query")
+
+    assert result is None
+
+
+def test_select_release_with_nested_multiple_results(processor, mock_discogs_service):
+    """Test nested search with multiple results."""
+    # First search returns results, custom search returns multiple results
+    release1 = Mock(title="Result 1")
+    release2 = Mock(title="Result 2")
+    nested_release = Mock(title="Nested Selection")
+
+    mock_discogs_service.search_releases.side_effect = [
+        [release1],  # Initial search
+        [release2, nested_release],  # Custom search with multiple results
+    ]
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.select_release.side_effect = [
+        "custom search query",  # First call returns custom search
+        nested_release,  # Second call (nested) returns a selection
+    ]
+
+    result = processor._select_release(search_string="Test Query")
+
+    assert result == nested_release
+
+
+def test_select_release_with_nested_user_quits(processor, mock_discogs_service):
+    """Test nested search when user quits."""
+    mock_discogs_service.search_releases.side_effect = [
+        [Mock(title="First Result")],  # Initial search
+        [Mock(title="Result 1"), Mock(title="Result 2")],  # Custom search
+    ]
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.select_release.side_effect = [
+        "custom search query",  # First call returns custom search
+        None,  # Second call (nested) user quits
+    ]
+
+    result = processor._select_release(search_string="Test Query")
+
+    assert result is None
+
+
+def test_select_release_with_nested_returns_string(processor, mock_discogs_service):
+    """Test nested search when user enters another custom search (should return None)."""
+    mock_discogs_service.search_releases.side_effect = [
+        [Mock(title="First Result")],  # Initial search
+        [Mock(title="Result 1"), Mock(title="Result 2")],  # Custom search
+    ]
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.select_release.side_effect = [
+        "custom search query",  # First call returns custom search
+        "another custom search",  # Second call (nested) returns string
+    ]
+
+    result = processor._select_release(search_string="Test Query")
+
+    assert result is None
+
+
+def test_select_artists_with_non_404_http_error(processor, mock_discogs_service):
+    """Test artist selection when non-404 HTTP error occurs (should raise)."""
+    from discogs_client.exceptions import HTTPError
+
+    release = Mock()
+    release.country = "US"
+    release.artists = [Mock(data={"id": 456, "name": "Test Artist"})]
+
+    mock_discogs_service.get_artist_by_id.side_effect = HTTPError("Server Error", 500)
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.confirm_artist.return_value = True
+
+    with pytest.raises(HTTPError):
+        processor._select_artists(release=release)
+
+
+def test_process_video_handles_click_abort(processor, mock_discogs_service):
+    """Test that click.Abort is re-raised."""
+    import click
+
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.select_search_string.side_effect = click.Abort()
+
+    with pytest.raises(click.Abort):
+        processor.process_video(
+            video_id="test_video_123",
+            search_strings=["Artist - Title"],
+        )
+
+
+def test_process_video_handles_keyboard_interrupt(processor, mock_discogs_service):
+    """Test that KeyboardInterrupt is re-raised."""
+    processor.interaction_strategy = Mock()
+    processor.interaction_strategy.select_search_string.side_effect = KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        processor.process_video(
+            video_id="test_video_123",
+            search_strings=["Artist - Title"],
+        )

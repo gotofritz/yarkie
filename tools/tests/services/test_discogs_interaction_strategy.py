@@ -251,3 +251,24 @@ def test_should_continue_after_error_no(cli_strategy):
         result = cli_strategy.should_continue_after_error(error="Fatal error")
 
         assert result is False
+
+
+def test_prompt_manual_release_id_with_id(cli_strategy):
+    """Test prompting for manual release ID when user enters an ID."""
+    with patch("tools.services.discogs_interaction_strategy.click.prompt") as mock_prompt:
+        mock_prompt.return_value = "12345"
+
+        result = cli_strategy.prompt_manual_release_id()
+
+        assert result == "12345"
+        mock_prompt.assert_called_once()
+
+
+def test_prompt_manual_release_id_with_empty_string(cli_strategy):
+    """Test prompting for manual release ID when user enters nothing."""
+    with patch("tools.services.discogs_interaction_strategy.click.prompt") as mock_prompt:
+        mock_prompt.return_value = ""
+
+        result = cli_strategy.prompt_manual_release_id()
+
+        assert result is None
