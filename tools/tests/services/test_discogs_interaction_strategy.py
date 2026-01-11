@@ -17,9 +17,10 @@ def cli_strategy():
 
 def test_select_search_string_with_valid_selection(cli_strategy):
     """Test selecting a search string from numbered options."""
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = "Artist - Title"
 
         result = cli_strategy.select_search_string(
@@ -32,9 +33,10 @@ def test_select_search_string_with_valid_selection(cli_strategy):
 
 def test_select_search_string_with_custom_input(cli_strategy):
     """Test entering a custom search string."""
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = "Custom Search"
 
         result = cli_strategy.select_search_string(
@@ -46,14 +48,13 @@ def test_select_search_string_with_custom_input(cli_strategy):
 
 def test_select_search_string_with_none(cli_strategy):
     """Test when user skips search string selection."""
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = None
 
-        result = cli_strategy.select_search_string(
-            video_id="test_video_789", options=["Option 1"]
-        )
+        result = cli_strategy.select_search_string(video_id="test_video_789", options=["Option 1"])
 
         assert result is None
 
@@ -82,9 +83,10 @@ def test_select_release_with_multiple_releases(cli_strategy):
     mock_release2 = Mock()
     mock_release2.title = "Release 2"
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = mock_release1
 
         result = cli_strategy.select_release(releases=[mock_release1, mock_release2])
@@ -100,9 +102,10 @@ def test_select_release_with_custom_search(cli_strategy):
     mock_release2 = Mock()
     mock_release2.title = "Test Release 2"
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = "custom search"
 
         result = cli_strategy.select_release(releases=[mock_release1, mock_release2])
@@ -115,9 +118,10 @@ def test_select_release_with_quit(cli_strategy):
     mock_release = Mock()
     mock_release.title = "Test Release"
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = None
 
         result = cli_strategy.select_release(releases=[mock_release, mock_release])
@@ -129,26 +133,26 @@ def test_confirm_artist_accepts(cli_strategy):
     """Test confirming an artist selection."""
     artist = {"id": 123, "name": "Test Artist"}
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.click.confirm"
-    ) as mock_confirm:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.click.confirm") as mock_confirm,
+    ):
         mock_confirm.return_value = True
 
         result = cli_strategy.confirm_artist(artist=artist)
 
         assert result is True
-        mock_confirm.assert_called_once_with(
-            "Use artist?", default=True, show_default=True
-        )
+        mock_confirm.assert_called_once_with("Use artist?", default=True, show_default=True)
 
 
 def test_confirm_artist_rejects(cli_strategy):
     """Test rejecting an artist selection."""
     artist = {"id": 456, "name": "Another Artist"}
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.click.confirm"
-    ) as mock_confirm:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.click.confirm") as mock_confirm,
+    ):
         mock_confirm.return_value = False
 
         result = cli_strategy.confirm_artist(artist=artist)
@@ -168,8 +172,9 @@ def test_search_artist_manually_with_query(cli_strategy):
 
 def test_search_artist_manually_with_empty_input(cli_strategy):
     """Test manual artist search when user declines."""
-    with patch("tools.services.discogs_interaction_strategy.click.prompt") as mock_prompt, patch(
-        "tools.services.discogs_interaction_strategy.click.echo"
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.prompt") as mock_prompt,
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
     ):
         mock_prompt.return_value = ""
 
@@ -192,9 +197,10 @@ def test_select_track_with_valid_selection(cli_strategy):
     mock_track2 = Mock()
     mock_track2.title = "Track 2"
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = mock_track1
 
         result = cli_strategy.select_track(tracks=[mock_track1, mock_track2])
@@ -207,9 +213,10 @@ def test_select_track_with_quit(cli_strategy):
     mock_track = Mock()
     mock_track.title = "Test Track"
 
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.prompt_numbered_choice"
-    ) as mock_prompt:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.prompt_numbered_choice") as mock_prompt,
+    ):
         mock_prompt.return_value = None
 
         result = cli_strategy.select_track(tracks=[mock_track])
@@ -219,9 +226,10 @@ def test_select_track_with_quit(cli_strategy):
 
 def test_should_continue_after_error_yes(cli_strategy):
     """Test continuing after error."""
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.click.confirm"
-    ) as mock_confirm:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.click.confirm") as mock_confirm,
+    ):
         mock_confirm.return_value = True
 
         result = cli_strategy.should_continue_after_error(error="Test error")
@@ -234,9 +242,10 @@ def test_should_continue_after_error_yes(cli_strategy):
 
 def test_should_continue_after_error_no(cli_strategy):
     """Test stopping after error."""
-    with patch("tools.services.discogs_interaction_strategy.click.echo"), patch(
-        "tools.services.discogs_interaction_strategy.click.confirm"
-    ) as mock_confirm:
+    with (
+        patch("tools.services.discogs_interaction_strategy.click.echo"),
+        patch("tools.services.discogs_interaction_strategy.click.confirm") as mock_confirm,
+    ):
         mock_confirm.return_value = False
 
         result = cli_strategy.should_continue_after_error(error="Fatal error")

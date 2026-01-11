@@ -578,8 +578,6 @@ def test_refresh_download_field_handles_database_error(test_sql_client: SQLClien
     assert "Error refreshing download field" in str(mock_logger.error.call_args)
 
 
-
-
 def test_get_video_ids_handles_database_error(test_sql_client: SQLClient) -> None:
     """Should return empty list on SQLAlchemyError."""
     from unittest.mock import patch

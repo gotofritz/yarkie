@@ -189,6 +189,9 @@ class CliInteractionStrategy:
     It provides the same interaction pattern as the original postprocess command.
     """
 
+    # in lieu of pagination we just cap the number of releases
+    max_releases: int = 32
+
     def select_search_string(self, *, video_id: str, options: list[str]) -> str | None:
         """
         Prompt user to select or enter a search string.
@@ -246,6 +249,9 @@ class CliInteractionStrategy:
         # Multiple results - let user select
         click.echo(f"Found {len(releases)} results")
 
+        # TODO: implement pagination
+        releases = releases[: self.max_releases]
+
         selected = prompt_numbered_choice(
             releases,
             formatter=lambda idx, result: f"{idx}. {result.title}",
@@ -291,7 +297,7 @@ class CliInteractionStrategy:
         """
         import json
 
-        click.echo(json.dumps(artist, indent=2))
+        click.echo(json.dumps(artist, indent=2, ensure_ascii=False))
         return click.confirm("Use artist?", default=True, show_default=True)
 
     def search_artist_manually(self) -> str | None:

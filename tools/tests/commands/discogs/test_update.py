@@ -51,14 +51,10 @@ def test_update_with_valid_video_id_success(mock_app_context, mock_video):
 
     # Mock the services
     with (
-        patch(
-            "tools.commands.discogs.update.DiscogsSearchService"
-        ) as mock_search_service_class,
+        patch("tools.commands.discogs.update.DiscogsSearchService") as mock_search_service_class,
         patch("tools.commands.discogs.update.create_discogs_service"),
         patch("tools.commands.discogs.update.CliInteractionStrategy"),
-        patch(
-            "tools.commands.discogs.update.DiscogsProcessor"
-        ) as mock_processor_class,
+        patch("tools.commands.discogs.update.DiscogsProcessor") as mock_processor_class,
     ):
         # Setup search service mock
         mock_search_service = Mock()
@@ -133,9 +129,7 @@ def test_update_with_processing_failure(mock_app_context, mock_video):
         patch("tools.commands.discogs.update.DiscogsSearchService"),
         patch("tools.commands.discogs.update.create_discogs_service"),
         patch("tools.commands.discogs.update.CliInteractionStrategy"),
-        patch(
-            "tools.commands.discogs.update.DiscogsProcessor"
-        ) as mock_processor_class,
+        patch("tools.commands.discogs.update.DiscogsProcessor") as mock_processor_class,
     ):
         mock_processor = Mock()
         mock_processor.process_video.return_value = failed_result
@@ -152,9 +146,7 @@ def test_update_with_processing_failure(mock_app_context, mock_video):
         assert exc_info.value.exit_code == 1
 
 
-def test_update_generates_search_strings_from_video_metadata(
-    mock_app_context, mock_video
-):
+def test_update_generates_search_strings_from_video_metadata(mock_app_context, mock_video):
     """Test that search strings are generated from video metadata."""
     # Setup mocks
     mock_app_context.video_repository.get_video_by_id.return_value = mock_video
@@ -168,14 +160,10 @@ def test_update_generates_search_strings_from_video_metadata(
 
     # Mock the services
     with (
-        patch(
-            "tools.commands.discogs.update.DiscogsSearchService"
-        ) as mock_search_service_class,
+        patch("tools.commands.discogs.update.DiscogsSearchService") as mock_search_service_class,
         patch("tools.commands.discogs.update.create_discogs_service"),
         patch("tools.commands.discogs.update.CliInteractionStrategy"),
-        patch(
-            "tools.commands.discogs.update.DiscogsProcessor"
-        ) as mock_processor_class,
+        patch("tools.commands.discogs.update.DiscogsProcessor") as mock_processor_class,
     ):
         mock_search_service = Mock()
         mock_search_service.generate_search_strings.return_value = [

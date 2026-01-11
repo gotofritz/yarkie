@@ -33,9 +33,7 @@ def test_delete_single_playlist_successfully(runner, faker):
             assert result.exit_code == 0
             assert "Deleting 1 playlist(s)" in result.output
             assert "Successfully deleted 1 playlist(s)" in result.output
-            mock_repository.delete_playlists.assert_called_once_with(
-                playlist_ids=[playlist_id]
-            )
+            mock_repository.delete_playlists.assert_called_once_with(playlist_ids=[playlist_id])
 
 
 def test_delete_multiple_playlists(runner, faker):
@@ -55,9 +53,7 @@ def test_delete_multiple_playlists(runner, faker):
             assert result.exit_code == 0
             assert "Deleting 3 playlist(s)" in result.output
             assert "Successfully deleted 3 playlist(s)" in result.output
-            mock_repository.delete_playlists.assert_called_once_with(
-                playlist_ids=[pl1, pl2, pl3]
-            )
+            mock_repository.delete_playlists.assert_called_once_with(playlist_ids=[pl1, pl2, pl3])
 
 
 def test_delete_nonexistent_playlist(runner, faker):
@@ -73,9 +69,7 @@ def test_delete_nonexistent_playlist(runner, faker):
 
             assert result.exit_code == 0
             assert "No playlists were deleted" in result.output
-            mock_repository.delete_playlists.assert_called_once_with(
-                playlist_ids=[playlist_id]
-            )
+            mock_repository.delete_playlists.assert_called_once_with(playlist_ids=[playlist_id])
 
 
 def test_delete_partial_success(runner, faker):
@@ -95,6 +89,4 @@ def test_delete_partial_success(runner, faker):
             assert result.exit_code == 0
             assert "Deleting 3 playlist(s)" in result.output
             assert "Successfully deleted 2 playlist(s)" in result.output
-            mock_repository.delete_playlists.assert_called_once_with(
-                playlist_ids=[pl1, pl2, pl3]
-            )
+            mock_repository.delete_playlists.assert_called_once_with(playlist_ids=[pl1, pl2, pl3])

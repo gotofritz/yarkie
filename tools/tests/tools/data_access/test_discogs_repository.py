@@ -180,9 +180,7 @@ def test_upsert_release_inserts_new_release(
 
     # Verify it was inserted
     with Session(test_sql_client.engine) as session:
-        stmt = session.query(DiscogsReleaseTable).filter(
-            DiscogsReleaseTable.id == 12345
-        )
+        stmt = session.query(DiscogsReleaseTable).filter(DiscogsReleaseTable.id == 12345)
         db_release = session.execute(stmt).scalar()
 
     assert db_release is not None
@@ -217,9 +215,7 @@ def test_upsert_release_skips_existing_release(
 
     # Verify only one record exists
     with Session(test_sql_client.engine) as session:
-        count = session.query(DiscogsReleaseTable).filter(
-            DiscogsReleaseTable.id == 12345
-        ).count()
+        count = session.query(DiscogsReleaseTable).filter(DiscogsReleaseTable.id == 12345).count()
 
     assert count == 1
 
@@ -252,19 +248,13 @@ def test_upsert_artist_inserts_new_artist(
         uri="https://www.discogs.com/artist/54321",
     )
 
-    result = discogs_repository.upsert_artist(
-        record=artist,
-        release_id=12345,
-        role="Main"
-    )
+    result = discogs_repository.upsert_artist(record=artist, release_id=12345, role="Main")
 
     assert result == 54321
 
     # Verify artist was inserted
     with Session(test_sql_client.engine) as session:
-        db_artist = session.query(DiscogsArtistTable).filter(
-            DiscogsArtistTable.id == 54321
-        ).first()
+        db_artist = session.query(DiscogsArtistTable).filter(DiscogsArtistTable.id == 54321).first()
 
     assert db_artist is not None
     assert db_artist.name == "Test Artist"  # "The" prefix removed
@@ -297,9 +287,7 @@ def test_upsert_artist_cleans_artist_name(
 
     # Verify name was cleaned
     with Session(test_sql_client.engine) as session:
-        db_artist = session.query(DiscogsArtistTable).filter(
-            DiscogsArtistTable.id == 54321
-        ).first()
+        db_artist = session.query(DiscogsArtistTable).filter(DiscogsArtistTable.id == 54321).first()
 
     assert db_artist.name == "Beatles"  # "The" and "(2)" removed
 
@@ -331,10 +319,14 @@ def test_upsert_artist_links_to_release(
 
     # Verify link was created
     with Session(test_sql_client.engine) as session:
-        link = session.query(ReleaseArtistsTable).filter(
-            ReleaseArtistsTable.release_id == 12345,
-            ReleaseArtistsTable.artist_id == 54321,
-        ).first()
+        link = (
+            session.query(ReleaseArtistsTable)
+            .filter(
+                ReleaseArtistsTable.release_id == 12345,
+                ReleaseArtistsTable.artist_id == 54321,
+            )
+            .first()
+        )
 
     assert link is not None
     assert link.role == "Main"
@@ -374,10 +366,14 @@ def test_upsert_artist_skips_existing_link(
 
     # Verify only one link exists
     with Session(test_sql_client.engine) as session:
-        count = session.query(ReleaseArtistsTable).filter(
-            ReleaseArtistsTable.release_id == 12345,
-            ReleaseArtistsTable.artist_id == 54321,
-        ).count()
+        count = (
+            session.query(ReleaseArtistsTable)
+            .filter(
+                ReleaseArtistsTable.release_id == 12345,
+                ReleaseArtistsTable.artist_id == 54321,
+            )
+            .count()
+        )
 
     assert count == 1
 
@@ -429,9 +425,7 @@ def test_upsert_track_inserts_new_track(
 
     # Verify track was inserted
     with Session(test_sql_client.engine) as session:
-        db_track = session.query(DiscogsTrackTable).filter(
-            DiscogsTrackTable.id == result
-        ).first()
+        db_track = session.query(DiscogsTrackTable).filter(DiscogsTrackTable.id == result).first()
 
     assert db_track is not None
     assert db_track.title == "Track One"
@@ -541,10 +535,14 @@ def test_upsert_track_reuses_existing_track(
 
     # Verify only one track exists
     with Session(test_sql_client.engine) as session:
-        count = session.query(DiscogsTrackTable).filter(
-            DiscogsTrackTable.title == "Track One",
-            DiscogsTrackTable.release_id == 12345,
-        ).count()
+        count = (
+            session.query(DiscogsTrackTable)
+            .filter(
+                DiscogsTrackTable.title == "Track One",
+                DiscogsTrackTable.release_id == 12345,
+            )
+            .count()
+        )
 
     assert count == 1
 

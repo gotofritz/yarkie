@@ -151,8 +151,8 @@ class DiscogsProcessor:
             potential_artists = [artist.data for artist in release.artists]
         else:
             # Master object - artists already in dict form
-            # Force lazy loading of data first
-            _ = release.data.get("title")
+            if release.data.get("artists") is None:
+                release.fetch("artists")
             potential_artists = [artist for artist in release.data.get("artists", [])]
 
         # Prompt user to confirm each artist
@@ -277,7 +277,8 @@ class DiscogsProcessor:
             }
         else:
             # Master object
-            _ = release.data.get("title")  # Force lazy loading
+            release.fetch("title")
+            release.fetch("country")
             release_data = {
                 "id": release.id,
                 "title": release.data.get("title", ""),

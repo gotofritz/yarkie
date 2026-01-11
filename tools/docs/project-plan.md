@@ -500,7 +500,7 @@ def update(ctx: click.Context, video_id: str) -> None:
    - Test selecting different options
    - Test quitting mid-process
    - Test error scenarios
-   - Compare behavior to original implementation
+   - Compare behaviour to original implementation
 
 **Dependencies**: Phase 2 complete
 **Reasoning**: Ensure existing functionality still works after refactor
@@ -568,7 +568,7 @@ def update(ctx: click.Context, video_id: str) -> None:
    - Auto-fixed 81 linting issues
 
 4. **Create migration guide** (not needed)
-   - No behavior changes to existing commands
+   - No behaviour changes to existing commands
    - Internal APIs unchanged for consumers
    - Refactor is transparent to end users
 
@@ -610,7 +610,7 @@ def update(ctx: click.Context, video_id: str) -> None:
 
    - **Solution**: Use AutoInteractionStrategy for tests, avoiding Click mocks
 
-4. **Existing behavior preservation**: Must ensure postprocess works exactly as before
+4. **Existing behaviour preservation**: Must ensure postprocess works exactly as before
    - **Solution**: Thorough manual testing, potentially add integration tests
 
 ### Technical Constraints
@@ -632,7 +632,7 @@ def update(ctx: click.Context, video_id: str) -> None:
 1. ✓ `DiscogsProcessor` service created with pluggable interaction strategy
 2. ✓ `InteractionStrategy` protocol defined with CLI and Auto implementations
 3. ✓ `discogs postprocess` refactored to use DiscogsProcessor
-4. ✓ `discogs postprocess` maintains identical behavior to original
+4. ✓ `discogs postprocess` maintains identical behaviour to original
 5. ✓ `discogs update <video_id>` command created and working
 6. ✓ `VideoRepository.get_video_by_id` implemented
 7. ✓ All processing logic has unit tests (>80% coverage)
@@ -659,4 +659,4 @@ def update(ctx: click.Context, video_id: str) -> None:
 - The refactor enables future extensions like batch processing, API endpoints, or scheduled jobs
 - The interaction strategy pattern makes it easy to add new UIs (web, API) later
 - All business logic will be testable without running interactive prompts
-- The original `discogs postprocess` behavior is preserved for users
+- The original `discogs postprocess` behaviour is preserved for users
