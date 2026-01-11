@@ -18,12 +18,14 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
 
 **Subtasks:**
 1. Create Song model and table
-   - id (PK), title, artist_name, first_release_date, discogs_track_id (FK, nullable)
-   - Add relationship constraints
+   - id (PK), title, artist_name, first_release_date, created_at, updated_at, notes (nullable)
+   - **NO FK to DiscogsTrack** - Song is independent entity that may be derived from Discogs data
+   - **Reasoning:** Songs can exist without Discogs data (original compositions, non-commercial music)
    - **Complexity:** Low - straightforward schema
 
 2. Add video_songs join table (many-to-many)
    - song_id, video_id, version_type (enum: 'original', 'live', 'cover', 'lesson', 'other')
+   - version_type defaults to 'other' on creation, populated later in Phase 4
    - **Reasoning:** Videos can contain multiple songs (concerts), songs have multiple videos
    - **Complexity:** Low
 
@@ -31,22 +33,37 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
    - Add tables, maintain existing columns
    - **Dependency:** Subtask 1-2 complete
 
+4. Create database indexes in migration
+   - songs.title, songs.artist_name (search performance)
+   - video_songs.song_id, video_songs.video_id (join performance)
+   - **Complexity:** Low
+
 **Integration:** New tables coexist with existing schema. No changes to services/commands yet.
 
 **Blockers:** None
 
 ### Phase 2: Song Creation Service (High Priority)
-**Goal:** Service to create/update songs from Discogs data
+**Goal:** Service to create/update songs from Discogs data and manual input
 
 **Subtasks:**
 1. Create SongRepository (CRUD operations)
+   - find_by_artist_and_title(artist, title) -> Optional[Song]
+   - create(song_data) -> Song
+   - update(song_id, updates) -> Song
+   - **Deduplication:** Ensures only ONE song per unique (artist, title, first_release_date) combination
    - **Pattern:** Follow existing repository pattern (base_repository.py)
    - **Complexity:** Low
 
 2. Create SongService
    - find_or_create_from_discogs(track_id) -> Song
-   - find_oldest_matching_track(artist, title) -> Optional[DiscogsTrack]
-   - **Reasoning:** Encapsulates business logic for "oldest track" requirement
+     - Queries Discogs API for track data
+     - Finds oldest matching track with same artist/title
+     - Creates Song with extracted data (title, artist, release_date)
+     - Uses find_or_create pattern to prevent duplicates
+   - create_song_manual(title, artist, date, notes) -> Song
+     - For music videos without Discogs data
+     - Manual song creation workflow
+   - **Reasoning:** Encapsulates business logic for "oldest track" requirement and manual workflows
    - **Complexity:** Medium - requires Discogs API queries
 
 3. Create song_from_video(video_id) workflow
@@ -54,7 +71,13 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
    - **Complexity:** Low
    - **Dependency:** Phase 1 complete
 
-**Integration:** Services ready but not yet invoked by commands.
+4. Integrate song creation into discogs postprocess workflow
+   - When linking video to track, also call find_or_create_from_discogs()
+   - Ensures new videos get songs immediately
+   - **Complexity:** Medium
+   - **Dependency:** Subtask 1-2 complete
+
+**Integration:** Services ready and integrated into discogs workflow.
 
 **Blockers:** None
 
@@ -64,7 +87,12 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
 **Subtasks:**
 1. Create migration command: `tools song backfill`
    - Query all videos with discogs_track_id
-   - For each: find_or_create song, create video_songs entry
+   - For each video with discogs_track_id:
+     1. Call SongService.find_or_create_from_discogs(track_id)
+     2. Create video_songs entry with version_type='other'
+     3. Set migrated_to_song=True
+   - **Note:** No search needed - discogs_track_id already known
+   - **Deduplication:** Multiple videos linking to same track share one song entity
    - **Reasoning:** Preserves existing Discogs relationships
    - **Complexity:** Medium - needs transaction handling
 
@@ -73,9 +101,14 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
    - **Complexity:** Low
 
 3. Create report: videos with is_tune=True but no song
-   - Identifies unmigrated music videos
+   - Identifies music videos without Discogs data
    - **Complexity:** Low
    - **Dependency:** Subtask 1 complete
+
+4. Create workflow for is_tune=True videos without discogs_track_id
+   - Identifies music content that needs manual song creation
+   - Provides command to manually create and link songs
+   - **Complexity:** Medium
 
 **Integration:** Existing video commands unchanged. Run migration manually.
 
@@ -152,14 +185,11 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
    - search, show, link, unlink subcommands
    - **Complexity:** Medium
 
-3. Update discogs postprocess to create songs
-   - When linking video to track, also create/link song
-   - **Complexity:** Medium
-   - **Dependency:** Phase 2 complete
-
 **Integration:** Gradual rollout. Video commands work with/without songs.
 
 **Blockers:** Requires thorough testing.
+
+**Note:** Discogs postprocess integration completed in Phase 2, Subtask 4.
 
 ### Future Phases (Low Priority, Not Detailed)
 - Phase 8: Multiple songs per video
@@ -171,6 +201,7 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
 2. Phase 3 depends on Phase 2 (services exist)
 3. Phase 7 depends on Phase 3 (data migrated)
 4. Phases 5-6 independent, can proceed in parallel
+5. Phase 2, Subtask 4 (discogs integration) should complete before significant new video processing
 
 ## Constraints
 - Must maintain backwards compatibility during transition
@@ -179,6 +210,8 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
 - Existing video downloads must remain accessible
 
 ## Testing Strategy
-- Unit tests per repository/service (follow patterns in tests/commands/)
-- Integration test for backfill migration
+- Unit tests for repositories (follow patterns in tests/tools/data_access/)
+- Unit tests for services (follow patterns in tests/services/)
+- Integration tests for commands (follow patterns in tests/commands/)
+- Integration test for backfill migration with sample data
 - Manual QA on sample data before production migration
