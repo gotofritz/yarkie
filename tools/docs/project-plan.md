@@ -13,11 +13,14 @@ Shift from a Video-centric model to a decoupled **Song, Asset, & Artist** model.
 
 ```mermaid
 erDiagram
-    Artist ||--o{ Song : "composes/performs"
+    Artist ||--o{ SongArtist : "composes/performs"
+    Song ||--o{ SongArtist : "performed_by"
+
     Artist ||--o{ Asset : "featured_in/teaches"
     Artist ||--o| DiscogsArtist : "linked_to"
 
-    Song ||--o{ Asset : "realized_by"
+    Song ||--o{ AssetSong : "realized_in"
+    Asset ||--o{ AssetSong : "contains"
 
     Asset ||--o{ DiscogsTrack : "matches"
     Asset ||--o| YoutubeMetadata : "has_youtube_info"
@@ -37,18 +40,28 @@ erDiagram
     Song {
         int id
         string title
-        int artist_id FK
         string source "discogs_matched|llm_inferred|manually_verified"
         date original_release_date "Derived"
     }
 
+    SongArtist {
+        int song_id FK
+        int artist_id FK
+        string role "optional: composer, performer, etc."
+    }
+
     Asset {
         int id
-        int song_id FK "nullable"
         string type "video|audio|image|project|score"
         string path "local/fs/path"
         int parent_asset_id FK "nullable (e.g., stem -> project)"
         json metadata "timestamps, etc"
+    }
+
+    AssetSong {
+        int asset_id FK
+        int song_id FK
+        string note "optional: live version, cover, etc."
     }
 
     DiscogsTrack {
@@ -121,31 +134,37 @@ The data model must support the following scenarios:
 
 **Goal**: Introduce Artist and Song entities together, populating from both Discogs matches and LLM inference.
 
+0.  **Preparation**:
+    - Create `tools db backup` command to ensure easy rollback during refactoring.
+
 1.  **Schema Changes**:
     - Create `Artists` and `DiscogsArtist` tables (as defined in Core Model).
     - Create `Songs` table with `source` field (Enum: `discogs_matched`, `llm_inferred`, `manually_verified`).
-    - Add `artist_id` FK to `Videos` table (nullable initially).
-    - Add `song_id` FK to `Videos` table (nullable).
+    - Create `SongArtists` junction table.
+    - Create `AssetSongs` (or temporary `VideoSongs`) junction table.
+    - **Note**: Create a new Alembic migration for these changes to ensure consistency.
 
 2.  **Migration Step A - Discogs-Linked Videos (High Confidence)**:
     - For Videos _with_ an existing `discogs_track_id`:
       - **Artist Creation**: Follow chain `Video -> DiscogsTrack -> Release -> DiscogsArtist`.
         - Create/Find `Artist` record linked to `DiscogsArtist`.
-        - Link `Video.artist_id` to the found `Artist`.
-      - **Song Creation**: Create `Song` (Title=DiscogsTrack.title, artist_id from above).
-        - Link `Video.song_id` to the new `Song`.
+      - **Song Creation**: Create `Song` (Title=DiscogsTrack.title).
+        - Link `Song` to `Artist` via `SongArtists`.
+        - Link `Video` to `Song` via junction table.
         - Set `Song.source = 'discogs_matched'`.
 
 3.  **Migration Step B - Orphan Videos (LLM Inference)**:
-    - Develop `tools guess-songs` command.
+    - Develop `tools guess-songs` command using `LLMInferenceService` and `InferenceStrategy`.
     - For Videos _without_ a `discogs_track_id` (orphans):
-      - Send `title`, `description`, `uploader` to a local LLM (OpenWeb-UI/Gemini).
-      - Prompt: "Extract canonical Artist Name and Song Title."
-      - **Artist Creation**: Create new `Artist` record with inferred name (no `DiscogsArtist` link yet).
-      - **Song Creation**: Create `Song` linked to the Artist.
-        - Link `Video.song_id` to the new `Song`.
+      - Use `LLMInferenceService` with `title`, `description`, `uploader`.
+      - Prompt: "Extract canonical Artist Name(s) and Song Title."
+      - **Artist Creation**: Create new `Artist` record(s) with inferred name (no `DiscogsArtist` link yet).
+      - **Song Creation**: Create `Song`.
+        - Link `Song` to `Artist`s via `SongArtists`.
+        - Link `Video` to `Song` via junction table.
         - Set `Song.source = 'llm_inferred'`.
     - **Note**: Do *not* migrate `Videos.uploader` directly to `Artist` (data is too noisy for direct migration).
+    - **Command Migration**: Update `tools discogs` commands (refresh, postprocess, update) to support the new Song/Artist/Video junction schema.
 
 4.  **Validation**:
     - Ensure all existing `tools playlist` and `tools discogs` commands function correctly.
@@ -192,7 +211,7 @@ The data model must support the following scenarios:
 
 1.  **Migrate Assets**:
     - Convert `Videos` -> `Assets` (type=video) + `YoutubeMetadata`.
-    - Move `song_id` and `artist_id` from Video to Asset/Song structures.
+    - Move `VideoSongs` links to `AssetSongs`.
 2.  **Cleanup**:
     - Drop `Videos` table.
     - Drop legacy columns.
