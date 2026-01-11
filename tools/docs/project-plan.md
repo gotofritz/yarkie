@@ -1,11 +1,13 @@
 # Data Modeling Refactoring: Video-Centric to Song-Centric
 
 ## Overview
+
 Transform yarkie from video-centric to song-centric data modeling to better support music learning. Core abstraction shifts from "YouTube videos" to "Songs/Pieces" with videos as one of many resources for learning.
 
 **Why:** Current model treats videos as primary entities with optional Discogs enrichment. New model treats Songs as primary with multiple associated resources (videos, audio, scores, stems).
 
 ## Current State
+
 - Videos table with `is_tune` flag (distinguishes music vs non-music)
 - Optional `discogs_track_id` FK links videos to Discogs tracks
 - Discogs tables: artist, release, track, release_artists
@@ -76,6 +78,7 @@ erDiagram
 ```
 
 **Key Design Decisions:**
+
 - **Song is independent** - No direct FK to DiscogsTrack. Songs can exist without Discogs data (original compositions, non-commercial music)
 - **Video retains discogs_track_id** - Backwards compatible, used to derive Song data during migration
 - **VideoSongs join table** - Many-to-many relationship (concerts have multiple songs, songs have multiple videos)
@@ -161,6 +164,7 @@ erDiagram
 ```
 
 **Ultimate Target Design Decisions:**
+
 - **Asset abstraction** - Unifies videos, audio files, images, scores, DAW projects under single table
 - **Platform agnostic** - YoutubeMetadata separate from Asset enables non-YouTube sources (Vimeo, local files)
 - **Asset hierarchy** - `parent_asset_id` enables relationships: thumbnails→videos, stems→projects, clips→source
@@ -195,18 +199,60 @@ erDiagram
 ```
 
 **Key Points:**
+
 - **DiscogsService**: Handles Discogs API interactions and Discogs entity management (unchanged)
 - **SongService**: Handles Song business logic, queries DiscogsRepository directly (no service-to-service coupling)
 - **DiscogsProcessor**: Integration point - orchestrates both services during video processing
 - **Clean layering**: Repository ← Service ← Processor ← Command
 
+### Asset-to-Asset Hierarchy (Thumbnails & Stems)
+
+Thumbnails are associated directly with the Video **Asset** (via `parent_asset_id`) rather than the `YoutubeMetadata`.
+
+- **Pros**: Platform agnostic (works for local files/Vimeo), unified file management (one query for all related files), and decoupled from source-specific data.
+- **Context**: The `metadata` JSON field on the child asset (type=image) defines its role (e.g., `{"role": "thumbnail"}`).
+
+### Clip Asset Mechanics
+
+Clips are "Pointer" assets that represent a segment of a larger source file.
+
+- **Virtual Clips**: The asset has no `path` but contains `start_seconds` and `end_seconds` in its `metadata`. Tools (like players) resolve the parent path and apply the offset.
+- **Physical Clips**: Assets that have been "materialized" (e.g., via FFmpeg) into their own files. They retain a `parent_asset_id` for lineage but have their own `path`.
+
+## Use Cases & Requirements
+
+The data model must support the following scenarios:
+
+1.  **Simple videos**:
+    - Add a Youtube video which is not related to a music composition, it's just a video asset
+1.  **Composition Management**:
+    - Add a Song "Brown Sugar" by "Rolling Stones" without any assets initially.
+1.  **Asset Associations**:
+    - A single **YouTube Video** (Asset) can be linked to:
+      - A **Song** (e.g., "Brown Sugar").
+      - A **DiscogsTrack** (e.g., Track A1 on Album X).
+      - A **YoutubeMetadata** record (details below).
+    - A **Thumbnail** (Asset, type=image) can be associated with a **YouTube Video** (Asset).
+    - A **Record Cover** (Asset, type=image) can be associated with a **DiscogsTrack** (via Asset match).
+    - A **Cover Version** (Asset) by another band can be linked to the original **Song** (Composition).
+    - A **Video Lesson** (Asset) can be linked to the **Song** and a specific **Teacher/Channel**.
+    - A **Clip** (Asset) defined by timestamps T1-T2 can be linked to a source **YouTube Video** (Asset).
+1.  **Production Assets**:
+    - **MusicXML** or **Scores** linked to a Song.
+    - **Stems** (WAV files) linked to a parent Asset (e.g., a BitWig project).
+      - _Clarification_: `parent_asset_id` is used here. If Asset A is a BitWig project, and Asset B is a stem used in it, Asset B has `parent_asset_id = A.id`.
+    - **DAW Projects** (BitWig, Ableton) linked to constituent Assets.
+
 ## Implementation Plan
 
 ### Phase 0: Preparation (High Priority)
+
 **Goal:** Set up infrastructure for safe refactoring
 
 **Subtasks:**
+
 1. Create `tools db backup` command
+
    - Creates timestamped database backups
    - Ensures easy rollback during refactoring
    - **Complexity:** Low
@@ -222,22 +268,27 @@ erDiagram
 **Blockers:** None
 
 ### Phase 1: Introduce Song Entity (High Priority)
+
 **Goal:** Add Song table without breaking existing functionality
 
 **Subtasks:**
+
 1. Create Song model and table
+
    - id (PK), title, artist_name, first_release_date, created_at, updated_at, notes (nullable)
    - **NO FK to DiscogsTrack** - Song is independent entity that may be derived from Discogs data
    - **Reasoning:** Songs can exist without Discogs data (original compositions, non-commercial music)
    - **Complexity:** Low - straightforward schema
 
 2. Add video_songs join table (many-to-many)
+
    - song_id, video_id, version_type (enum: 'original', 'live', 'cover', 'lesson', 'other')
    - version_type defaults to 'other' on creation, populated later in Phase 4
    - **Reasoning:** Videos can contain multiple songs (concerts), songs have multiple videos
    - **Complexity:** Low
 
 3. Create alembic migration
+
    - Add tables, maintain existing columns
    - **Dependency:** Subtask 1-2 complete
 
@@ -251,10 +302,13 @@ erDiagram
 **Blockers:** None
 
 ### Phase 2: Song Creation Service (High Priority)
+
 **Goal:** Service to create/update songs from Discogs data and manual input
 
 **Subtasks:**
+
 1. Create SongRepository (CRUD operations)
+
    - find_by_artist_and_title(artist, title) -> Optional[Song]
    - create(song_data) -> Song
    - update(song_id, updates) -> Song
@@ -263,6 +317,7 @@ erDiagram
    - **Complexity:** Low
 
 2. Create SongService
+
    - find_or_create_from_discogs(track_id: int) -> Song
      - Queries DiscogsRepository (NOT DiscogsService) for track data
      - Follows FK chain: Track → Release → ReleaseArtists → Artist
@@ -280,12 +335,13 @@ erDiagram
    - **Complexity:** Medium - requires Discogs FK traversal logic
 
 3. Create song_from_video(video_id) workflow
+
    - If video.discogs_track_id exists: create song, link video
    - **Complexity:** Low
    - **Dependency:** Phase 1 complete
 
 4. Integrate song creation into DiscogsProcessor workflow
-   - In DiscogsProcessor._save_metadata(), after save_track() succeeds:
+   - In DiscogsProcessor.\_save_metadata(), after save_track() succeeds:
      1. Call SongService.find_or_create_from_discogs(track_id)
      2. Call SongService.link_song_to_video(song_id, video_id, 'other')
    - Add SongService as DiscogsProcessor dependency (constructor injection)
@@ -299,10 +355,13 @@ erDiagram
 **Blockers:** None
 
 ### Phase 3: Backfill Existing Data (High Priority)
+
 **Goal:** Migrate existing video->track relationships to song model
 
 **Subtasks:**
+
 1. Create migration command: `tools song backfill`
+
    - Query all videos with discogs_track_id
    - For each video with discogs_track_id:
      1. Call SongService.find_or_create_from_discogs(track_id)
@@ -314,10 +373,12 @@ erDiagram
    - **Complexity:** Medium - needs transaction handling
 
 2. Add flag to videos table: `migrated_to_song` (Boolean)
+
    - Track migration status
    - **Complexity:** Low
 
 3. Create report: videos with is_tune=True but no song
+
    - Identifies music videos without Discogs data
    - **Complexity:** Low
    - **Dependency:** Subtask 1 complete
@@ -332,10 +393,13 @@ erDiagram
 **Blockers:** Requires manual validation before production.
 
 ### Phase 4: LLM/MCP Inference for Orphan Videos (Mid Priority)
+
 **Goal:** Use LLM or MCP to extract song metadata from videos without Discogs data
 
 **Subtasks:**
+
 1. Create LLMInferenceService with InferenceStrategy pattern
+
    - Support multiple backends: OpenWebUI, Gemini, Claude API, MCP servers
    - Prompt: "Extract canonical Artist Name and Song Title from: title, description, uploader"
    - Returns structured data: {artist: str, title: str, confidence: float}
@@ -343,6 +407,7 @@ erDiagram
    - **Complexity:** Medium
 
 2. Develop `tools song guess` command
+
    - For videos with is_tune=True but no discogs_track_id (orphans)
    - Uses LLMInferenceService to extract artist/song info
    - Creates Song via SongService.create_song_manual()
@@ -353,6 +418,7 @@ erDiagram
    - **Dependency:** Phase 2 complete (SongService exists)
 
 3. Create `tools song review-inferred` command
+
    - Interactive CLI for manual review of LLM-inferred songs
    - Displays: YouTube Title vs. Guessed Artist/Title
    - Options: [C]onfirm, [E]dit, [S]kip, [D]elete
@@ -374,10 +440,13 @@ erDiagram
 **Blockers:** Requires LLM/MCP infrastructure setup.
 
 ### Phase 5: Song Versions (High Priority)
+
 **Goal:** Handle multiple versions of same song
 
 **Subtasks:**
+
 1. Add version detection to SongService
+
    - Compare duration between video and discogs track
    - Threshold: >10% difference = different version
    - **Reasoning:** Per requirements - "different recordings, not repackages"
@@ -392,15 +461,19 @@ erDiagram
 **Blockers:** None
 
 ### Phase 6: Audio Files (Mid Priority)
+
 **Goal:** Support audio files as Song resources
 
 **Subtasks:**
+
 1. Create AudioFiles table
+
    - id, song_id (FK), file_path, duration, format, stem_type (enum: 'full', 'bass', 'drums', 'vocals', 'other')
    - **Reasoning:** Parallels video structure, supports stems requirement
    - **Complexity:** Low
 
 2. Create AudioFileRepository and basic CRUD service
+
    - **Pattern:** Mirror video repository pattern
    - **Complexity:** Low
 
@@ -413,15 +486,19 @@ erDiagram
 **Blockers:** None
 
 ### Phase 7: Other File Types (Mid Priority)
+
 **Goal:** Support scores, DAW projects
 
 **Subtasks:**
+
 1. Create generic ResourceFiles table
+
    - id, song_id (FK), file_path, file_type (enum: 'musicxml', 'pdf', 'garageband', 'bitwig', 'other')
    - **Reasoning:** Flexible schema for various file types
    - **Complexity:** Low
 
 2. Create ResourceFileRepository
+
    - **Complexity:** Low
 
 3. Add command: `tools song add-resource <song_id> <file_path> <type>`
@@ -432,10 +509,13 @@ erDiagram
 **Blockers:** None
 
 ### Phase 8: Command Integration (High Priority)
+
 **Goal:** Update existing commands to work with Song model
 
 **Subtasks:**
+
 1. Update `tools video` commands to show song associations
+
    - Display linked songs in search results
    - **Complexity:** Low
    - **Dependency:** Phase 3 complete (data migrated)
@@ -453,6 +533,7 @@ erDiagram
 ### Future Phases (Low Priority, Not Detailed)
 
 **Phase 9: Asset Migration**
+
 - Migrate Videos table to Asset abstraction
 - Create YoutubeMetadata table and migrate YouTube-specific fields
 - Convert VideoSongs to AssetSongs
@@ -460,16 +541,19 @@ erDiagram
 - One-time data migration with rollback capability
 
 **Phase 10: Extended Asset Types**
+
 - Multiple songs per asset (concerts, compilations)
 - Non-YouTube video sources (Vimeo, local files)
 - Full audio/image/score/project file support via Asset type field
 
 **Phase 11: Artist & Channel Tracking**
+
 - Separate Artist entity (denormalize artist_name from Song)
 - Channel/Teacher tracking for lesson videos
 - Artist-Song relationships (composers, performers)
 
 ## Critical Dependencies
+
 1. Phase 1 depends on Phase 0 (backup/add commands ready)
 2. Phase 2 depends on Phase 1 (schema exists)
 3. Phase 3 depends on Phase 2 (services exist)
@@ -479,12 +563,14 @@ erDiagram
 7. Phase 2, Subtask 4 (discogs integration) should complete before significant new video processing
 
 ## Constraints
+
 - Must maintain backwards compatibility during transition
 - Discogs API rate limits (1 req/sec)
 - SQLite-specific alembic migrations
 - Existing video downloads must remain accessible
 
 ## Testing Strategy
+
 - Unit tests for repositories (follow patterns in tests/tools/data_access/)
 - Unit tests for services (follow patterns in tests/services/)
 - Integration tests for commands (follow patterns in tests/commands/)
