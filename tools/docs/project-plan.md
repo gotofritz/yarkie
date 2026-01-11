@@ -77,6 +77,39 @@ erDiagram
 - **VideoSongs join table** - Many-to-many relationship (concerts have multiple songs, songs have multiple videos)
 - **artist_name in Song** - Denormalized for simplicity. Full Artist entity deferred to future phases
 
+## Service Architecture
+
+**Separation of Concerns:**
+
+```
+┌─────────────────────┐
+│ DiscogsProcessor    │
+│   process_video()   │  ← Orchestrates both services
+└──────────┬──────────┘
+           │
+           ├─────────────────────┐
+           │                     │
+           v                     v
+┌──────────────────┐   ┌──────────────────┐
+│ DiscogsService   │   │ SongService      │
+│  - search_*()    │   │  - find_or_      │
+│  - save_*()      │   │    create_*()    │
+│  (unchanged)     │   │  - link_song_    │
+└────────┬─────────┘   └────────┬─────────┘
+         │                      │
+         v                      v
+    ┌─────────────────────────────┐
+    │ DiscogsRepository           │
+    │ SongRepository              │
+    └─────────────────────────────┘
+```
+
+**Key Points:**
+- **DiscogsService**: Handles Discogs API interactions and Discogs entity management (unchanged)
+- **SongService**: Handles Song business logic, queries DiscogsRepository directly (no service-to-service coupling)
+- **DiscogsProcessor**: Integration point - orchestrates both services during video processing
+- **Clean layering**: Repository ← Service ← Processor ← Command
+
 ## Implementation Plan
 
 ### Phase 1: Introduce Song Entity (High Priority)
@@ -121,26 +154,35 @@ erDiagram
    - **Complexity:** Low
 
 2. Create SongService
-   - find_or_create_from_discogs(track_id) -> Song
-     - Queries Discogs API for track data
-     - Finds oldest matching track with same artist/title
-     - Creates Song with extracted data (title, artist, release_date)
-     - Uses find_or_create pattern to prevent duplicates
-   - create_song_manual(title, artist, date, notes) -> Song
+   - find_or_create_from_discogs(track_id: int) -> Song
+     - Queries DiscogsRepository (NOT DiscogsService) for track data
+     - Follows FK chain: Track → Release → ReleaseArtists → Artist
+     - Finds oldest track with same artist/title across releases
+     - Creates Song with extracted data (title, artist_name, first_release_date)
+     - Uses find_or_create pattern via SongRepository to prevent duplicates
+   - create_song_manual(title: str, artist: str, date: str, notes: str) -> Song
      - For music videos without Discogs data
      - Manual song creation workflow
-   - **Reasoning:** Encapsulates business logic for "oldest track" requirement and manual workflows
-   - **Complexity:** Medium - requires Discogs API queries
+   - link_song_to_video(song_id: int, video_id: str, version_type: str) -> None
+     - Creates video_songs junction record
+   - **Dependencies:** DiscogsRepository (data queries), SongRepository (CRUD)
+   - **Pattern:** Service coordinates across repositories, no service-to-service calls
+   - **Reasoning:** Maintains clean separation - SongService reads Discogs data but doesn't control Discogs operations
+   - **Complexity:** Medium - requires Discogs FK traversal logic
 
 3. Create song_from_video(video_id) workflow
    - If video.discogs_track_id exists: create song, link video
    - **Complexity:** Low
    - **Dependency:** Phase 1 complete
 
-4. Integrate song creation into discogs postprocess workflow
-   - When linking video to track, also call find_or_create_from_discogs()
-   - Ensures new videos get songs immediately
-   - **Complexity:** Medium
+4. Integrate song creation into DiscogsProcessor workflow
+   - In DiscogsProcessor._save_metadata(), after save_track() succeeds:
+     1. Call SongService.find_or_create_from_discogs(track_id)
+     2. Call SongService.link_song_to_video(song_id, video_id, 'other')
+   - Add SongService as DiscogsProcessor dependency (constructor injection)
+   - Ensures new videos get songs immediately during postprocess
+   - **Integration Point:** DiscogsProcessor orchestrates both DiscogsService and SongService
+   - **Complexity:** Low - simple method call insertion
    - **Dependency:** Subtask 1-2 complete
 
 **Integration:** Services ready and integrated into discogs workflow.
