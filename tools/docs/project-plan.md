@@ -11,6 +11,72 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
 - Discogs tables: artist, release, track, release_artists
 - No concept of "Song" as distinct from video or track
 
+## Target Schema
+
+```mermaid
+erDiagram
+    Song ||--o{ VideoSongs : "realized_in"
+    Video ||--o{ VideoSongs : "contains"
+
+    Video ||--o| DiscogsTrack : "matches"
+    DiscogsTrack ||--o| DiscogsRelease : "appears_on"
+    DiscogsRelease ||--o{ ReleaseArtists : "credited_to"
+    DiscogsArtist ||--o{ ReleaseArtists : "performs_on"
+
+    Song {
+        int id PK
+        string title
+        string artist_name
+        date first_release_date "nullable"
+        datetime created_at
+        datetime updated_at
+        text notes "nullable"
+    }
+
+    VideoSongs {
+        int video_id FK
+        int song_id FK
+        string version_type "original|live|cover|lesson|other"
+    }
+
+    Video {
+        string id PK "YouTube ID"
+        string title
+        int discogs_track_id FK "nullable"
+        bool is_tune
+        bool migrated_to_song
+    }
+
+    DiscogsTrack {
+        int id PK
+        int release_id FK
+        string title
+        string duration
+    }
+
+    DiscogsRelease {
+        int id PK
+        string title
+        int released
+    }
+
+    ReleaseArtists {
+        int release_id FK
+        int artist_id FK
+    }
+
+    DiscogsArtist {
+        int id PK
+        string name
+    }
+```
+
+**Key Design Decisions:**
+- **Song is independent** - No direct FK to DiscogsTrack. Songs can exist without Discogs data (original compositions, non-commercial music)
+- **Video retains discogs_track_id** - Backwards compatible, used to derive Song data during migration
+- **VideoSongs join table** - Many-to-many relationship (concerts have multiple songs, songs have multiple videos)
+- **artist_name in Song** - Denormalized for simplicity. Full Artist entity deferred to future phases
+
 ## Implementation Plan
 
 ### Phase 1: Introduce Song Entity (High Priority)
