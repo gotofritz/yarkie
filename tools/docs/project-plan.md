@@ -13,6 +13,10 @@ Transform yarkie from video-centric to song-centric data modeling to better supp
 
 ## Target Schema
 
+### Intermediate Target (Phases 0-8)
+
+This incremental refactoring maintains the Video table while adding Song abstraction:
+
 ```mermaid
 erDiagram
     Song ||--o{ VideoSongs : "realized_in"
@@ -76,6 +80,92 @@ erDiagram
 - **Video retains discogs_track_id** - Backwards compatible, used to derive Song data during migration
 - **VideoSongs join table** - Many-to-many relationship (concerts have multiple songs, songs have multiple videos)
 - **artist_name in Song** - Denormalized for simplicity. Full Artist entity deferred to future phases
+
+### Ultimate Target (Future Phases 9+)
+
+The final architecture replaces Video with generic Asset abstraction:
+
+```mermaid
+erDiagram
+    Song ||--o{ AssetSongs : "realized_in"
+    Asset ||--o{ AssetSongs : "contains"
+
+    Asset ||--o| YoutubeMetadata : "has_youtube_info"
+    Asset ||--o{ Asset : "related_to (thumbnail, parent, stem)"
+    Asset ||--o| DiscogsTrack : "matches"
+
+    DiscogsTrack ||--o| DiscogsRelease : "appears_on"
+    DiscogsRelease ||--o{ ReleaseArtists : "credited_to"
+    DiscogsArtist ||--o{ ReleaseArtists : "performs_on"
+
+    Song {
+        int id PK
+        string title
+        string artist_name
+        date first_release_date "nullable"
+        datetime created_at
+        datetime updated_at
+        text notes "nullable"
+    }
+
+    Asset {
+        int id PK
+        string type "video|audio|image|project|score"
+        string path "local file system path"
+        int parent_asset_id FK "nullable (e.g., thumbnail->video, stem->project)"
+        json metadata "format-specific data, timestamps, etc"
+    }
+
+    AssetSongs {
+        int asset_id FK
+        int song_id FK
+        string version_type "original|live|cover|lesson|other"
+    }
+
+    YoutubeMetadata {
+        int asset_id FK PK
+        string youtube_id
+        string uploader
+        string channel_id
+        string title "Original YouTube Title"
+        text description
+        date upload_date
+        int duration
+        int width
+        int height
+        bool deleted
+    }
+
+    DiscogsTrack {
+        int id PK
+        int release_id FK
+        string title
+        string duration
+    }
+
+    DiscogsRelease {
+        int id PK
+        string title
+        int released
+    }
+
+    ReleaseArtists {
+        int release_id FK
+        int artist_id FK
+    }
+
+    DiscogsArtist {
+        int id PK
+        string name
+    }
+```
+
+**Ultimate Target Design Decisions:**
+- **Asset abstraction** - Unifies videos, audio files, images, scores, DAW projects under single table
+- **Platform agnostic** - YoutubeMetadata separate from Asset enables non-YouTube sources (Vimeo, local files)
+- **Asset hierarchy** - `parent_asset_id` enables relationships: thumbnails→videos, stems→projects, clips→source
+- **Flexible metadata** - JSON field accommodates format-specific data without schema changes
+- **Migration path** - Videos table becomes Assets (type='video') + YoutubeMetadata in one-time migration
 
 ## Service Architecture
 
@@ -361,9 +451,23 @@ erDiagram
 **Note:** Discogs postprocess integration completed in Phase 2, Subtask 4.
 
 ### Future Phases (Low Priority, Not Detailed)
-- Phase 9: Multiple songs per video
-- Phase 10: Non-YouTube video sources
-- Phase 11: Channel/Teacher tracking
+
+**Phase 9: Asset Migration**
+- Migrate Videos table to Asset abstraction
+- Create YoutubeMetadata table and migrate YouTube-specific fields
+- Convert VideoSongs to AssetSongs
+- Enable Asset-to-Asset relationships (thumbnails, clips)
+- One-time data migration with rollback capability
+
+**Phase 10: Extended Asset Types**
+- Multiple songs per asset (concerts, compilations)
+- Non-YouTube video sources (Vimeo, local files)
+- Full audio/image/score/project file support via Asset type field
+
+**Phase 11: Artist & Channel Tracking**
+- Separate Artist entity (denormalize artist_name from Song)
+- Channel/Teacher tracking for lesson videos
+- Artist-Song relationships (composers, performers)
 
 ## Critical Dependencies
 1. Phase 1 depends on Phase 0 (backup/add commands ready)
