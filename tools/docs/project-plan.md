@@ -38,6 +38,7 @@ erDiagram
         int id
         string title
         int artist_id FK
+        string source "discogs_matched|llm_inferred|manually_verified"
         date original_release_date "Derived"
     }
 
@@ -116,59 +117,52 @@ The data model must support the following scenarios:
 
 ## Implementation Phases
 
-### Phase 1: Artist Foundation & Hybrid State
+### Phase 1: Artist & Song Foundation (Combined)
 
-**Goal**: Establish the Artist entity without breaking the current Video-centric CLI.
+**Goal**: Introduce Artist and Song entities together, populating from both Discogs matches and LLM inference.
 
 1.  **Schema Changes**:
     - Create `Artists` and `DiscogsArtist` tables (as defined in Core Model).
+    - Create `Songs` table with `source` field (Enum: `discogs_matched`, `llm_inferred`, `manually_verified`).
     - Add `artist_id` FK to `Videos` table (nullable initially).
-2.  **Migration**:
-    - **Source**: Populate `Artists` table *only* from existing `DiscogsArtist` entries.
-    - **Linkage**:
-        - For Videos linked to a `DiscogsTrack`:
-            - Follow chain: `Video -> DiscogsTrack -> Release -> Artist`.
-            - Link `Video.artist_id` to the found `Artist`.
-        - For all other Videos:
-            - Leave `artist_id` as `NULL`.
-            - **Note**: Do *not* migrate `Videos.uploader` to `Artist` (data is too noisy).
-3.  **Validation**:
-    - Ensure all existing `tools playlist` and `tools discogs` commands function correctly.
-
-### Phase 2: Song Introduction & LLM Inference
-
-**Goal**: Introduce the Song concept and populate it using a mix of hard data and AI guessing.
-
-1.  **Schema Changes**:
-    - Create `Songs` table.
-      - Add `confidence` field (Enum: `high`, `low`, `manual_verified`).
     - Add `song_id` FK to `Videos` table (nullable).
-2.  **Migration Step A (High Confidence)**:
+
+2.  **Migration Step A - Discogs-Linked Videos (High Confidence)**:
     - For Videos _with_ an existing `discogs_track_id`:
-      - Create `Song` (Title=DiscogsTrack.title, Artist=DiscogsArtist.name).
-      - Link Video -> Song.
-      - Set `Song.confidence = 'high'`.
-3.  **Migration Step B (LLM Guessing)**:
+      - **Artist Creation**: Follow chain `Video -> DiscogsTrack -> Release -> DiscogsArtist`.
+        - Create/Find `Artist` record linked to `DiscogsArtist`.
+        - Link `Video.artist_id` to the found `Artist`.
+      - **Song Creation**: Create `Song` (Title=DiscogsTrack.title, artist_id from above).
+        - Link `Video.song_id` to the new `Song`.
+        - Set `Song.source = 'discogs_matched'`.
+
+3.  **Migration Step B - Orphan Videos (LLM Inference)**:
     - Develop `tools guess-songs` command.
-    - For Videos _without_ a Song link (orphans):
+    - For Videos _without_ a `discogs_track_id` (orphans):
       - Send `title`, `description`, `uploader` to a local LLM (OpenWeb-UI/Gemini).
       - Prompt: "Extract canonical Artist Name and Song Title."
-      - Create/Find `Artist` (if new) and `Song`.
-      - Link Video -> Song.
-      - Set `Song.confidence = 'low'`.
+      - **Artist Creation**: Create new `Artist` record with inferred name (no `DiscogsArtist` link yet).
+      - **Song Creation**: Create `Song` linked to the Artist.
+        - Link `Video.song_id` to the new `Song`.
+        - Set `Song.source = 'llm_inferred'`.
+    - **Note**: Do *not* migrate `Videos.uploader` directly to `Artist` (data is too noisy for direct migration).
 
-### Phase 3: Song Manual Review
+4.  **Validation**:
+    - Ensure all existing `tools playlist` and `tools discogs` commands function correctly.
+    - Verify Artist and Song counts match expected values from Videos table.
+
+### Phase 2: Song Manual Review
 
 **Goal**: Verify AI guesses before moving to Discogs matching.
 
 1.  **Develop `tools review songs`**:
     - Interactive CLI.
-    - Selects `Songs` where `confidence = 'low'`.
+    - Selects `Songs` where `source = 'llm_inferred'`.
     - Displays: YouTube Title vs. Guessed Artist/Title.
     - Options: [C]onfirm, [E]dit, [S]kip, [D]elete.
-    - On Confirm/Edit: Set `confidence = 'manual_verified'`.
+    - On Confirm/Edit: Set `source = 'manually_verified'`.
 
-### Phase 4: Discogs Enrichment (MCP/Service)
+### Phase 3: Discogs Enrichment (MCP/Service)
 
 **Goal**: Connect the new Song/Artist entities to Discogs.
 
@@ -183,16 +177,16 @@ The data model must support the following scenarios:
       - Search Discogs for (Artist, Title).
       - If match found -> Store `discogs_track_id` as candidate linkage on the Song (or distinct candidate table).
 
-### Phase 5: Discogs Manual Review
+### Phase 4: Discogs Manual Review
 
 **Goal**: Finalize external links.
 
 1.  **Develop `tools review discogs`**:
     - Interactive CLI.
-    - Presents Candidate Matches from Phase 4.
+    - Presents Candidate Matches from Phase 3.
     - User confirms or rejects the link.
 
-### Phase 6: Full Asset Migration
+### Phase 5: Full Asset Migration
 
 **Goal**: Final transition to the `Asset` table (The "Big Switch").
 
