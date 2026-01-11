@@ -70,7 +70,7 @@ def db_with_videos_for_discogs(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for video_data in videos:
-            session.execute(VideosTable.__table__.insert().values(**video_data))
+            session.execute(VideosTable.__table__.insert().values(**video_data))  # type: ignore[unresolved-attribute]
 
         session.commit()
 
@@ -124,6 +124,8 @@ def test_get_next_video_without_discogs_skips_videos_with_discogs(
     video2 = discogs_repository.get_next_video_without_discogs(offset=1)
 
     # video2 has discogs_track_id, so should be skipped
+    assert video1 is not None
+    assert video2 is not None
     assert video1.id != "video2"
     assert video2.id != "video2"
 
@@ -137,6 +139,8 @@ def test_get_next_video_without_discogs_skips_non_tunes(
     video2 = discogs_repository.get_next_video_without_discogs(offset=1)
 
     # video3 has is_tune=False, so should be skipped
+    assert video1 is not None
+    assert video2 is not None
     assert video1.id != "video3"
     assert video2.id != "video3"
 
@@ -401,7 +405,7 @@ def test_upsert_track_inserts_new_track(
     # Create video
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -452,7 +456,7 @@ def test_upsert_track_links_to_video(
     # Create video
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -499,7 +503,7 @@ def test_upsert_track_reuses_existing_track(
     # Create two videos
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -507,7 +511,7 @@ def test_upsert_track_reuses_existing_track(
             )
         )
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video2",
                 title="Test Song",
                 is_tune=True,
@@ -567,7 +571,7 @@ def test_upsert_track_does_not_update_video_with_existing_track(
     # Create video with existing discogs_track_id
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,

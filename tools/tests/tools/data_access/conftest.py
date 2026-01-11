@@ -51,7 +51,7 @@ def db_with_playlists(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for playlist_data in playlists:
-            session.execute(PlaylistsTable.__table__.insert().values(**playlist_data))
+            session.execute(PlaylistsTable.__table__.insert().values(**playlist_data))  # type: ignore[unresolved-attribute]
 
         # Insert some playlist entries
         entries = [
@@ -61,7 +61,7 @@ def db_with_playlists(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for entry_data in entries:
-            session.execute(PlaylistEntriesTable.__table__.insert().values(**entry_data))
+            session.execute(PlaylistEntriesTable.__table__.insert().values(**entry_data))  # type: ignore[unresolved-attribute]
 
         session.commit()
 
@@ -113,7 +113,7 @@ def db_with_videos(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for video_data in videos:
-            session.execute(VideosTable.__table__.insert().values(**video_data))
+            session.execute(VideosTable.__table__.insert().values(**video_data))  # type: ignore[unresolved-attribute]
 
         session.commit()
 

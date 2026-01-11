@@ -64,7 +64,7 @@ def test_refresh_playlist_no_videos(
         config=mock_config,
         logger=logger,
     )
-    archiver_service.refresh_playlist([faker.uuid4()])
+    archiver_service.refresh_playlist((faker.uuid4(),))
     assert logger.mock_calls[-1].args[0] == "...no videos found"
     assert len(logger.mock_calls) == 3
 
