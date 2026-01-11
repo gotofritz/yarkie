@@ -112,6 +112,25 @@ erDiagram
 
 ## Implementation Plan
 
+### Phase 0: Preparation (High Priority)
+**Goal:** Set up infrastructure for safe refactoring
+
+**Subtasks:**
+1. Create `tools db backup` command
+   - Creates timestamped database backups
+   - Ensures easy rollback during refactoring
+   - **Complexity:** Low
+
+2. Create `tools video add` command
+   - Add individual videos explicitly (alternative to `tools playlist refresh`)
+   - When Song integration is ready (Phase 2, Subtask 4), automatically creates Song from Discogs metadata
+   - **Reasoning:** Makes video addition explicit and prepares for Song integration
+   - **Complexity:** Low
+
+**Integration:** Foundational commands for safe development.
+
+**Blockers:** None
+
 ### Phase 1: Introduce Song Entity (High Priority)
 **Goal:** Add Song table without breaking existing functionality
 
@@ -222,7 +241,49 @@ erDiagram
 
 **Blockers:** Requires manual validation before production.
 
-### Phase 4: Song Versions (High Priority)
+### Phase 4: LLM/MCP Inference for Orphan Videos (Mid Priority)
+**Goal:** Use LLM or MCP to extract song metadata from videos without Discogs data
+
+**Subtasks:**
+1. Create LLMInferenceService with InferenceStrategy pattern
+   - Support multiple backends: OpenWebUI, Gemini, Claude API, MCP servers
+   - Prompt: "Extract canonical Artist Name and Song Title from: title, description, uploader"
+   - Returns structured data: {artist: str, title: str, confidence: float}
+   - **Pattern:** Strategy pattern for swappable LLM backends
+   - **Complexity:** Medium
+
+2. Develop `tools song guess` command
+   - For videos with is_tune=True but no discogs_track_id (orphans)
+   - Uses LLMInferenceService to extract artist/song info
+   - Creates Song via SongService.create_song_manual()
+   - Links to video with version_type='other'
+   - Adds note field indicating "llm_inferred" source
+   - **Note:** Do NOT migrate Videos.uploader directly to Song (data too noisy)
+   - **Complexity:** Medium
+   - **Dependency:** Phase 2 complete (SongService exists)
+
+3. Create `tools song review-inferred` command
+   - Interactive CLI for manual review of LLM-inferred songs
+   - Displays: YouTube Title vs. Guessed Artist/Title
+   - Options: [C]onfirm, [E]dit, [S]kip, [D]elete
+   - Updates Song.notes to indicate manual verification
+   - **Complexity:** Low
+   - **Dependency:** Subtask 2 complete
+
+4. Develop `tools song enrich-discogs` (optional MCP integration)
+   - For manually-created songs without Discogs links
+   - Uses Discogs API or MCP server to search for matching tracks
+   - Suggests candidate matches with confidence scores
+   - User confirms matches interactively
+   - Updates Song metadata with Discogs-derived data
+   - **Note:** Does NOT create FK to DiscogsTrack (Song remains independent)
+   - **Complexity:** Medium
+
+**Integration:** Optional enhancement for videos without Discogs metadata. Works alongside manual song creation.
+
+**Blockers:** Requires LLM/MCP infrastructure setup.
+
+### Phase 5: Song Versions (High Priority)
 **Goal:** Handle multiple versions of same song
 
 **Subtasks:**
@@ -240,7 +301,7 @@ erDiagram
 
 **Blockers:** None
 
-### Phase 5: Audio Files (Mid Priority)
+### Phase 6: Audio Files (Mid Priority)
 **Goal:** Support audio files as Song resources
 
 **Subtasks:**
@@ -261,7 +322,7 @@ erDiagram
 
 **Blockers:** None
 
-### Phase 6: Other File Types (Mid Priority)
+### Phase 7: Other File Types (Mid Priority)
 **Goal:** Support scores, DAW projects
 
 **Subtasks:**
@@ -280,7 +341,7 @@ erDiagram
 
 **Blockers:** None
 
-### Phase 7: Command Integration (High Priority)
+### Phase 8: Command Integration (High Priority)
 **Goal:** Update existing commands to work with Song model
 
 **Subtasks:**
@@ -300,16 +361,18 @@ erDiagram
 **Note:** Discogs postprocess integration completed in Phase 2, Subtask 4.
 
 ### Future Phases (Low Priority, Not Detailed)
-- Phase 8: Multiple songs per video
-- Phase 9: Non-YouTube video sources
-- Phase 10: Channel/Teacher tracking
+- Phase 9: Multiple songs per video
+- Phase 10: Non-YouTube video sources
+- Phase 11: Channel/Teacher tracking
 
 ## Critical Dependencies
-1. Phase 2 depends on Phase 1 (schema exists)
-2. Phase 3 depends on Phase 2 (services exist)
-3. Phase 7 depends on Phase 3 (data migrated)
-4. Phases 5-6 independent, can proceed in parallel
-5. Phase 2, Subtask 4 (discogs integration) should complete before significant new video processing
+1. Phase 1 depends on Phase 0 (backup/add commands ready)
+2. Phase 2 depends on Phase 1 (schema exists)
+3. Phase 3 depends on Phase 2 (services exist)
+4. Phase 4 depends on Phase 2 (SongService exists for manual creation)
+5. Phase 8 depends on Phase 3 (data migrated)
+6. Phases 5, 6-7 independent, can proceed in parallel
+7. Phase 2, Subtask 4 (discogs integration) should complete before significant new video processing
 
 ## Constraints
 - Must maintain backwards compatibility during transition
