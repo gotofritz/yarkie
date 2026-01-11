@@ -35,8 +35,7 @@ def test_delete_single_video_with_files(runner, faker):
             assert "Successfully deleted 1 video(s)" in result.output
             assert "Video and thumbnail files were also removed" in result.output
             mock_repository.delete_videos.assert_called_once_with(
-                video_ids=[video_id],
-                delete_files=True
+                video_ids=[video_id], delete_files=True
             )
 
 
@@ -59,8 +58,7 @@ def test_delete_multiple_videos_with_files(runner, faker):
             assert "Successfully deleted 3 video(s)" in result.output
             assert "Video and thumbnail files were also removed" in result.output
             mock_repository.delete_videos.assert_called_once_with(
-                video_ids=[vid1, vid2, vid3],
-                delete_files=True
+                video_ids=[vid1, vid2, vid3], delete_files=True
             )
 
 
@@ -79,8 +77,7 @@ def test_delete_video_without_files(runner, faker):
             assert "Successfully deleted 1 video(s)" in result.output
             assert "Video and thumbnail files were also removed" not in result.output
             mock_repository.delete_videos.assert_called_once_with(
-                video_ids=[video_id],
-                delete_files=False
+                video_ids=[video_id], delete_files=False
             )
 
 
@@ -98,8 +95,7 @@ def test_delete_nonexistent_video(runner, faker):
             assert result.exit_code == 0
             assert "No videos were deleted" in result.output
             mock_repository.delete_videos.assert_called_once_with(
-                video_ids=[video_id],
-                delete_files=True
+                video_ids=[video_id], delete_files=True
             )
 
 
@@ -121,6 +117,5 @@ def test_delete_partial_success(runner, faker):
             assert "Deleting 3 video(s)" in result.output
             assert "Successfully deleted 2 video(s)" in result.output
             mock_repository.delete_videos.assert_called_once_with(
-                video_ids=[vid1, vid2, vid3],
-                delete_files=True
+                video_ids=[vid1, vid2, vid3], delete_files=True
             )

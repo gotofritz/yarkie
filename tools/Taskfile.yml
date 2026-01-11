@@ -4,20 +4,24 @@ vars:
   ALL: src/tools/ tests/
   VENV: .venv/bin
   SOURCES: src/tools/
+  TESTS: tests/
 
 tasks:
-  # Task to run Bandssit, a security linter for Python code
   ruff:
     desc: "Run ruff"
     cmds:
       - "{{.VENV}}/ruff check {{.SOURCES}}"
       - "{{.VENV}}/ruff format {{.SOURCES}}"
+      - "{{.VENV}}/ruff check {{.TESTS}}"
+      - "{{.VENV}}/ruff format {{.TESTS}}"
 
   ruff-fix:
-    desc: "fix ruff i=ssues"
+    desc: "fix ruff issues"
     cmds:
       - "{{.VENV}}/ruff check {{.SOURCES}} --fix"
       - "{{.VENV}}/ruff format {{.SOURCES}}"
+      - "{{.VENV}}/ruff check {{.TESTS}} --fix"
+      - "{{.VENV}}/ruff format {{.TESTS}}"
 
   # Task to open the latest coverage report in a web browser
   coverage:
@@ -37,6 +41,7 @@ tasks:
     desc: "Run ty for static type checking"
     cmds:
       - "{{.VENV}}/ty check {{.SOURCES}}"
+      - "{{.VENV}}/ty check {{.TESTS}}"
 
   # Task to run linting and tests
   qa:

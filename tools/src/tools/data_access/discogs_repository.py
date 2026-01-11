@@ -8,7 +8,7 @@ import re
 from logging import Logger
 from typing import Any, Optional
 
-from sqlalchemy import and_, insert, select, update
+from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.engine import Result
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -54,14 +54,19 @@ class DiscogsRepository(BaseRepository):
         """
         super().__init__(sql_client=sql_client, logger=logger, config=config)
 
-    def get_next_video_without_discogs(self, *, offset: int = 0) -> Video | None:
+    def get_next_video_without_discogs(
+        self, *, offset: int = 0, deterministic: bool = True
+    ) -> Video | None:
         """
         Get the next video that doesn't have Discogs data.
 
         Parameters
         ----------
         offset : int, optional
-            The offset for pagination, by default 0.
+            The offset for pagination (only used when deterministic=True), by default 0.
+        deterministic : bool, optional
+            If True, returns videos sequentially using offset.
+            If False, returns a random video each time. Default True.
 
         Returns
         -------
@@ -70,31 +75,34 @@ class DiscogsRepository(BaseRepository):
         """
         try:
             with Session(self.sql_client.engine) as session:
-                stmt = (
-                    select(
-                        VideosTable.id,
-                        VideosTable.title,
-                        VideosTable.uploader,
-                        VideosTable.description,
-                        VideosTable.duration,
-                        VideosTable.upload_date,
-                        VideosTable.width,
-                        VideosTable.height,
-                        VideosTable.video_file,
-                        VideosTable.thumbnail,
-                        VideosTable.deleted,
-                        VideosTable.downloaded,
-                        VideosTable.last_updated,
+                stmt = select(
+                    VideosTable.id,
+                    VideosTable.title,
+                    VideosTable.uploader,
+                    VideosTable.description,
+                    VideosTable.duration,
+                    VideosTable.upload_date,
+                    VideosTable.width,
+                    VideosTable.height,
+                    VideosTable.video_file,
+                    VideosTable.thumbnail,
+                    VideosTable.deleted,
+                    VideosTable.downloaded,
+                    VideosTable.last_updated,
+                ).where(
+                    and_(
+                        VideosTable.discogs_track_id.is_(None),
+                        VideosTable.is_tune.is_(True),
                     )
-                    .where(
-                        and_(
-                            VideosTable.discogs_track_id.is_(None),
-                            VideosTable.is_tune.is_(True),
-                        )
-                    )
-                    .limit(1)
-                    .offset(offset)
                 )
+
+                # Apply ordering based on deterministic flag
+                if deterministic:
+                    stmt = stmt.offset(offset)
+                else:
+                    stmt = stmt.order_by(func.random())
+
+                stmt = stmt.limit(1)
                 result = session.execute(stmt).first()
 
             if result is None:

@@ -361,6 +361,36 @@ class VideoRepository(BaseRepository):
             self.logger.error(f"Error adding video: {e}")
             return False
 
+    def get_video_by_id(self, *, video_id: str) -> Video | None:
+        """
+        Get a specific video by its ID.
+
+        Parameters
+        ----------
+        video_id : str
+            The unique identifier of the video.
+
+        Returns
+        -------
+        Video | None
+            The Video object if found, None otherwise.
+        """
+        try:
+            with Session(self.sql_client.engine) as session:
+                stmt = select(VideosTable).where(VideosTable.id == video_id)
+                result = session.execute(stmt).first()
+
+                if result is None:
+                    self.logger.info(f"Video {video_id} not found")
+                    return None
+
+                video = Video.model_validate(result[0].__dict__)
+                self.logger.debug(f"Retrieved video {video_id}")
+                return video
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error retrieving video {video_id}: {e}")
+            return None
+
     def get_videos(
         self,
         *,

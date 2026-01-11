@@ -72,9 +72,7 @@ def test_simple_upsert_handles_composite_primary_key(test_sql_client: SQLClient)
     mock_logger = Mock()
     repository = BaseRepository(sql_client=test_sql_client, logger=mock_logger)
 
-    records = [
-        {"id": "test_video", "title": "Test Video", "description": "", "deleted": False}
-    ]
+    records = [{"id": "test_video", "title": "Test Video", "description": "", "deleted": False}]
 
     # Should not raise errors even with list pk
     repository._simple_upsert(table_class=VideosTable, records=records, pk=["id"])
@@ -107,9 +105,7 @@ def test_get_table_field_map_returns_empty_dict_for_unknown_table(
     mock_logger = Mock()
     repository = BaseRepository(sql_client=test_sql_client, logger=mock_logger)
 
-    result = repository._get_table_field_map(
-        table_name="unknown_table", field="some_field"
-    )
+    result = repository._get_table_field_map(table_name="unknown_table", field="some_field")
 
     assert result == {}
     mock_logger.error.assert_called_once()

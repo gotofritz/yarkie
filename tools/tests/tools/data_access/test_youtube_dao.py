@@ -24,12 +24,12 @@ def test_get_info_with_downloader_error(extract_info_mock, faker):
     ]
     extract_info_mock.side_effect = expected
 
-    info = sut.get_info((faker.uuid4(), expected[1]["id"]))
+    info = sut.get_info((faker.uuid4(), expected[1]["id"]))  # type: ignore not-subscriptable
 
     assert len(info) == 2
     assert isinstance(info[0], DeletedYoutubeObj)
     assert isinstance(info[1], Video)
-    assert info[1].id == expected[1]["id"]
+    assert info[1].id == expected[1]["id"]  # type: ignore not-subscriptable
 
 
 def test_get_info_video_happy_path(extract_info_mock, faker):
@@ -99,9 +99,7 @@ def test_get_info_playlist_happy_path(extract_info_mock, faker):
     # 2 videos + 1 playlist
     assert len(info) == 3
 
-    actual_playlist = next(
-        (info_obj for info_obj in info if isinstance(info_obj, Playlist)), False
-    )
+    actual_playlist = next((info_obj for info_obj in info if isinstance(info_obj, Playlist)), False)
     assert actual_playlist
     assert actual_playlist.id == expected_playlist_id
 

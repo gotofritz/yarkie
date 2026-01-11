@@ -1,6 +1,6 @@
 # tests/tools/helpers/test_thumbnails_downloader.py
 
-from unittest.mock import ANY, AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
