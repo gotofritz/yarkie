@@ -1,4 +1,4 @@
-# /plan
+# /plan [TASK]
 
 Analyze codebase for {TASK}. Map structure, identify gaps, flag constraints.
 
