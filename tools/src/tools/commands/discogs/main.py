@@ -1,11 +1,10 @@
-# tools/commands/playlist/main.py
-
-"""Collect all playlist commands."""
+"""Collect all discogs commands."""
 
 import click
 
 from tools.app_context import AppContext
 from tools.commands.discogs.postprocess import postprocess
+from tools.commands.discogs.update import update
 
 
 @click.group()
@@ -17,5 +16,6 @@ def discogs(ctx: click.Context) -> None:
     ctx.ensure_object(AppContext)
 
 
-# Add the 'refresh' command to the 'playlist' command group.
+# Add commands to the 'discogs' command group
 discogs.add_command(postprocess)
+discogs.add_command(update)

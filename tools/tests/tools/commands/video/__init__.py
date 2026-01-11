@@ -1,1 +1,0 @@
-# tests/tools/commands/video/__init__.py

@@ -1,5 +1,3 @@
-# tools/data_access/file_repository.py
-
 """Provide a FileRepository for managing file operations."""
 
 import shutil

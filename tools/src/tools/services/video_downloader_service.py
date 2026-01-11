@@ -1,5 +1,3 @@
-# tools/services/video_downloader_service.py
-
 """Service for downloading videos from YouTube."""
 
 from logging import Logger, getLogger

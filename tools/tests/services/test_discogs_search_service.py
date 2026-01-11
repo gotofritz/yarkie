@@ -25,16 +25,12 @@ class TestGenerateSearchStrings:
 
     def test_generate_search_strings_with_title_only(self, discogs_search_service):
         """Test generating search strings with only a title."""
-        result = discogs_search_service.generate_search_strings(
-            title="Song Title (Official Video)"
-        )
+        result = discogs_search_service.generate_search_strings(title="Song Title (Official Video)")
 
         assert len(result) == 1
         assert result[0] == "Song Title"
 
-    def test_generate_search_strings_with_title_and_uploader(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_with_title_and_uploader(self, discogs_search_service):
         """Test generating search strings with title and uploader."""
         result = discogs_search_service.generate_search_strings(
             title="Song Title (Official Video)", uploader="Artist Name - Topic"
@@ -58,9 +54,7 @@ class TestGenerateSearchStrings:
         assert result[1] == "Song Title - Artist Name"
         assert result[2] == "Artist - Song Title"
 
-    def test_generate_search_strings_removes_parentheses_from_title(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_removes_parentheses_from_title(self, discogs_search_service):
         """Test that parentheses are removed from title."""
         result = discogs_search_service.generate_search_strings(
             title="Song Title (Official Music Video) (HD)"
@@ -79,9 +73,7 @@ class TestGenerateSearchStrings:
         assert "Song Title - Artist Name" in result
         assert "Song Title - Artist Name - Topic" not in result
 
-    def test_generate_search_strings_with_short_description(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_with_short_description(self, discogs_search_service):
         """Test generating search strings with short description (< 3 lines)."""
         description = "This is a very long first line that needs to be truncated after 64 characters to keep it manageable"
         result = discogs_search_service.generate_search_strings(
@@ -104,9 +96,7 @@ class TestGenerateSearchStrings:
 
         assert "Song Title - Preferred Line" in result
 
-    def test_generate_search_strings_cleans_description_dots(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_cleans_description_dots(self, discogs_search_service):
         """Test that ' · ' is replaced with space in description."""
         description = "Line 1\nLine 2\nArtist · Song · Album"
         result = discogs_search_service.generate_search_strings(
@@ -116,9 +106,7 @@ class TestGenerateSearchStrings:
         assert "Artist Song Album" in result[-1]
         assert " · " not in result[-1]
 
-    def test_generate_search_strings_with_title_in_description(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_with_title_in_description(self, discogs_search_service):
         """Test that when title appears in description, description is used alone."""
         description = "Line 1\nLine 2\nSong Title by Artist Name"
         result = discogs_search_service.generate_search_strings(
@@ -129,9 +117,7 @@ class TestGenerateSearchStrings:
         assert result[-1] == "Song Title by Artist Name"
         assert not result[-1].startswith("Song Title - Song Title")
 
-    def test_generate_search_strings_with_title_not_in_description(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_with_title_not_in_description(self, discogs_search_service):
         """Test that when title doesn't appear in description, both are combined."""
         description = "Line 1\nLine 2\nDifferent Text"
         result = discogs_search_service.generate_search_strings(
@@ -143,17 +129,13 @@ class TestGenerateSearchStrings:
 
     def test_generate_search_strings_with_empty_uploader(self, discogs_search_service):
         """Test generating search strings with empty uploader."""
-        result = discogs_search_service.generate_search_strings(
-            title="Song Title", uploader=""
-        )
+        result = discogs_search_service.generate_search_strings(title="Song Title", uploader="")
 
         # Empty uploader should be treated as None
         assert len(result) == 1
         assert result[0] == "Song Title"
 
-    def test_generate_search_strings_with_empty_description(
-        self, discogs_search_service
-    ):
+    def test_generate_search_strings_with_empty_description(self, discogs_search_service):
         """Test generating search strings with empty description."""
         result = discogs_search_service.generate_search_strings(
             title="Song Title", uploader="Artist", description=""
@@ -179,18 +161,14 @@ class TestNextVideoToProcess:
             description="Line1\nLine2\nTest Artist - Test Song",
         )
 
-        video_id, search_strings = discogs_search_service.next_video_to_process(
-            video=video
-        )
+        video_id, search_strings = discogs_search_service.next_video_to_process(video=video)
 
         assert video_id == video.id
         assert isinstance(search_strings, list)
         assert len(search_strings) == 3
         assert "Test Song" in search_strings
 
-    def test_next_video_to_process_with_minimal_video_data(
-        self, discogs_search_service, faker
-    ):
+    def test_next_video_to_process_with_minimal_video_data(self, discogs_search_service, faker):
         """Test next_video_to_process with minimal video data."""
         video = FakeVideoFactory.build(
             id=faker.uuid4(),
@@ -199,17 +177,13 @@ class TestNextVideoToProcess:
             description=None,
         )
 
-        video_id, search_strings = discogs_search_service.next_video_to_process(
-            video=video
-        )
+        video_id, search_strings = discogs_search_service.next_video_to_process(video=video)
 
         assert video_id == video.id
         assert len(search_strings) == 1
         assert search_strings[0] == "Song Title"
 
-    def test_next_video_to_process_calls_with_video_attributes(
-        self, discogs_search_service, faker
-    ):
+    def test_next_video_to_process_calls_with_video_attributes(self, discogs_search_service, faker):
         """Test that next_video_to_process calls with correct video attributes."""
         video = FakeVideoFactory.build(
             id=faker.uuid4(),
@@ -218,9 +192,7 @@ class TestNextVideoToProcess:
             description="Line1\nLine2\nTest Info",
         )
 
-        video_id, search_strings = discogs_search_service.next_video_to_process(
-            video=video
-        )
+        video_id, search_strings = discogs_search_service.next_video_to_process(video=video)
 
         # Verify it processes the video correctly
         assert video_id == video.id

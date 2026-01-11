@@ -1,5 +1,3 @@
-# tools/commands/playlist/main.py
-
 """Collect all playlist commands."""
 
 import click

@@ -1,5 +1,3 @@
-# tools/commands/playlist/refresh.py
-
 """Command to refresh new or existing playlists."""
 
 import click

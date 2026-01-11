@@ -1,5 +1,3 @@
-# tests/tools/commands/db/test_sync_local.py
-
 """Tests for db sync_local command."""
 
 from unittest.mock import patch

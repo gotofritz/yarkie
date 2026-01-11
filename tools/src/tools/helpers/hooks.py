@@ -1,5 +1,3 @@
-# tools/helpers/hooks.py
-
 """Module providing download progress hooks."""
 
 from logging import Logger, getLogger

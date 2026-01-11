@@ -1,5 +1,3 @@
-# tests/tools/helpers/test_youtube_downloader.py
-
 # NOTE: use 'ydl_mock.__enter__().download' for mocks, because it's
 # inside a context.
 

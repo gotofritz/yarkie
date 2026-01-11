@@ -1,5 +1,3 @@
-# tools/helpers/thumbnails_downloader.py
-
 """Module providing a thumbnails downloader utility."""
 
 import asyncio

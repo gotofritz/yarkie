@@ -1,6 +1,6 @@
 """Tests for VideoSyncService."""
 
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -170,14 +170,10 @@ class TestSyncYoutubeData:
             mock_session_instance = MagicMock()
             mock_session.return_value.__enter__.return_value = mock_session_instance
 
-            with patch.object(
-                video_sync_service, "handle_deleted_videos"
-            ) as mock_handle_deleted:
+            with patch.object(video_sync_service, "handle_deleted_videos") as mock_handle_deleted:
                 mock_handle_deleted.return_value = [video]
 
-                video_sync_service.sync_youtube_data(
-                    all_records=[video, deleted_video]
-                )
+                video_sync_service.sync_youtube_data(all_records=[video, deleted_video])
 
                 # Verify handle_deleted_videos was called
                 mock_handle_deleted.assert_called_once_with(
@@ -211,9 +207,7 @@ class TestSyncYoutubeData:
         video = FakeVideoFactory.build()
 
         with patch("tools.services.video_sync_service.Session") as mock_session:
-            mock_session.return_value.__enter__.side_effect = Exception(
-                "Database error"
-            )
+            mock_session.return_value.__enter__.side_effect = Exception("Database error")
 
             with pytest.raises(Exception, match="Database error"):
                 video_sync_service.sync_youtube_data(all_records=[video])
@@ -298,14 +292,8 @@ class TestHandleDeletedVideos:
         mock_session_instance.execute.assert_not_called()
 
         # Verify logs
-        assert any(
-            "No playlists were disabled" in str(call)
-            for call in logger.info.call_args_list
-        )
-        assert any(
-            "No videos were deleted" in str(call)
-            for call in logger.info.call_args_list
-        )
+        assert any("No playlists were disabled" in str(call) for call in logger.info.call_args_list)
+        assert any("No videos were deleted" in str(call) for call in logger.info.call_args_list)
 
     def test_handle_deleted_videos_with_empty_list(
         self,
@@ -346,6 +334,4 @@ class TestHandleDeletedVideos:
             )
 
             # Verify deletions were logged
-            assert any(
-                "videos as deleted" in str(call) for call in logger.info.call_args_list
-            )
+            assert any("videos as deleted" in str(call) for call in logger.info.call_args_list)

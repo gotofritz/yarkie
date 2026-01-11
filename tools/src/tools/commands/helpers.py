@@ -1,5 +1,3 @@
-# tools/commands/helpers.py
-
 """
 Common helper functions for CLI commands.
 

@@ -1,5 +1,3 @@
-# tools/commands/db/sync_local.py
-
 """Sync the local repository with playlist data."""
 
 import click

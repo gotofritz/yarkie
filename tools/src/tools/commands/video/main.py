@@ -1,5 +1,3 @@
-# tools/commands/video/main.py
-
 """Collect all video commands."""
 
 import click

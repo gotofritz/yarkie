@@ -1,6 +1,3 @@
-# tests/tools/data_access/test_video_logger.py
-
-
 import pytest
 
 from tools.data_access.video_logger import SilentVideoLogger
@@ -22,9 +19,7 @@ def test_silent_video_logger_info_does_not_raise_exception(silent_video_logger, 
     silent_video_logger.info(faker.word())
 
 
-def test_silent_video_logger_warning_does_not_raise_exception(
-    silent_video_logger, faker
-):
+def test_silent_video_logger_warning_does_not_raise_exception(silent_video_logger, faker):
     """Calling the warning method does not raise an exception."""
     silent_video_logger.warning(faker.word())
 

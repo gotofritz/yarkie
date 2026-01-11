@@ -1,8 +1,8 @@
 [project]
 name = "tools"
-version = "0.1.1"
+version = "0.8.0"
 description = "Helpers and set up scripts for yarkie"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
   "aiofiles>=24.1.0",
   "aiohttp>=3.11.8",
@@ -17,7 +17,7 @@ dependencies = [
   "questionary>=2.0.1",
   "requests>=2.32.3",
   "sqlalchemy>=2.0.40",
-  "yt-dlp==2025.12.30.233018.dev0",
+  "yt-dlp==2026.01.06.233142.dev0",
 ]
 
 [dependency-groups]

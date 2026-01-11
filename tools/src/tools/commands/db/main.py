@@ -1,5 +1,3 @@
-# tools/commands/playlist/main.py
-
 """Collect all db management commands."""
 
 import click

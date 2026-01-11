@@ -1,5 +1,3 @@
-# tools/services/thumbnail_downloader_service.py
-
 """Service for downloading thumbnails from YouTube."""
 
 from logging import Logger, getLogger

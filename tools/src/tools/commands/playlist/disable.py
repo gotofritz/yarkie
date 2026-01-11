@@ -1,5 +1,3 @@
-# tools/commands/playlist/disable.py
-
 """Disable playlists in the database."""
 
 import click

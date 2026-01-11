@@ -1,5 +1,3 @@
-# tests/test_archiver_service.py
-
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -64,7 +62,7 @@ def test_refresh_playlist_no_videos(
         config=mock_config,
         logger=logger,
     )
-    archiver_service.refresh_playlist([faker.uuid4()])
+    archiver_service.refresh_playlist((faker.uuid4(),))
     assert logger.mock_calls[-1].args[0] == "...no videos found"
     assert len(logger.mock_calls) == 3
 
@@ -478,7 +476,9 @@ def test_sync_video_with_filesystem_with_updates(
     assert "downloaded" in result
 
 
-def test_sync_local_no_videos(logger, video_repository, sync_service, mock_config, playlist_repository):
+def test_sync_local_no_videos(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
     """Test sync_local when there are no videos needing download."""
     video_repository.get_videos_needing_download.return_value = []
     video_repository.update_videos.return_value = None
@@ -497,7 +497,9 @@ def test_sync_local_no_videos(logger, video_repository, sync_service, mock_confi
     video_repository.update_videos.assert_called_once_with([])
 
 
-def test_sync_local_with_updates(logger, video_repository, sync_service, mock_config, playlist_repository):
+def test_sync_local_with_updates(
+    logger, video_repository, sync_service, mock_config, playlist_repository
+):
     """Test sync_local when updates are made."""
     videos = FakeVideoFactory.batch(size=3, thumbnail="", video_file="", downloaded=False)
 
@@ -607,7 +609,10 @@ def test_filter_videos_needing_thumbnails_with_http_urls(
     result = archiver_service._filter_videos_needing_thumbnails(videos)
 
     assert len(result) == 3
-    assert all(video_id == video.id and url == video.thumbnail for (video_id, url), video in zip(result, videos))
+    assert all(
+        video_id == video.id and url == video.thumbnail
+        for (video_id, url), video in zip(result, videos)
+    )
 
 
 def test_filter_videos_needing_thumbnails_mixed_types(

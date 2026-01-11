@@ -1,5 +1,3 @@
-# tools/commands/video/search.py
-
 """Search for videos with filters."""
 
 import click

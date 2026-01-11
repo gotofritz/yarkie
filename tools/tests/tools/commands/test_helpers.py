@@ -1,5 +1,3 @@
-# tests/tools/commands/test_helpers.py
-
 """Tests for command helper functions."""
 
 from unittest.mock import patch
@@ -208,6 +206,7 @@ def test_works_with_complex_objects():
     with patch("tools.commands.helpers.click.prompt", return_value="2"):
         result = prompt_numbered_choice(items)
 
+    assert result is not None
     assert result.title == "Album 2"
 
 

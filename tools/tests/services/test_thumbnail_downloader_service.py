@@ -1,5 +1,3 @@
-# tests/services/test_thumbnail_downloader_service.py
-
 """Tests for ThumbnailDownloaderService."""
 
 from unittest.mock import MagicMock, Mock, patch
@@ -49,7 +47,9 @@ def test_download_thumbnails_with_key_url_pairs(mock_config, video_repository, l
         ("video2", "https://example.com/thumb2.jpg"),
     ]
 
-    with patch("tools.services.thumbnail_downloader_service.thumbnails_downloader") as mock_downloader:
+    with patch(
+        "tools.services.thumbnail_downloader_service.thumbnails_downloader"
+    ) as mock_downloader:
         service.download_thumbnails(key_url_pairs=key_url_pairs)
 
     mock_downloader.assert_called_once_with(
@@ -71,7 +71,9 @@ def test_download_thumbnails_with_empty_pairs(mock_config, video_repository, log
 
     key_url_pairs = []
 
-    with patch("tools.services.thumbnail_downloader_service.thumbnails_downloader") as mock_downloader:
+    with patch(
+        "tools.services.thumbnail_downloader_service.thumbnails_downloader"
+    ) as mock_downloader:
         service.download_thumbnails(key_url_pairs=key_url_pairs)
 
     mock_downloader.assert_not_called()

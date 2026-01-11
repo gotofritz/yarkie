@@ -16,7 +16,7 @@ from tools.helpers.hooks import downloading_hook
 
 # error: Class cannot subclass "PostProcessor" (has type "Any")
 # probably due to MetaClass
-class MovePP(postprocessor.PostProcessor):  # type: ignore
+class MovePP(postprocessor.PostProcessor):
     """YoutubeDL post-processor, called after download."""
 
     def __init__(

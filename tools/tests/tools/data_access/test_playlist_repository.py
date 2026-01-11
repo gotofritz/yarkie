@@ -55,7 +55,7 @@ def test_get_all_playlists_keys_orders_by_last_updated_desc(
     with Session(test_sql_client.engine) as session:
         # Older playlist with earlier timestamp
         session.execute(
-            PlaylistsTable.__table__.insert().values(
+            PlaylistsTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="old_playlist",
                 title="Old",
                 description="",
@@ -65,7 +65,7 @@ def test_get_all_playlists_keys_orders_by_last_updated_desc(
         )
         # Newer playlist with later timestamp
         session.execute(
-            PlaylistsTable.__table__.insert().values(
+            PlaylistsTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="new_playlist",
                 title="New",
                 description="",
@@ -282,7 +282,7 @@ def test_clear_playlist_links_handles_playlists_with_no_links(
     # Create a playlist with no links
     with Session(test_sql_client.engine) as session:
         session.execute(
-            PlaylistsTable.__table__.insert().values(
+            PlaylistsTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="empty_playlist",
                 title="Empty",
                 description="",

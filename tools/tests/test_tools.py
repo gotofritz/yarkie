@@ -1,5 +1,3 @@
-# tests/test_tools.py
-
 from tools.cli import cli
 
 

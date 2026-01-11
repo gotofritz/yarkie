@@ -1,5 +1,3 @@
-# tests/tools/data_access/test_discogs_repository.py
-
 """Tests for DiscogsRepository."""
 
 import logging
@@ -70,7 +68,7 @@ def db_with_videos_for_discogs(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for video_data in videos:
-            session.execute(VideosTable.__table__.insert().values(**video_data))
+            session.execute(VideosTable.__table__.insert().values(**video_data))  # type: ignore[unresolved-attribute]
 
         session.commit()
 
@@ -124,6 +122,8 @@ def test_get_next_video_without_discogs_skips_videos_with_discogs(
     video2 = discogs_repository.get_next_video_without_discogs(offset=1)
 
     # video2 has discogs_track_id, so should be skipped
+    assert video1 is not None
+    assert video2 is not None
     assert video1.id != "video2"
     assert video2.id != "video2"
 
@@ -137,6 +137,8 @@ def test_get_next_video_without_discogs_skips_non_tunes(
     video2 = discogs_repository.get_next_video_without_discogs(offset=1)
 
     # video3 has is_tune=False, so should be skipped
+    assert video1 is not None
+    assert video2 is not None
     assert video1.id != "video3"
     assert video2.id != "video3"
 
@@ -147,6 +149,7 @@ def test_get_next_video_without_discogs_returns_none_on_error(
 ):
     """Test that SQLAlchemyError is caught and None is returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     with patch.object(test_sql_client.engine, "connect", side_effect=SQLAlchemyError("DB Error")):
@@ -179,9 +182,7 @@ def test_upsert_release_inserts_new_release(
 
     # Verify it was inserted
     with Session(test_sql_client.engine) as session:
-        stmt = session.query(DiscogsReleaseTable).filter(
-            DiscogsReleaseTable.id == 12345
-        )
+        stmt = session.query(DiscogsReleaseTable).filter(DiscogsReleaseTable.id == 12345)
         db_release = session.execute(stmt).scalar()
 
     assert db_release is not None
@@ -216,9 +217,7 @@ def test_upsert_release_skips_existing_release(
 
     # Verify only one record exists
     with Session(test_sql_client.engine) as session:
-        count = session.query(DiscogsReleaseTable).filter(
-            DiscogsReleaseTable.id == 12345
-        ).count()
+        count = session.query(DiscogsReleaseTable).filter(DiscogsReleaseTable.id == 12345).count()
 
     assert count == 1
 
@@ -251,19 +250,13 @@ def test_upsert_artist_inserts_new_artist(
         uri="https://www.discogs.com/artist/54321",
     )
 
-    result = discogs_repository.upsert_artist(
-        record=artist,
-        release_id=12345,
-        role="Main"
-    )
+    result = discogs_repository.upsert_artist(record=artist, release_id=12345, role="Main")
 
     assert result == 54321
 
     # Verify artist was inserted
     with Session(test_sql_client.engine) as session:
-        db_artist = session.query(DiscogsArtistTable).filter(
-            DiscogsArtistTable.id == 54321
-        ).first()
+        db_artist = session.query(DiscogsArtistTable).filter(DiscogsArtistTable.id == 54321).first()
 
     assert db_artist is not None
     assert db_artist.name == "Test Artist"  # "The" prefix removed
@@ -296,9 +289,7 @@ def test_upsert_artist_cleans_artist_name(
 
     # Verify name was cleaned
     with Session(test_sql_client.engine) as session:
-        db_artist = session.query(DiscogsArtistTable).filter(
-            DiscogsArtistTable.id == 54321
-        ).first()
+        db_artist = session.query(DiscogsArtistTable).filter(DiscogsArtistTable.id == 54321).first()
 
     assert db_artist.name == "Beatles"  # "The" and "(2)" removed
 
@@ -330,10 +321,14 @@ def test_upsert_artist_links_to_release(
 
     # Verify link was created
     with Session(test_sql_client.engine) as session:
-        link = session.query(ReleaseArtistsTable).filter(
-            ReleaseArtistsTable.release_id == 12345,
-            ReleaseArtistsTable.artist_id == 54321,
-        ).first()
+        link = (
+            session.query(ReleaseArtistsTable)
+            .filter(
+                ReleaseArtistsTable.release_id == 12345,
+                ReleaseArtistsTable.artist_id == 54321,
+            )
+            .first()
+        )
 
     assert link is not None
     assert link.role == "Main"
@@ -373,10 +368,14 @@ def test_upsert_artist_skips_existing_link(
 
     # Verify only one link exists
     with Session(test_sql_client.engine) as session:
-        count = session.query(ReleaseArtistsTable).filter(
-            ReleaseArtistsTable.release_id == 12345,
-            ReleaseArtistsTable.artist_id == 54321,
-        ).count()
+        count = (
+            session.query(ReleaseArtistsTable)
+            .filter(
+                ReleaseArtistsTable.release_id == 12345,
+                ReleaseArtistsTable.artist_id == 54321,
+            )
+            .count()
+        )
 
     assert count == 1
 
@@ -404,7 +403,7 @@ def test_upsert_track_inserts_new_track(
     # Create video
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -428,9 +427,7 @@ def test_upsert_track_inserts_new_track(
 
     # Verify track was inserted
     with Session(test_sql_client.engine) as session:
-        db_track = session.query(DiscogsTrackTable).filter(
-            DiscogsTrackTable.id == result
-        ).first()
+        db_track = session.query(DiscogsTrackTable).filter(DiscogsTrackTable.id == result).first()
 
     assert db_track is not None
     assert db_track.title == "Track One"
@@ -457,7 +454,7 @@ def test_upsert_track_links_to_video(
     # Create video
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -504,7 +501,7 @@ def test_upsert_track_reuses_existing_track(
     # Create two videos
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -512,7 +509,7 @@ def test_upsert_track_reuses_existing_track(
             )
         )
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video2",
                 title="Test Song",
                 is_tune=True,
@@ -540,10 +537,14 @@ def test_upsert_track_reuses_existing_track(
 
     # Verify only one track exists
     with Session(test_sql_client.engine) as session:
-        count = session.query(DiscogsTrackTable).filter(
-            DiscogsTrackTable.title == "Track One",
-            DiscogsTrackTable.release_id == 12345,
-        ).count()
+        count = (
+            session.query(DiscogsTrackTable)
+            .filter(
+                DiscogsTrackTable.title == "Track One",
+                DiscogsTrackTable.release_id == 12345,
+            )
+            .count()
+        )
 
     assert count == 1
 
@@ -568,7 +569,7 @@ def test_upsert_track_does_not_update_video_with_existing_track(
     # Create video with existing discogs_track_id
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(
+            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -601,6 +602,7 @@ def test_upsert_release_returns_id_on_error(
 ):
     """Test that SQLAlchemyError in upsert_release is caught and release ID returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     release = DiscogsRelease(
@@ -625,6 +627,7 @@ def test_upsert_artist_returns_id_on_error(
 ):
     """Test that SQLAlchemyError in upsert_artist is caught and artist ID returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     artist = DiscogsArtist(
@@ -650,6 +653,7 @@ def test_upsert_track_returns_zero_on_error(
 ):
     """Test that SQLAlchemyError in upsert_track is caught and 0 returned."""
     from unittest.mock import patch
+
     from sqlalchemy.exc import SQLAlchemyError
 
     track = DiscogsTrack(

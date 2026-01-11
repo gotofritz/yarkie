@@ -1,5 +1,3 @@
-# tests/tools/commands/playlist/test_disable.py
-
 """Tests for playlist disable command."""
 
 from unittest.mock import MagicMock, patch
@@ -31,11 +29,9 @@ def test_disable_single_playlist_successfully(runner, faker):
             result = runner.invoke(cli, ["playlist", "disable", playlist_id])
 
             assert result.exit_code == 0
-            assert f"Disabling 1 playlist(s)" in result.output
+            assert "Disabling 1 playlist(s)" in result.output
             assert "Successfully disabled 1 playlist(s)" in result.output
-            mock_repository.disable_playlists.assert_called_once_with(
-                playlist_ids=[playlist_id]
-            )
+            mock_repository.disable_playlists.assert_called_once_with(playlist_ids=[playlist_id])
 
 
 def test_disable_multiple_playlists(runner, faker):
@@ -55,9 +51,7 @@ def test_disable_multiple_playlists(runner, faker):
             assert result.exit_code == 0
             assert "Disabling 3 playlist(s)" in result.output
             assert "Successfully disabled 3 playlist(s)" in result.output
-            mock_repository.disable_playlists.assert_called_once_with(
-                playlist_ids=[pl1, pl2, pl3]
-            )
+            mock_repository.disable_playlists.assert_called_once_with(playlist_ids=[pl1, pl2, pl3])
 
 
 def test_disable_nonexistent_playlist(runner, faker):
@@ -73,9 +67,7 @@ def test_disable_nonexistent_playlist(runner, faker):
 
             assert result.exit_code == 0
             assert "No playlists were disabled" in result.output
-            mock_repository.disable_playlists.assert_called_once_with(
-                playlist_ids=[playlist_id]
-            )
+            mock_repository.disable_playlists.assert_called_once_with(playlist_ids=[playlist_id])
 
 
 def test_disable_partial_success(runner, faker):
@@ -95,6 +87,4 @@ def test_disable_partial_success(runner, faker):
             assert result.exit_code == 0
             assert "Disabling 3 playlist(s)" in result.output
             assert "Successfully disabled 2 playlist(s)" in result.output
-            mock_repository.disable_playlists.assert_called_once_with(
-                playlist_ids=[pl1, pl2, pl3]
-            )
+            mock_repository.disable_playlists.assert_called_once_with(playlist_ids=[pl1, pl2, pl3])

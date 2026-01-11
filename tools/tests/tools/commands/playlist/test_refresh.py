@@ -1,6 +1,3 @@
-# tests/tools/commands/playlist/test_add.py
-
-
 from unittest.mock import patch
 
 from tools.cli import cli

@@ -1,5 +1,3 @@
-# tests/tools/commands/video/test_search.py
-
 """Tests for video search command."""
 
 from unittest.mock import MagicMock, patch
@@ -40,9 +38,7 @@ def test_search_with_no_filters(runner, faker):
             assert videos[0].title in result.output
             assert videos[1].title in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=None,
-                deleted=None,
-                limit=None
+                downloaded=None, deleted=None, limit=None
             )
 
 
@@ -63,9 +59,7 @@ def test_search_downloaded_videos(runner, faker):
             assert video.title in result.output
             assert "[downloaded]" in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=True,
-                deleted=None,
-                limit=None
+                downloaded=True, deleted=None, limit=None
             )
 
 
@@ -86,9 +80,7 @@ def test_search_not_downloaded_videos(runner, faker):
             assert video.title in result.output
             assert "[downloaded]" not in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=False,
-                deleted=None,
-                limit=None
+                downloaded=False, deleted=None, limit=None
             )
 
 
@@ -109,9 +101,7 @@ def test_search_deleted_videos(runner, faker):
             assert video.title in result.output
             assert "[deleted]" in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=None,
-                deleted=True,
-                limit=None
+                downloaded=None, deleted=True, limit=None
             )
 
 
@@ -130,9 +120,7 @@ def test_search_with_limit(runner, faker):
             assert result.exit_code == 0
             assert "Found 5 video(s)" in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=None,
-                deleted=None,
-                limit=5
+                downloaded=None, deleted=None, limit=5
             )
 
 
@@ -150,16 +138,13 @@ def test_search_combined_filters(runner, faker):
             mock_repository.get_videos.return_value = videos
 
             result = runner.invoke(
-                cli,
-                ["video", "search", "--downloaded", "0", "--deleted", "0", "--limit", "2"]
+                cli, ["video", "search", "--downloaded", "0", "--deleted", "0", "--limit", "2"]
             )
 
             assert result.exit_code == 0
             assert "Found 2 video(s)" in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=False,
-                deleted=False,
-                limit=2
+                downloaded=False, deleted=False, limit=2
             )
 
 
@@ -176,9 +161,7 @@ def test_search_no_results(runner):
             assert result.exit_code == 0
             assert "No videos found matching the criteria" in result.output
             mock_repository.get_videos.assert_called_once_with(
-                downloaded=False,
-                deleted=None,
-                limit=None
+                downloaded=False, deleted=None, limit=None
             )
 
 

@@ -1,12 +1,7 @@
-# tests/test_factories.py
-
 """Tests for factory functions that create service instances."""
 
 from logging import Logger
-from pathlib import Path
 from unittest.mock import MagicMock, Mock
-
-import pytest
 
 from tools.config.app_config import YarkieSettings
 from tools.data_access.playlist_repository import PlaylistRepository
