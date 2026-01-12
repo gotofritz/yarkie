@@ -259,6 +259,7 @@ The data model must support the following scenarios:
 
 2. Create `tools video add` command
    - Add individual videos explicitly (alternative to `tools playlist refresh`)
+   - **Clarification:** Supports adding videos without requiring Discogs data initially; marks as `is_tune=True` (or False) for later processing.
    - When Song integration is ready (Phase 2, Subtask 4), automatically creates Song from Discogs metadata
    - **Reasoning:** Makes video addition explicit and prepares for Song integration
    - **Complexity:** Low
@@ -276,6 +277,7 @@ The data model must support the following scenarios:
 1. Create Song model and table
 
    - id (PK), title, artist_name, first_release_date, created_at, updated_at, notes (nullable)
+   - **Unique Constraint:** (artist_name, title) to ensure idempotency and prevent duplicates
    - **NO FK to DiscogsTrack** - Song is independent entity that may be derived from Discogs data
    - **Reasoning:** Songs can exist without Discogs data (original compositions, non-commercial music)
    - **Complexity:** Low - straightforward schema
@@ -293,6 +295,7 @@ The data model must support the following scenarios:
    - **Dependency:** Subtask 1-2 complete
 
 4. Create database indexes in migration
+   - UNIQUE index on (artist_name, title)
    - songs.title, songs.artist_name (search performance)
    - video_songs.song_id, video_songs.video_id (join performance)
    - **Complexity:** Low
@@ -363,6 +366,7 @@ The data model must support the following scenarios:
 1. Create migration command: `tools song backfill`
 
    - Query all videos with discogs_track_id
+   - **Dry Run:** Support `--dry-run` flag to preview migration counts without DB writes
    - For each video with discogs_track_id:
      1. Call SongService.find_or_create_from_discogs(track_id)
      2. Create video_songs entry with version_type='other'
