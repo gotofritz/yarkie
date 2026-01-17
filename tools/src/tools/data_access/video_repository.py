@@ -55,19 +55,23 @@ class VideoRepository(BaseRepository):
     def update_videos(self, video_data: list[dict[str, Any]]) -> int:
         """Update or insert multiple video records in the database.
 
-        Uses UPSERT logic (INSERT ... ON CONFLICT DO UPDATE) to add new
-        videos or update existing ones.
+        Behavior depends on the data provided:
+        - If records include 'title' (complete data): Uses UPSERT to insert
+          new videos or update existing ones
+        - If records lack 'title' (partial data): Uses UPDATE to only modify
+          existing records (prevents NOT NULL constraint violations)
 
         Parameters
         ----------
         video_data : list[dict[str, Any]]
-            A list of dictionaries representing video records to upsert.
+            A list of dictionaries representing video records.
             Each dictionary must contain an 'id' field.
+            Include 'title' for UPSERT behavior, omit for UPDATE-only.
 
         Returns
         -------
         int
-            The number of videos successfully upserted.
+            The number of videos successfully updated/inserted.
         """
         if not video_data:
             return 0
@@ -91,14 +95,18 @@ class VideoRepository(BaseRepository):
                 updated_record["deleted"] = False
             updated_records.append(updated_record)
 
+        # Check if we have complete data (with title) or just download state updates
+        has_complete_data = updated_records and "title" in updated_records[0]
+
         try:
             with Session(self.sql_client.engine) as session:
-                stmt = sqlite_insert(VideosTable).values(updated_records)
+                if has_complete_data:
+                    # UPSERT: insert new videos or update existing ones
+                    stmt = sqlite_insert(VideosTable).values(updated_records)
 
-                # Build updates dictionary only for columns present in records
-                # Exclude locally-managed fields (downloaded, video_file, thumbnail)
-                # from UPDATE to preserve download state
-                if updated_records:
+                    # Build updates dictionary only for columns present in records
+                    # Exclude locally-managed fields (downloaded, video_file, thumbnail)
+                    # from UPDATE to preserve download state
                     record_keys = set(updated_records[0].keys()) - {
                         "id",
                         "downloaded",
@@ -111,7 +119,16 @@ class VideoRepository(BaseRepository):
                         index_elements=["id"],
                         set_=updates,
                     )
-                session.execute(stmt)
+                    session.execute(stmt)
+                else:
+                    # UPDATE only: for partial data (e.g., from sync_local)
+                    for video_dict in updated_records:
+                        stmt = (
+                            update(VideosTable)
+                            .values(**{k: v for k, v in video_dict.items() if k != "id"})
+                            .where(VideosTable.id == video_dict["id"])
+                        )
+                        session.execute(stmt)
                 session.commit()
                 self.logger.info(f"Updated {len(video_data)} video(s)")
                 return len(video_data)
