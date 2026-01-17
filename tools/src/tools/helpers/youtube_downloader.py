@@ -65,11 +65,17 @@ def youtube_downloader(
     ydl_settings = {
         "logger": SilentVideoLogger(),
         "progress_hooks": [partial(downloading_hook, logger=log)],
-        "format": config.video_ext,
+        "merge_output_format": config.video_ext,
+        "remux_video": config.video_ext,
+        "format_sort": {"vcodec": "h264,lang,quality,res,fps", "hdr": 12, "acodec": "aac"},
         "concurrent_fragment_downloads": 8,
         "ignore_no_formats_error": True,
         "outtmpl": f"{config.download_path}/%(id)s.%(ext)s",
         "retries": 3,
+        "extractor_args": {
+            "youtube:player-client": "default,-web_safari",
+            "player_js_version": "actual",
+        },
     }
 
     with YoutubeDL(ydl_settings) as ydl:
