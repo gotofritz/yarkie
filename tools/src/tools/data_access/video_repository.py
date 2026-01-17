@@ -53,18 +53,25 @@ class VideoRepository(BaseRepository):
         super().__init__(sql_client=sql_client, logger=logger, config=config)
 
     def update_videos(self, video_data: list[dict[str, Any]]) -> int:
-        """Update multiple video records in the database.
+        """Update or insert multiple video records in the database.
+
+        Behavior depends on the data provided:
+        - If records include 'title' (complete data): Uses UPSERT to insert
+          new videos or update existing ones
+        - If records lack 'title' (partial data): Uses UPDATE to only modify
+          existing records (prevents NOT NULL constraint violations)
 
         Parameters
         ----------
         video_data : list[dict[str, Any]]
-            A list of dictionaries representing video records to update.
+            A list of dictionaries representing video records.
             Each dictionary must contain an 'id' field.
+            Include 'title' for UPSERT behavior, omit for UPDATE-only.
 
         Returns
         -------
         int
-            The number of videos successfully updated.
+            The number of videos successfully updated/inserted.
         """
         if not video_data:
             return 0
@@ -78,23 +85,56 @@ class VideoRepository(BaseRepository):
             self.logger.error(f"Invalid video data provided: {e}")
             return 0
 
+        # Prepare records with defaults
+        updated_records = []
+        for record in video_data:
+            updated_record = {k: v for k, v in record.items()}
+            if "last_updated" not in updated_record:
+                updated_record["last_updated"] = last_updated_factory()
+            if "deleted" not in updated_record:
+                updated_record["deleted"] = False
+            updated_records.append(updated_record)
+
         try:
             with Session(self.sql_client.engine) as session:
-                for video_dict in video_data:
-                    stmt = (
-                        update(VideosTable)
-                        .values(
-                            **{k: v for k, v in video_dict.items() if k != "id"},
-                        )
-                        .where(VideosTable.id == video_dict["id"])
-                    )
+                # Process each record individually to handle varying field sets
+                for record in updated_records:
+                    # Check if this specific record has complete data (with title)
+                    has_complete_data = "title" in record
 
-                    session.execute(stmt)
+                    if has_complete_data:
+                        # UPSERT: insert new video or update existing one
+                        stmt = sqlite_insert(VideosTable).values(record)
+
+                        # Build updates dictionary for columns in this specific record
+                        # Exclude locally-managed fields (downloaded, video_file, thumbnail)
+                        # from UPDATE to preserve download state
+                        record_keys = set(record.keys()) - {
+                            "id",
+                            "downloaded",
+                            "video_file",
+                            "thumbnail",
+                        }
+                        updates = {col_name: stmt.excluded[col_name] for col_name in record_keys}
+
+                        stmt = stmt.on_conflict_do_update(
+                            index_elements=["id"],
+                            set_=updates,
+                        )
+                        session.execute(stmt)
+                    else:
+                        # UPDATE only: for partial data (e.g., specific field updates)
+                        stmt = (
+                            update(VideosTable)
+                            .values(**{k: v for k, v in record.items() if k != "id"})
+                            .where(VideosTable.id == record["id"])
+                        )
+                        session.execute(stmt)
                 session.commit()
                 self.logger.info(f"Updated {len(video_data)} video(s)")
                 return len(video_data)
         except (SQLAlchemyError, TypeError) as e:
-            self.logger.error(f"Error updating VideosTable: {e}")
+            self.logger.error(f"Error upserting VideosTable: {e}")
             return 0
 
     def get_videos_needing_download(
