@@ -96,8 +96,15 @@ class VideoRepository(BaseRepository):
                 stmt = sqlite_insert(VideosTable).values(updated_records)
 
                 # Build updates dictionary only for columns present in records
+                # Exclude locally-managed fields (downloaded, video_file, thumbnail)
+                # from UPDATE to preserve download state
                 if updated_records:
-                    record_keys = set(updated_records[0].keys()) - {"id"}
+                    record_keys = set(updated_records[0].keys()) - {
+                        "id",
+                        "downloaded",
+                        "video_file",
+                        "thumbnail",
+                    }
                     updates = {col_name: stmt.excluded[col_name] for col_name in record_keys}
 
                     stmt = stmt.on_conflict_do_update(
