@@ -111,7 +111,6 @@ class VideoSyncService:
                     video_dicts = [
                         {
                             "id": v.id,
-                            "playlist_id": v.playlist_id,
                             "title": v.title,
                             "description": v.description,
                             "uploader": v.uploader,
