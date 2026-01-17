@@ -95,38 +95,39 @@ class VideoRepository(BaseRepository):
                 updated_record["deleted"] = False
             updated_records.append(updated_record)
 
-        # Check if we have complete data (with title) or just download state updates
-        has_complete_data = updated_records and "title" in updated_records[0]
-
         try:
             with Session(self.sql_client.engine) as session:
-                if has_complete_data:
-                    # UPSERT: insert new videos or update existing ones
-                    stmt = sqlite_insert(VideosTable).values(updated_records)
+                # Process each record individually to handle varying field sets
+                for record in updated_records:
+                    # Check if this specific record has complete data (with title)
+                    has_complete_data = "title" in record
 
-                    # Build updates dictionary only for columns present in records
-                    # Exclude locally-managed fields (downloaded, video_file, thumbnail)
-                    # from UPDATE to preserve download state
-                    record_keys = set(updated_records[0].keys()) - {
-                        "id",
-                        "downloaded",
-                        "video_file",
-                        "thumbnail",
-                    }
-                    updates = {col_name: stmt.excluded[col_name] for col_name in record_keys}
+                    if has_complete_data:
+                        # UPSERT: insert new video or update existing one
+                        stmt = sqlite_insert(VideosTable).values(record)
 
-                    stmt = stmt.on_conflict_do_update(
-                        index_elements=["id"],
-                        set_=updates,
-                    )
-                    session.execute(stmt)
-                else:
-                    # UPDATE only: for partial data (e.g., from sync_local)
-                    for video_dict in updated_records:
+                        # Build updates dictionary for columns in this specific record
+                        # Exclude locally-managed fields (downloaded, video_file, thumbnail)
+                        # from UPDATE to preserve download state
+                        record_keys = set(record.keys()) - {
+                            "id",
+                            "downloaded",
+                            "video_file",
+                            "thumbnail",
+                        }
+                        updates = {col_name: stmt.excluded[col_name] for col_name in record_keys}
+
+                        stmt = stmt.on_conflict_do_update(
+                            index_elements=["id"],
+                            set_=updates,
+                        )
+                        session.execute(stmt)
+                    else:
+                        # UPDATE only: for partial data (e.g., specific field updates)
                         stmt = (
                             update(VideosTable)
-                            .values(**{k: v for k, v in video_dict.items() if k != "id"})
-                            .where(VideosTable.id == video_dict["id"])
+                            .values(**{k: v for k, v in record.items() if k != "id"})
+                            .where(VideosTable.id == record["id"])
                         )
                         session.execute(stmt)
                 session.commit()
