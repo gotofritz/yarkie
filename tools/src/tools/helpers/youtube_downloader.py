@@ -33,12 +33,12 @@ class MovePP(postprocessor.PostProcessor):
         self.video_repository = video_repository
         self.logger = logger
 
-    def run(self, info):  # type: ignore[override]
+    def run(self, information):
         """Run the post-processing steps after a video is downloaded."""
-        moved_to = self.file_repo.move_video_after_download(Path(info["_filename"]))
-        self.video_repository.mark_video_downloaded(key=info.get("id"), local_file=moved_to)
-        self.logger.debug(f"Moved from {Path(info['_filename'])} to {moved_to}")
-        return [], info
+        moved_to = self.file_repo.move_video_after_download(Path(information["_filename"]))
+        self.video_repository.mark_video_downloaded(key=information.get("id"), local_file=moved_to)
+        self.logger.debug(f"Moved from {Path(information['_filename'])} to {moved_to}")
+        return [], information
 
 
 def youtube_downloader(

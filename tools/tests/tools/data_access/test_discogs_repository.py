@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from tools.data_access.discogs_repository import DiscogsRepository, create_discogs_repository
@@ -68,7 +69,7 @@ def db_with_videos_for_discogs(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for video_data in videos:
-            session.execute(VideosTable.__table__.insert().values(**video_data))  # type: ignore[unresolved-attribute]
+            session.execute(insert(VideosTable).values(**video_data))
 
         session.commit()
 
@@ -291,6 +292,7 @@ def test_upsert_artist_cleans_artist_name(
     with Session(test_sql_client.engine) as session:
         db_artist = session.query(DiscogsArtistTable).filter(DiscogsArtistTable.id == 54321).first()
 
+    assert db_artist is not None
     assert db_artist.name == "Beatles"  # "The" and "(2)" removed
 
 
@@ -403,7 +405,7 @@ def test_upsert_track_inserts_new_track(
     # Create video
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
+            insert(VideosTable).values(
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -454,7 +456,7 @@ def test_upsert_track_links_to_video(
     # Create video
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
+            insert(VideosTable).values(
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -478,6 +480,7 @@ def test_upsert_track_links_to_video(
     with Session(test_sql_client.engine) as session:
         video = session.query(VideosTable).filter(VideosTable.id == "video1").first()
 
+    assert video is not None
     assert video.discogs_track_id == track_id
 
 
@@ -501,7 +504,7 @@ def test_upsert_track_reuses_existing_track(
     # Create two videos
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
+            insert(VideosTable).values(
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -509,7 +512,7 @@ def test_upsert_track_reuses_existing_track(
             )
         )
         session.execute(
-            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
+            insert(VideosTable).values(
                 id="video2",
                 title="Test Song",
                 is_tune=True,
@@ -569,7 +572,7 @@ def test_upsert_track_does_not_update_video_with_existing_track(
     # Create video with existing discogs_track_id
     with Session(test_sql_client.engine) as session:
         session.execute(
-            VideosTable.__table__.insert().values(  # type: ignore[unresolved-attribute]
+            insert(VideosTable).values(
                 id="video1",
                 title="Test Song",
                 is_tune=True,
@@ -593,6 +596,7 @@ def test_upsert_track_does_not_update_video_with_existing_track(
     with Session(test_sql_client.engine) as session:
         video = session.query(VideosTable).filter(VideosTable.id == "video1").first()
 
+    assert video is not None
     assert video.discogs_track_id == 999  # Should not be updated
 
 
