@@ -6,10 +6,10 @@ database operations related to Discogs releases, artists, and tracks.
 
 import re
 from logging import Logger
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from sqlalchemy import and_, func, insert, select, update
-from sqlalchemy.engine import Result
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -284,8 +284,11 @@ class DiscogsRepository(BaseRepository):
                         type_=record.type_,
                         release_id=record.release_id,
                     )
-                    insert_result: Result[Any] = session.execute(insert_stmt)
-                    track_id = int(insert_result.inserted_primary_key[0])  # type: ignore[attr-defined]
+                    insert_result = cast("CursorResult[Any]", session.execute(insert_stmt))
+                    inserted_primary_key = insert_result.inserted_primary_key
+                    if inserted_primary_key is None:
+                        raise SQLAlchemyError("Insert did not return a primary key")
+                    track_id = int(inserted_primary_key[0])
                 else:
                     self.logger.warning(f"Track {record.title} already in DB")
                     track_id = int(existing_track[0])

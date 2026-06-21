@@ -7,9 +7,9 @@ relationships, and deleting playlists.
 """
 
 from logging import Logger
-from typing import Optional
+from typing import Any, Optional, cast
 
-from sqlalchemy import delete, desc, select, update
+from sqlalchemy import CursorResult, delete, desc, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -162,10 +162,10 @@ class PlaylistRepository(BaseRepository):
 
                 # Then delete playlists
                 playlists_stmt = delete(PlaylistsTable).where(PlaylistsTable.id.in_(playlist_ids))
-                result = session.execute(playlists_stmt)
+                result = cast("CursorResult[Any]", session.execute(playlists_stmt))
 
                 session.commit()
-                deleted_count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+                deleted_count = result.rowcount if result.rowcount is not None else 0
                 self.logger.info(f"Deleted {deleted_count} playlist(s) and their entries")
                 return deleted_count
         except SQLAlchemyError as e:
@@ -196,9 +196,9 @@ class PlaylistRepository(BaseRepository):
                     .where(PlaylistsTable.id.in_(playlist_ids))
                     .values(enabled=False, last_updated=last_updated_factory())
                 )
-                result = session.execute(stmt)
+                result = cast("CursorResult[Any]", session.execute(stmt))
                 session.commit()
-                disabled_count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+                disabled_count = result.rowcount if result.rowcount is not None else 0
                 self.logger.info(f"Disabled {disabled_count} playlist(s)")
                 return disabled_count
         except SQLAlchemyError as e:

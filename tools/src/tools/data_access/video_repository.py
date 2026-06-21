@@ -6,11 +6,12 @@ information, tracking downloads, managing video metadata, and deleting
 videos.
 """
 
+from collections.abc import Sequence
 from logging import Logger
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
-from sqlalchemy import and_, delete, or_, select, update
+from sqlalchemy import CursorResult, and_, delete, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -235,19 +236,19 @@ class VideoRepository(BaseRepository):
                     )
                     .values(downloaded=True, last_updated=last_updated_factory())
                 )
-                result = session.execute(stmt)
+                result = cast("CursorResult[Any]", session.execute(stmt))
                 session.commit()
-                count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+                count = result.rowcount if result.rowcount is not None else 0
                 self.logger.info(f"{count} videos flagged as downloaded")
         except SQLAlchemyError as e:
             self.logger.error(f"Error refreshing download field: {e}")
 
-    def refresh_deleted_videos(self, all_videos: list[YoutubeObj]) -> None:
+    def refresh_deleted_videos(self, all_videos: Sequence[YoutubeObj]) -> None:
         """Determine which videos were deleted and update table accordingly.
 
         Parameters
         ----------
-        all_videos : list[YoutubeObj]
+        all_videos : Sequence[YoutubeObj]
             A list of YoutubeObj instances to check for deletions.
         """
         # Get list of previously downloaded video IDs
@@ -274,12 +275,12 @@ class VideoRepository(BaseRepository):
 
         self.logger.info(f"Updated {len(deleted_video_ids)} video(s)")
 
-    def pass_needs_download(self, all_records: list[YoutubeObj]) -> list[Video]:
+    def pass_needs_download(self, all_records: Sequence[YoutubeObj]) -> list[Video]:
         """Identify videos that need downloading.
 
         Parameters
         ----------
-        all_records : list[YoutubeObj]
+        all_records : Sequence[YoutubeObj]
             A list of YoutubeObj instances representing videos to check.
 
         Returns
@@ -351,10 +352,10 @@ class VideoRepository(BaseRepository):
 
                 # Then delete videos
                 videos_stmt = delete(VideosTable).where(VideosTable.id.in_(video_ids))
-                result = session.execute(videos_stmt)
+                result = cast("CursorResult[Any]", session.execute(videos_stmt))
 
                 session.commit()
-                deleted_count = result.rowcount if result.rowcount is not None else 0  # type: ignore[attr-defined]
+                deleted_count = result.rowcount if result.rowcount is not None else 0
 
                 # Delete files if requested
                 if delete_files and video_paths:

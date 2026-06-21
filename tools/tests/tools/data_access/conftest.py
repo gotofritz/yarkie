@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from tools.data_access.sql_client import SQLClient
@@ -51,7 +52,7 @@ def db_with_playlists(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for playlist_data in playlists:
-            session.execute(PlaylistsTable.__table__.insert().values(**playlist_data))  # type: ignore[unresolved-attribute]
+            session.execute(insert(PlaylistsTable).values(**playlist_data))
 
         # Insert some playlist entries
         entries = [
@@ -61,7 +62,7 @@ def db_with_playlists(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for entry_data in entries:
-            session.execute(PlaylistEntriesTable.__table__.insert().values(**entry_data))  # type: ignore[unresolved-attribute]
+            session.execute(insert(PlaylistEntriesTable).values(**entry_data))
 
         session.commit()
 
@@ -113,7 +114,7 @@ def db_with_videos(test_sql_client: SQLClient) -> SQLClient:
         ]
 
         for video_data in videos:
-            session.execute(VideosTable.__table__.insert().values(**video_data))  # type: ignore[unresolved-attribute]
+            session.execute(insert(VideosTable).values(**video_data))
 
         session.commit()
 

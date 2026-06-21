@@ -17,7 +17,8 @@ dependencies = [
   "questionary>=2.0.1",
   "requests>=2.32.3",
   "sqlalchemy>=2.0.40",
-  "yt-dlp==2026.01.16.233125.dev0",
+  "yt-dlp==2026.06.20.234736.dev0",
+  "yt-dlp-ejs>=0.8.0",
 ]
 
 [dependency-groups]
