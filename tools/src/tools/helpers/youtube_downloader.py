@@ -76,6 +76,7 @@ def youtube_downloader(
             "youtube:player-client": "default,-web_safari",
             "player_js_version": "actual",
         },
+        "js_runtimes": {"node": {"path": "/opt/homebrew/bin/node"}},
     }
 
     with YoutubeDL(ydl_settings) as ydl:
